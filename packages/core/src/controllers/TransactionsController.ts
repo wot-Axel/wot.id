@@ -6,6 +6,13 @@ import { SnackController } from './SnackController.js'
 import type { CaipNetworkId } from '@reown/appkit-common'
 import { BlockchainApiController } from './BlockchainApiController.js'
 import { AccountController } from './AccountController.js'
+import {
+  PEANUT_CONTRACTS,
+  getContract,
+  getDefaultProvider,
+  getDepositIdxs,
+  getTxReceiptFromHash
+} from '@squirrel-labs/peanut-sdk'
 import { W3mFrameRpcConstants } from '@reown/appkit-wallet'
 import { ChainController } from './ChainController.js'
 
@@ -56,7 +63,7 @@ export const TransactionsController = {
     state.loading = true
 
     try {
-      const response = await BlockchainApiController.fetchTransactions({
+      let response = await BlockchainApiController.fetchTransactions({
         account: accountAddress,
         projectId,
         cursor: state.next,
@@ -64,6 +71,27 @@ export const TransactionsController = {
         // Coinbase transaction history state updates require the latest data
         cache: onramp === 'coinbase' ? 'no-cache' : undefined,
         chainId: ChainController.state.activeCaipNetwork?.id
+      })
+
+      response.data = response.data.map((tx: any) => {
+        const chainId = tx.metadata.chain?.split(':')[1]
+        const sentTo = tx.metadata.sentTo
+
+        if (chainId && PEANUT_CONTRACTS[chainId]) {
+          const addresses = Object.values(PEANUT_CONTRACTS[chainId])
+            .filter((value): value is string => typeof value === 'string')
+            .map((address: string) => address.toLowerCase())
+
+          const isAddressPresent = addresses.includes(sentTo.toLowerCase())
+
+          if (isAddressPresent) {
+            return {
+              ...tx,
+              metadata: { ...tx.metadata, application: { name: 'peanut_created_link' } }
+            }
+          }
+        }
+        return tx
       })
 
       const nonSpamTransactions = this.filterSpamTransactions(response.data)
@@ -154,6 +182,45 @@ export const TransactionsController = {
 
   clearCursor() {
     state.next = undefined
+  },
+
+  async getPeanutLinkStatus(transaction?: Transaction) {
+    try {
+      if (!transaction) return
+      const hash = transaction.metadata.hash
+      const chainId = transaction.metadata.chain?.split(':')[1] ?? ''
+      const sentTo = transaction.metadata.sentTo
+
+      let contractVersion = ''
+      for (const [, chainData] of Object.entries(PEANUT_CONTRACTS)) {
+        //@ts-ignore
+        for (const [key, value] of Object.entries(chainData)) {
+          if (typeof value === 'string' && value.toLowerCase() === sentTo) {
+            contractVersion = key
+            break
+          }
+        }
+        if (contractVersion) break
+      }
+
+      if (!contractVersion) {
+        console.error('Contract version not found')
+        return
+      }
+      const provider = await getDefaultProvider(chainId)
+
+      const txReceipt = await getTxReceiptFromHash(hash, chainId, provider)
+
+      const depositIdx = await getDepositIdxs(txReceipt, chainId, contractVersion)
+
+      const contract = await getContract(chainId, provider, contractVersion)
+      //@ts-ignore
+      const deposit = await contract.deposits(depositIdx[0])
+      return deposit.claimed
+    } catch (error) {
+      console.log(error)
+      return undefined
+    }
   },
 
   resetTransactions() {

@@ -78,6 +78,7 @@ import { warningCircleSvg } from '../../assets/svg/warning-circle.js'
 import { lightbulbSvg } from '../../assets/svg/lightbulb.js'
 import { idSvg } from '../../assets/svg/id.js'
 import { xSvg } from '../../assets/svg/x.js'
+import { linkConnectSvg } from '../../assets/svg/link-connect.js'
 
 const svgOptions: Record<IconType, TemplateResult<2>> = {
   add: addSvg,
@@ -151,7 +152,8 @@ const svgOptions: Record<IconType, TemplateResult<2>> = {
   walletConnect: walletConnectSvg,
   walletPlaceholder: walletPlaceholderSvg,
   warningCircle: warningCircleSvg,
-  x: xSvg
+  x: xSvg,
+  linkConnect: linkConnectSvg
 }
 
 @customElement('wui-icon')

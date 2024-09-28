@@ -107,6 +107,8 @@ export class W3mRouter extends LitElement {
         return html`<w3m-switch-address-view></w3m-switch-address-view>`
       case 'Transactions':
         return html`<w3m-transactions-view></w3m-transactions-view>`
+      case 'TransactionDetails':
+        return html`<w3m-transaction-details-view></w3m-transaction-details-view>`
       case 'OnRampProviders':
         return html`<w3m-onramp-providers-view></w3m-onramp-providers-view>`
       case 'OnRampActivity':
@@ -135,6 +137,8 @@ export class W3mRouter extends LitElement {
         return html`<w3m-swap-preview-view></w3m-swap-preview-view>`
       case 'WalletSend':
         return html`<w3m-wallet-send-view></w3m-wallet-send-view>`
+      case 'WalletSelectSend':
+        return html`<w3m-wallet-select-send-view></w3m-wallet-select-send-view>`
       case 'WalletSendSelectToken':
         return html`<w3m-wallet-send-select-token-view></w3m-wallet-send-select-token-view>`
       case 'WalletSendPreview':

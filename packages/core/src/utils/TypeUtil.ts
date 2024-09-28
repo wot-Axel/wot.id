@@ -797,6 +797,14 @@ export type GetQuoteArgs = {
   amount: string
   network: string
 }
+
+export interface SendTransactionArgs {
+  to: `0x${string}`
+  data?: `0x${string}`
+  value?: bigint
+  gas?: bigint
+  gasPrice?: bigint
+  address?: `0x${string}`
 export type AccountType = {
   address: string
   type: 'eoa' | 'smartAccount'

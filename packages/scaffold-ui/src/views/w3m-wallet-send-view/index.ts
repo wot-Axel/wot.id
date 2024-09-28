@@ -32,6 +32,8 @@ export class W3mWalletSendView extends LitElement {
 
   @state() private gasPrice = SendController.state.gasPrice
 
+  @state() private type = SendController.state.type
+
   @state() private message:
     | 'Preview Send'
     | 'Select Token'
@@ -66,6 +68,13 @@ export class W3mWalletSendView extends LitElement {
   public override render() {
     this.getMessage()
 
+    const inputAddressComponent =
+      this.type === 'Address'
+        ? html`<w3m-input-address
+        .value=${this.receiverProfileName ? this.receiverProfileName : this.receiverAddress}
+      ></w3m-input-address>`
+        : html`<w3m-input-placeholder></w3m-input-placeholder>`
+
     return html` <wui-flex flexDirection="column" .padding=${['0', 'l', 'l', 'l'] as const}>
       <wui-flex class="inputContainer" gap="xs" flexDirection="column">
         <w3m-input-token
@@ -82,9 +91,8 @@ export class W3mWalletSendView extends LitElement {
           background="opaque"
           icon="arrowBottom"
         ></wui-icon-box>
-        <w3m-input-address
-          .value=${this.receiverProfileName ? this.receiverProfileName : this.receiverAddress}
-        ></w3m-input-address>
+        
+        ${inputAddressComponent}
       </wui-flex>
       <wui-flex .margin=${['l', '0', '0', '0'] as const}>
         <wui-button
@@ -119,14 +127,14 @@ export class W3mWalletSendView extends LitElement {
   private getMessage() {
     this.message = 'Preview Send'
 
-    if (
+    if (this.type === 'Address' &&
       this.receiverAddress &&
       !CoreHelperUtil.isAddress(this.receiverAddress, ChainController.state.activeChain)
     ) {
       this.message = 'Invalid Address'
     }
 
-    if (!this.receiverAddress) {
+    if (this.type === 'Address' && !this.receiverAddress) {
       this.message = 'Add Address'
     }
 

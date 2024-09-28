@@ -2,6 +2,7 @@ import { proxy, ref } from 'valtio/vanilla'
 import { EventsController } from './EventsController.js'
 import { ModalController } from './ModalController.js'
 import { CoreHelperUtil } from '../utils/CoreHelperUtil.js'
+import { PEANUT_CONTRACTS } from '@squirrel-labs/peanut-sdk'
 import {
   NetworkUtil,
   type CaipNetwork,
@@ -29,6 +30,7 @@ export interface NetworkControllerState {
   approvedCaipNetworkIds?: CaipNetworkId[]
   allowUnsupportedCaipNetwork?: boolean
   smartAccountEnabledNetworks?: number[]
+  isPeanutSupportedChain?: boolean
 }
 
 // -- State --------------------------------------------- //
@@ -88,6 +90,8 @@ export const NetworkController = {
     if (!caipNetwork) {
       return
     }
+    this.checkIfPeanutSupportsNetwork()
+  },
 
     if (!caipNetwork?.chainNamespace) {
       throw new Error('chain is required to set active network')
@@ -248,6 +252,16 @@ export const NetworkController = {
     )
 
     return Boolean(smartAccountEnabledNetworks?.includes(Number(networkId)))
+  },
+
+  checkIfPeanutSupportsNetwork() {
+    const networkId = NetworkUtil.caipNetworkIdToNumber(state.caipNetwork?.id)
+
+    if (PEANUT_CONTRACTS.hasOwnProperty(networkId)) {
+      state.isPeanutSupportedChain = true
+    } else {
+      state.isPeanutSupportedChain = false
+    }
   },
 
   resetNetwork() {

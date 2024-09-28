@@ -155,8 +155,17 @@ export class W3mActivityList extends LitElement {
   }
 
   private templateRenderTransaction(transaction: Transaction, isLastTransaction: boolean) {
-    const { date, descriptions, direction, isAllNFT, images, status, transfers, type } =
-      this.getTransactionListItemProps(transaction)
+    const {
+      date,
+      descriptions,
+      direction,
+      isAllNFT,
+      images,
+      status,
+      transfers,
+      type,
+      application
+    } = this.getTransactionListItemProps(transaction)
     const haveMultipleTransfers = transfers?.length > 1
     const haveTwoTransfers = transfers?.length === 2
 
@@ -170,6 +179,8 @@ export class W3mActivityList extends LitElement {
           type=${type}
           .images=${images}
           .descriptions=${descriptions}
+          .isPeanutTransfer=${application === 'peanut_created_link'}
+          .
         ></wui-transaction-list-item>
       `
     }
@@ -178,7 +189,6 @@ export class W3mActivityList extends LitElement {
       return transfers.map((transfer, index) => {
         const description = TransactionUtil.getTransferDescription(transfer)
         const isLastTransfer = isLastTransaction && index === transfers.length - 1
-
         return html` <wui-transaction-list-item
           date=${date}
           direction=${transfer.direction}
@@ -188,6 +198,7 @@ export class W3mActivityList extends LitElement {
           .onlyDirectionIcon=${true}
           .images=${[images[index]] as TransactionImage[]}
           .descriptions=${[description]}
+          .isPeanutTransfer=${transaction.metadata.application.name === 'peanut_created_link'}
         ></wui-transaction-list-item>`
       })
     }
@@ -201,6 +212,12 @@ export class W3mActivityList extends LitElement {
         type=${type}
         .images=${images}
         .descriptions=${descriptions}
+        .isPeanutTransfer=${transaction.metadata.application.name === 'peanut_created_link'}
+        .onClick=${() => {
+          RouterController.push('TransactionDetails', {
+            transaction: transaction
+          })
+        }}
       ></wui-transaction-list-item>
     `
   }
@@ -347,7 +364,8 @@ export class W3mActivityList extends LitElement {
       images,
       status: transaction.metadata?.status,
       transfers,
-      type: transaction.metadata?.operationType as TransactionType
+      type: transaction.metadata?.operationType as TransactionType,
+      application: transaction.metadata?.application.name
     }
   }
 }

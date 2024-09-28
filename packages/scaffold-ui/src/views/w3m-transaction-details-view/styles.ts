@@ -9,19 +9,7 @@ export default css`
     border-radius: var(--wui-border-radius-3xl);
   }
 
-  .sendButton {
-    width: 70%;
-    --local-width: 100% !important;
-    --local-border-radius: var(--wui-border-radius-xs) !important;
-  }
-
-  .cancelButton {
-    width: 30%;
-    --local-width: 100% !important;
-    --local-border-radius: var(--wui-border-radius-xs) !important;
-  }
-
-  .generateLinkPreview{
+  .generateLinkPreview {
     display: flex;
     gap: var(--wui-spacing-xs);
     border-radius: var(--wui-border-radius-3xl);
@@ -31,4 +19,15 @@ export default css`
       var(--wui-spacing-s);
     align-items: center;
   }
-  `
+
+  .detailsComponent {
+    display: flex;
+    width: auto;
+    flex-direction: column;
+    gap: var(--wui-border-radius-1xs);
+    border-radius: var(--wui-border-radius-s);
+    background: var(--wui-color-gray-glass-002);
+    padding: var(--wui-spacing-s) var(--wui-spacing-1xs) var(--wui-spacing-1xs)
+      var(--wui-spacing-1xs);
+  }
+`
