@@ -24,7 +24,11 @@ export interface SIWECreateMessageArgs {
   iat?: string
 }
 export type SIWEMessageArgs = {
-  chains: number[]
+  /**
+   * @deprecated - Chains are set based on the `networks` you provided to the `createAppKit` function.
+   * @see https://docs.reown.com/appkit/react/core/options#networks
+   */
+  chains?: number[]
   methods?: string[]
 } & Omit<SIWECreateMessageArgs, 'address' | 'chainId' | 'nonce' | 'version'>
 // Signed Cacao (CAIP-74)
@@ -57,6 +61,7 @@ export interface SIWEVerifyMessageArgs {
   message: string
   signature: string
   cacao?: Cacao
+  clientId?: string | null
 }
 
 export interface SIWEClientMethods {
@@ -66,7 +71,7 @@ export interface SIWEClientMethods {
   verifyMessage: (args: SIWEVerifyMessageArgs) => Promise<boolean>
   getSession: () => Promise<SIWESession | null>
   signOut: () => Promise<boolean>
-  onSignIn?: (session?: SIWESession) => void
+  onSignIn?: (session?: SIWESession) => Promise<void>
   onSignOut?: () => void
 }
 

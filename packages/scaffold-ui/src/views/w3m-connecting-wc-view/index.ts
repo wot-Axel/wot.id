@@ -1,5 +1,6 @@
 import type { BaseError, Platform } from '@reown/appkit-core'
 import {
+  AccountController,
   ConnectionController,
   ConstantsUtil,
   CoreHelperUtil,
@@ -30,6 +31,8 @@ export class W3mConnectingWcView extends LitElement {
 
   @state() private isSiweEnabled = OptionsController.state.isSiweEnabled
 
+  private unsubscribe: (() => void)[] = []
+
   public constructor() {
     super()
     this.determinePlatforms()
@@ -38,6 +41,21 @@ export class W3mConnectingWcView extends LitElement {
       this.initializeConnection.bind(this),
       ConstantsUtil.TEN_SEC_MS
     ) as unknown as NodeJS.Timeout
+    this.unsubscribe.push(
+      AccountController.subscribeKey('siweStatus', val => {
+        if (val === 'authenticating') {
+          SnackController.showLoading('Authenticating', 8000)
+        }
+
+        if (val === 'success') {
+          SnackController.hide()
+        }
+        if (val === 'ready') {
+          SnackController.hide()
+        }
+      }),
+      OptionsController.subscribeKey('isSiweEnabled', val => (this.isSiweEnabled = val))
+    )
   }
 
   public override disconnectedCallback() {
@@ -82,14 +100,19 @@ export class W3mConnectingWcView extends LitElement {
         }
       }
     } catch (error) {
+      console.log('>>> initializeConnection - error', error)
+      const errorMessage = (error as BaseError)?.message
       EventsController.sendEvent({
         type: 'track',
         event: 'CONNECT_ERROR',
-        properties: { message: (error as BaseError)?.message ?? 'Unknown' }
+        properties: { message: errorMessage ?? 'Unknown' }
       })
       ConnectionController.setWcError(true)
       if (CoreHelperUtil.isAllowedRetry(this.lastRetry)) {
-        SnackController.showError('Declined')
+        SnackController.showError(
+          this.isSiweEnabled ? errorMessage : 'Declined',
+          this.isSiweEnabled ? 4000 : undefined
+        )
         this.lastRetry = Date.now()
         this.initializeConnection(true)
       }

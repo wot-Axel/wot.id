@@ -322,6 +322,8 @@ export class AppKit {
 
   public getActiveChainNamespace = () => ChainController.state.activeChain
 
+  public getIsSiweEnabled = () => OptionsController.state.isSiweEnabled
+
   public setRequestedCaipNetworks: (typeof ChainController)['setRequestedCaipNetworks'] = (
     requestedCaipNetworks,
     chain: ChainNamespace
@@ -407,6 +409,7 @@ export class AppKit {
 
   public setClientId: (typeof BlockchainApiController)['setClientId'] = clientId => {
     BlockchainApiController.setClientId(clientId)
+    ConnectionController.setClientId(clientId)
   }
 
   public getConnectorImage: (typeof AssetUtil)['getConnectorImage'] = connector =>
@@ -462,6 +465,7 @@ export class AppKit {
     OptionsController.setTokens(options.tokens)
     OptionsController.setTermsConditionsUrl(options.termsConditionsUrl)
     OptionsController.setPrivacyPolicyUrl(options.privacyPolicyUrl)
+    OptionsController.setEnableAuth(options.enableAuth)
     OptionsController.setCustomWallets(options.customWallets)
     OptionsController.setFeatures(options.features)
     OptionsController.setEnableWalletConnect(options.enableWalletConnect !== false)
@@ -487,11 +491,34 @@ export class AppKit {
       adapter => adapter.chainNamespace === ConstantsUtil.CHAIN.EVM
     )
 
+    // Only set the analytics state if it's not already set through the SDK config
+    if (options.features?.analytics === undefined) {
+      const projectCloudConfig = await ApiController.fetchProjectConfig()
+      // OptionsController.setFeatures({ analytics: projectCloudConfig?.isAppKitAuthEnabled })
+
+      if (options.enableAuth === undefined) {
+        OptionsController.setEnableAuth(projectCloudConfig?.isAnalyticsEnabled)
+      }
+    }
+
     // Set the SIWE client for EVM chains
     if (evmAdapter) {
-      if (options.siweConfig) {
-        const { SIWEController } = await import('@reown/appkit-siwe')
-        SIWEController.setSIWEClient(options.siweConfig)
+      // Only set the AppKit Auth state if it's not already set through the SDK config or while fetching the project config
+      if (options.enableAuth === undefined && OptionsController.state.enableAuth === undefined) {
+        const projectCloudConfig = await ApiController.fetchProjectConfig()
+        OptionsController.setEnableAuth(projectCloudConfig?.isAppKitAuthEnabled)
+      }
+
+      if (options.siweConfig || OptionsController.state.enableAuth) {
+        const { SIWEController, appKitAuthConfig } = await import('@reown/appkit-siwe')
+        const siweClient = options.siweConfig ?? appKitAuthConfig
+        SIWEController.setSIWEClient(siweClient)
+        const session = await siweClient.getSession()
+        OptionsController.setIsSiweEnabled(true)
+        if (session?.address && session?.chainId) {
+          SIWEController.setStatus('success')
+          SIWEController.setSession(session)
+        }
       }
     }
   }

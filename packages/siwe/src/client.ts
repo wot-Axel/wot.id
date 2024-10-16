@@ -8,15 +8,15 @@ import type {
   SIWEVerifyMessageArgs
 } from '../core/utils/TypeUtils.js'
 
+import { type CaipAddress } from '@reown/appkit-common'
 import {
   ChainController,
   ConnectionController,
-  RouterController,
-  StorageUtil,
+  CoreHelperUtil,
   ModalController,
-  CoreHelperUtil
+  RouterController,
+  StorageUtil
 } from '@reown/appkit-core'
-import { type CaipAddress } from '@reown/appkit-common'
 import { ConstantsUtil } from '../core/utils/ConstantsUtil.js'
 
 // -- Client -------------------------------------------------------------------- //
@@ -80,9 +80,6 @@ export class AppKitSIWEClient {
 
   async getSession() {
     const session = await this.methods.getSession()
-    if (!session) {
-      throw new Error('siweControllerClient:getSession - session is undefined')
-    }
 
     return session
   }
@@ -95,7 +92,8 @@ export class AppKitSIWEClient {
     const caipAddress = ChainController.state.activeCaipAddress
     const address = caipAddress ? CoreHelperUtil.getPlainAddress(caipAddress) : ''
 
-    const nonce = await this.methods.getNonce(address)
+    const nonce = await SIWEController.getNonce()
+
     if (!address) {
       throw new Error('An address is required to create a SIWE message.')
     }
@@ -116,7 +114,6 @@ export class AppKitSIWEClient {
     // Sign out if signOutOnNetworkChange is enabled to avoid re-prompting the user for a signature
     if (signOutOnNetworkChange) {
       SIWEController.state._client.options.signOutOnNetworkChange = false
-      await this.signOut()
     }
 
     // Enable the signOutOnNetworkChange option if it was previously enabled
@@ -134,6 +131,7 @@ export class AppKitSIWEClient {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       ...messageParams!
     })
+
     const type = StorageUtil.getConnectedConnector()
 
     if (type === 'AUTH') {
@@ -146,30 +144,39 @@ export class AppKitSIWEClient {
         }
       })
     }
+    const clientId = ConnectionController.state.wcClientId
+    try {
+      const signature = await ConnectionController.signMessage(message)
+      const isValid = await this.methods.verifyMessage({ message, signature, clientId })
+      if (!isValid) {
+        throw new Error('Error verifying SIWE signature')
+      }
 
-    const signature = await ConnectionController.signMessage(message)
+      const session = await this.methods.getSession()
 
-    const isValid = await this.methods.verifyMessage({ message, signature })
-    if (!isValid) {
-      throw new Error('Error verifying SIWE signature')
+      if (!session) {
+        throw new Error('Error verifying SIWE signature')
+      }
+
+      if (this.methods.onSignIn) {
+        await this.methods.onSignIn(session)
+      }
+
+      return session
+    } catch (err) {
+      const error = err as Error
+      // @ts-expect-error We don't really know what is the properties of thrown error from signMessage that it could be different based on the adapter
+      throw Error(error?.cause?.message || error?.message || error)
     }
-
-    const session = await this.methods.getSession()
-
-    if (!session) {
-      throw new Error('Error verifying SIWE signature')
-    }
-
-    if (this.methods.onSignIn) {
-      this.methods.onSignIn(session)
-    }
-
-    return session
   }
 
   async signOut() {
     this.methods.onSignOut?.()
 
     return this.methods.signOut()
+  }
+
+  async onSignIn(session?: SIWESession) {
+    await this.methods.onSignIn?.(session)
   }
 }

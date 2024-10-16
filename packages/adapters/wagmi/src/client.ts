@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable no-console */
 import {
   connect,
   disconnect,
@@ -297,48 +295,69 @@ export class WagmiAdapter implements ChainAdapter {
           ReturnType<(typeof UniversalProvider)['init']>
         >
 
-        const siweParams = await this.options?.siweConfig?.getMessageParams?.()
+        const clientId = await provider.client?.core?.crypto?.getClientId()
+        if (clientId) {
+          this.appKit?.setClientId(clientId)
+        }
 
-        const isSiweEnabled = this.options?.siweConfig?.options?.enabled
+        let chainId = this.appKit?.getCaipNetworkId<number>()
+        let address: string | undefined = undefined
+        let isSuccessfulOneClickAuth = false
+
+        const isSiweEnabled = this.appKit?.getIsSiweEnabled()
         const isProviderSupported = typeof provider?.authenticate === 'function'
-        const isSiweParamsValid = siweParams && Object.keys(siweParams || {}).length > 0
-        const siweConfig = this.options?.siweConfig
+        const supportsOneClickAuth = isSiweEnabled && isProviderSupported
 
-        if (isSiweEnabled && isProviderSupported && isSiweParamsValid && siweConfig) {
-          // @ts-expect-error - setting requested chains beforehand avoids wagmi auto disconnecting the session when `connect` is called because it things chains are stale
-          await connector.setRequestedChainsIds(siweParams.chains)
-
+        if (supportsOneClickAuth) {
           const { SIWEController, getDidChainId, getDidAddress } = await import(
             '@reown/appkit-siwe'
           )
+          if (!SIWEController.state._client) {
+            return
+          }
 
-          const chains = this.caipNetworks
-            ?.filter(network => network.chainNamespace === 'eip155')
-            .map(chain => chain.caipNetworkId) as string[]
+          const siweParams = await SIWEController?.getMessageParams?.()
+          const isSiweParamsValid = siweParams && Object.keys(siweParams || {}).length > 0
 
-          siweParams.chains = this.caipNetworks
-            ?.filter(network => network.chainNamespace === 'eip155')
-            .map(chain => chain.id) as number[]
+          if (!isSiweParamsValid) {
+            return
+          }
 
+          let reorderedChains = this.wagmiChains.map(chain => chain.id)
+
+          // @ts-expect-error - setting requested chains beforehand avoids wagmi auto disconnecting the session when `connect` is called because it thinks chains are stale
+          await connector.setRequestedChainsIds(reorderedChains)
+
+          if (chainId) {
+            reorderedChains = [chainId, ...reorderedChains.filter(c => c !== chainId)]
+          }
+
+          SIWEController.setIsOneClickAuthenticating(true)
           const result = await provider.authenticate({
-            nonce: await siweConfig.getNonce(),
+            nonce: await SIWEController.getNonce(),
             methods: [...OPTIONAL_METHODS],
             ...siweParams,
-            chains
+            chains: reorderedChains.map(chain => `eip155:${chain}`)
           })
+
           // Auths is an array of signed CACAO objects https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-74.md
           const signedCacao = result?.auths?.[0]
 
           if (signedCacao) {
             const { p, s } = signedCacao
             const cacaoChainId = getDidChainId(p.iss)
-            const address = getDidAddress(p.iss)
+            address = getDidAddress(p.iss)
+
             if (address && cacaoChainId) {
+              chainId = parseInt(cacaoChainId, 10)
+
               SIWEController.setSession({
                 address,
                 chainId: parseInt(cacaoChainId, 10)
               })
             }
+
+            SIWEController.setStatus('authenticating')
 
             try {
               // Kicks off verifyMessage and populates external states
@@ -350,22 +369,41 @@ export class WagmiAdapter implements ChainAdapter {
               await SIWEController.verifyMessage({
                 message,
                 signature: s.s,
-                cacao: signedCacao
+                cacao: signedCacao,
+                clientId
               })
+              isSuccessfulOneClickAuth = true
             } catch (error) {
+              isSuccessfulOneClickAuth = false
+              SIWEController.setIsOneClickAuthenticating(false)
+
               // eslint-disable-next-line no-console
               console.error('Error verifying message', error)
               // eslint-disable-next-line no-console
               await provider.disconnect().catch(console.error)
               // eslint-disable-next-line no-console
-              await SIWEController.signOut().catch(console.error)
+              await this.connectionControllerClient?.disconnect().catch(console.error)
+              SIWEController.setStatus('error')
               throw error
             }
           }
+          SIWEController.setIsOneClickAuthenticating(false)
         }
 
-        const chainId = this.appKit?.getCaipNetworkId<number>()
+        /**
+         * @description This is necessary to bypass the connection state in Wagmi when we have 1CA feature enabled. Otherwise, when we authenticate user, AppKit will try to re-trigger the connectWalletConnect function.
+         */
+        this.wagmiConfig.state.current = ''
         await connect(this.wagmiConfig, { connector, chainId })
+        const { SIWEController } = await import('@reown/appkit-siwe')
+        if (supportsOneClickAuth && address && chainId && isSuccessfulOneClickAuth) {
+          SIWEController.setStatus('authenticating')
+          await SIWEController.onSignIn?.({
+            address,
+            chainId
+          })
+          SIWEController.setStatus('success')
+        }
       },
       connectExternal: async ({ id, provider, info }) => {
         if (!this.wagmiConfig) {

@@ -1,9 +1,10 @@
-import { getCsrfToken, signIn, signOut, getSession } from 'next-auth/react'
-import type { SIWEVerifyMessageArgs, SIWECreateMessageArgs, SIWESession } from '@reown/appkit-siwe'
-import { createSIWEConfig, formatMessage } from '@reown/appkit-siwe'
-import { ConstantsUtil } from './ConstantsUtil'
-
-const chains = ConstantsUtil.EvmNetworks
+import type {
+  SIWECreateMessageArgs,
+  SIWESession,
+  SIWEVerifyMessageArgs
+} from '@reown/appkit-siwe/react'
+import { createSIWEConfig, formatMessage } from '@reown/appkit-siwe/react'
+import { getCsrfToken, getSession, signIn, signOut } from 'next-auth/react'
 
 export const siweConfig = createSIWEConfig({
   signOutOnAccountChange: true,
@@ -13,7 +14,6 @@ export const siweConfig = createSIWEConfig({
   getMessageParams: async () => ({
     domain: window.location.host,
     uri: window.location.origin,
-    chains: chains.map(chain => chain.id as number),
     statement: 'Please sign with your account',
     iat: new Date().toISOString()
   }),
@@ -29,7 +29,7 @@ export const siweConfig = createSIWEConfig({
   getSession: async () => {
     const session = await getSession()
     if (!session) {
-      throw new Error('Failed to get session!')
+      return null
     }
 
     const { address, chainId } = session as unknown as SIWESession

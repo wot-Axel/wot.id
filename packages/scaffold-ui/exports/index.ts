@@ -4,7 +4,6 @@
  * That's why it requires it's own path to be imported that separately. To do this, we are creating sub-exports for the `w3m-modal` component specifically.
  * Make sure you're not exporting w3m-modal here.
  */
-
 // -- Modal Components ---------------------------------- //
 export * from '../src/modal/w3m-account-button/index.js'
 export * from '../src/modal/w3m-button/index.js'
