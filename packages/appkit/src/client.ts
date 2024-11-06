@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import type {
   EventsControllerState,
   PublicStateControllerState,
@@ -49,7 +50,14 @@ export { AccountController }
 
 // -- Types --------------------------------------------------------------------
 export interface OpenOptions {
-  view: 'Account' | 'Connect' | 'Networks' | 'ApproveTransaction' | 'OnRampProviders'
+  view:
+    | 'Account'
+    | 'Connect'
+    | 'Networks'
+    | 'ApproveTransaction'
+    | 'OnRampProviders'
+    | 'ConnectingWalletConnectBasic'
+  uri?: string
 }
 
 // -- Helpers -------------------------------------------------------------------
@@ -96,6 +104,10 @@ export class AppKit {
   // -- Public -------------------------------------------------------------------
   public async open(options?: OpenOptions) {
     await this.initOrContinue()
+    if (options?.uri && this.universalAdapter) {
+      console.log('options.uri', options.uri)
+      ConnectionController.setUri(options.uri)
+    }
     ModalController.open(options)
   }
 
@@ -581,8 +593,13 @@ export class AppKit {
       networks: this.caipNetworks,
       defaultNetwork: this.defaultCaipNetwork
     }
-
-    this.universalAdapter = new UniversalAdapterClient(extendedOptions)
+    console.log('extendedOptions', extendedOptions)
+    const providedUniversalAdapter = options.adapters?.find(
+      a => a instanceof UniversalAdapterClient
+    ) as UniversalAdapterClient
+    console.log('providedUniversalAdapter', providedUniversalAdapter)
+    this.universalAdapter = providedUniversalAdapter || new UniversalAdapterClient(extendedOptions)
+    ConnectionController.state.manualControl = this.universalAdapter.manualControl
     ChainController.initializeUniversalAdapter(this.universalAdapter, options.adapters || [])
     this.universalAdapter.construct?.(this, extendedOptions)
   }
