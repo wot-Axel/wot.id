@@ -1182,16 +1182,17 @@ export class EthersAdapter {
         chain: this.chainNamespace
       })
 
-      this.appKit?.setLoading(true)
       const isLoginEmailUsed = this.authProvider.getLoginEmailUsed()
-      this.appKit?.setLoading(isLoginEmailUsed)
+
       if (isLoginEmailUsed) {
-        const { isConnected } = await this.authProvider.isConnected()
-        if (isConnected) {
-          await this.setAuthProvider()
-        } else {
-          this.appKit?.setLoading(false)
-        }
+        this.appKit?.setLoading(isLoginEmailUsed)
+      }
+
+      const { isConnected } = await this.authProvider.isConnected()
+      if (isConnected) {
+        await this.setAuthProvider()
+      } else if (isLoginEmailUsed) {
+        this.appKit?.setLoading(false)
       }
     }
   }

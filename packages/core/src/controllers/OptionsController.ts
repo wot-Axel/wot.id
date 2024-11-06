@@ -9,6 +9,7 @@ import type {
   Tokens
 } from '../utils/TypeUtil.js'
 import { ConstantsUtil } from '../utils/ConstantsUtil.js'
+import { filterSocialsByPlatform } from '../utils/OptionsUtil.js'
 import type { SIWXConfig } from '../utils/SIWXUtil.js'
 
 // -- Types --------------------------------------------- //
@@ -160,8 +161,13 @@ export const OptionsController = {
         state.features = ConstantsUtil.DEFAULT_FEATURES
       }
 
+      let filteredValue = value
+      if (key === 'socials') {
+        filteredValue = filterSocialsByPlatform(state.features.socials)
+      }
+
       if (key in state.features) {
-        ;(state.features as Record<keyof Features, unknown>)[key as keyof Features] = value
+        ;(state.features as Record<keyof Features, unknown>)[key as keyof Features] = filteredValue
       }
     })
   },

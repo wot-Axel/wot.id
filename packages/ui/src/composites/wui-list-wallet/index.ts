@@ -34,6 +34,8 @@ export class WuiListWallet extends LitElement {
 
   @property({ type: Boolean }) public disabled = false
 
+  @property({ type: Boolean }) public loading = false
+
   @property({ type: Boolean }) public showAllWallets = false
 
   // -- Render -------------------------------------------- //
@@ -74,7 +76,9 @@ export class WuiListWallet extends LitElement {
   }
 
   private templateStatus() {
-    if (this.tagLabel && this.tagVariant) {
+    if (this.loading) {
+      return html`<wui-loading-spinner size="lg" color="accent-100"></wui-loading-spinner>`
+    } else if (this.tagLabel && this.tagVariant) {
       return html`<wui-tag variant=${this.tagVariant}>${this.tagLabel}</wui-tag>`
     } else if (this.icon) {
       return html`<wui-icon color="inherit" size="sm" name=${this.icon}></wui-icon>`

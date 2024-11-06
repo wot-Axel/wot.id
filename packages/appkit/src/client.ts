@@ -7,6 +7,7 @@ import type {
   RouterControllerState,
   ChainAdapter,
   SdkVersion,
+  AccountControllerState,
   UseAppKitAccountReturn,
   UseAppKitNetworkReturn
 } from '@reown/appkit-core'
@@ -27,7 +28,8 @@ import {
   OptionsController,
   AssetUtil,
   ApiController,
-  AlertController
+  AlertController,
+  StorageUtil
 } from '@reown/appkit-core'
 import { setColorTheme, setThemeVariables } from '@reown/appkit-ui'
 import {
@@ -87,6 +89,10 @@ export class AppKit {
     this.initControllers(options)
     this.initOrContinue()
     this.version = options.sdkVersion
+    // Check on the next thick because wagmiAdapter authConnector is not immediately available
+    setTimeout(() => {
+      this.checkExistingConnection()
+    }, 0)
   }
 
   public static getInstance() {
@@ -628,5 +634,59 @@ export class AppKit {
     }
 
     return this.initPromise
+  }
+
+  private async checkExistingConnection() {
+    try {
+      if (!CoreHelperUtil.isTelegram()) {
+        return
+      }
+      const socialProviderToConnect = SafeLocalStorage.getItem(
+        SafeLocalStorageKeys.SOCIAL_PROVIDER
+      ) as AccountControllerState['socialProvider']
+      if (!socialProviderToConnect) {
+        return
+      }
+      if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return
+      }
+      const url = new URL(window.location.href)
+      const resultUri = url.searchParams.get('result_uri')
+      if (!resultUri) {
+        return
+      }
+      AccountController.setSocialProvider(
+        socialProviderToConnect,
+        ChainController.state.activeChain
+      )
+      const authConnector = ConnectorController.getAuthConnector()
+      if (socialProviderToConnect && authConnector) {
+        this.setLoading(true)
+        await authConnector.provider.connectSocial(resultUri)
+        await ConnectionController.connectExternal(authConnector, authConnector.chain)
+        StorageUtil.setConnectedSocialProvider(socialProviderToConnect)
+        SafeLocalStorage.removeItem(SafeLocalStorageKeys.SOCIAL_PROVIDER)
+        EventsController.sendEvent({
+          type: 'track',
+          event: 'SOCIAL_LOGIN_SUCCESS',
+          properties: { provider: socialProviderToConnect }
+        })
+      }
+    } catch (error) {
+      this.setLoading(false)
+      // eslint-disable-next-line no-console
+      console.error('checkExistingConnection error', error)
+    }
+
+    try {
+      const url = new URL(window.location.href)
+      // Remove the 'result_uri' parameter
+      url.searchParams.delete('result_uri')
+      // Update the URL without reloading the page
+      window.history.replaceState({}, document.title, url.toString())
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error)
+    }
   }
 }

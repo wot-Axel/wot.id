@@ -636,10 +636,10 @@ export class WagmiAdapter implements ChainAdapter {
       caipNetworks: this.caipNetworks
     })
 
-    this.syncConnectors(this.wagmiConfig.connectors)
     this.syncAuthConnector(
       this.wagmiConfig?.connectors.find(c => c.id === ConstantsUtil.AUTH_CONNECTOR_ID)
     )
+    this.syncConnectors(this.wagmiConfig.connectors)
     this.syncRequestedNetworks(this.caipNetworks)
 
     watchConnectors(this.wagmiConfig, {
@@ -991,6 +991,12 @@ export class WagmiAdapter implements ChainAdapter {
   ) {
     if (bypassWindowCheck || (typeof window !== 'undefined' && connector)) {
       const provider = (await connector.getProvider()) as W3mFrameProvider
+
+      const isLoginEmailUsed = provider.getLoginEmailUsed()
+
+      if (isLoginEmailUsed) {
+        this.appKit?.setLoading(isLoginEmailUsed)
+      }
 
       provider.onRpcRequest((request: W3mFrameTypes.RPCRequest) => {
         if (W3mFrameHelpers.checkIfRequestExists(request)) {
