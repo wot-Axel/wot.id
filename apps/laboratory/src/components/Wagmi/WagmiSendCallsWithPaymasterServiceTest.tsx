@@ -3,19 +3,22 @@ import { useAccount } from 'wagmi'
 import { useSendCalls } from 'wagmi/experimental'
 import { useCallback, useMemo, useState } from 'react'
 import { useChakraToast } from '../Toast'
-import { parseGwei, type Address } from 'viem'
-import { vitalikEthAddress } from '../../utils/DataUtil'
+import { encodeFunctionData, parseEther } from 'viem'
+import { abi as donutContractAbi, address as donutContractaddress } from '../../utils/DonutContract'
 import { EIP_5792_RPC_METHODS, WALLET_CAPABILITIES } from '../../utils/EIP5792Utils'
 import { useWagmiAvailableCapabilities } from '../../hooks/useWagmiActiveCapabilities'
 import { useAppKitAccount } from '@reown/appkit/react'
 
-const TEST_TX_1 = {
-  to: vitalikEthAddress as Address,
-  value: parseGwei('0.001')
-}
-const TEST_TX_2 = {
-  to: vitalikEthAddress as Address,
-  data: '0xdeadbeef' as `0x${string}`
+const purchaseDonutCallData = encodeFunctionData({
+  abi: donutContractAbi,
+  functionName: 'purchase',
+  args: [1]
+})
+
+const TEST_TX = {
+  to: donutContractaddress as `0x${string}`,
+  value: parseEther('0.0001'),
+  data: purchaseDonutCallData
 }
 
 const BICONOMY_PAYMASTER_CONTEXT = {
@@ -90,6 +93,9 @@ function AvailableTestContent() {
       biconomy: BICONOMY_PAYMASTER_CONTEXT,
       reown: {
         policyId: reownPolicyId
+      },
+      trycloudflare: {
+        policyId: reownPolicyId
       }
     }
 
@@ -99,7 +105,7 @@ function AvailableTestContent() {
   function onPaymasterUrlChange(url: string) {
     setPaymasterServiceUrl(url)
 
-    const match = url.match(/pimlico|biconomy|reown/u)
+    const match = url.match(/pimlico|biconomy|reown|trycloudflare/u)
     if (match?.[0]) {
       setPaymasterProvider(match?.[0])
     }
@@ -132,7 +138,7 @@ function AvailableTestContent() {
       throw Error('paymasterServiceUrl not set')
     }
     sendCalls({
-      calls: [TEST_TX_1, TEST_TX_2],
+      calls: [TEST_TX],
       capabilities: {
         paymasterService: {
           url: paymasterServiceUrl,
@@ -154,7 +160,7 @@ function AvailableTestContent() {
           textOverflow="ellipsis"
         />
       </Tooltip>
-      {paymasterProvider === 'reown' && (
+      {
         <Input
           placeholder="Reown Policy ID (Optional)"
           onChange={e => setReownPolicyId(e.target.value)}
@@ -163,7 +169,7 @@ function AvailableTestContent() {
           whiteSpace="nowrap"
           textOverflow="ellipsis"
         />
-      )}
+      }
       <Button
         width={'fit-content'}
         data-testid="send-calls-paymaster-service-button"
