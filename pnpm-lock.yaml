@@ -1756,6 +1756,9 @@ importers:
       '@reown/appkit-ui':
         specifier: workspace:*
         version: link:../ui
+      '@reown/appkit-ui-new':
+        specifier: workspace:*
+        version: link:../ui-new
       '@reown/appkit-utils':
         specifier: workspace:*
         version: link:../appkit-utils
@@ -1781,6 +1784,9 @@ importers:
       '@reown/appkit-ui':
         specifier: workspace:*
         version: link:../ui
+      '@reown/appkit-ui-new':
+        specifier: workspace:*
+        version: link:../ui-new
       '@reown/appkit-utils':
         specifier: workspace:*
         version: link:../appkit-utils
