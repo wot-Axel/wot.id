@@ -1,5 +1,15 @@
 # @reown/appkit-wallet
 
+## 1.5.3
+
+### Patch Changes
+
+- [#3329](https://github.com/reown-com/appkit/pull/3329) [`9f48a1d`](https://github.com/reown-com/appkit/commit/9f48a1dcc379958c8068090a7546048686e770e5) Thanks [@enesozturk](https://github.com/enesozturk)! - Sync wagmi status with account controller status
+
+- Updated dependencies [[`9f48a1d`](https://github.com/reown-com/appkit/commit/9f48a1dcc379958c8068090a7546048686e770e5)]:
+  - @reown/appkit-common@1.5.3
+  - @reown/appkit-polyfills@1.5.3
+
 ## 1.5.2
 
 ### Patch Changes
