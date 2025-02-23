@@ -9,7 +9,8 @@ export default function Home() {
   return (
     <div className={"pages"}>
       <Image src="/wot_logo_light.png" alt="wot_logo_light" width={150} height={150} priority />
-      <h1>AppKit Wagmi Next.js App Router Example</h1>
+      <h1>Just me</h1>
+      <h3>My Trusted Identity on the Ethereum Blockchain</h3>
 
       <ConnectButton />
       <ActionButtonList />
