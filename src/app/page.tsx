@@ -8,7 +8,7 @@ export default function Home() {
 
   return (
     <div className={"pages"}>
-      <Image src="/reown.svg" alt="Reown" width={150} height={150} priority />
+      <Image src="/wot_logo_light.png" alt="wot_logo_light" width={150} height={150} priority />
       <h1>AppKit Wagmi Next.js App Router Example</h1>
 
       <ConnectButton />
