@@ -1,4 +1,4 @@
-//'use client'
+'use client'
 
 import { useReadContract } from 'wagmi'
 import React from 'react'
