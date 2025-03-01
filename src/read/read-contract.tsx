@@ -12,3 +12,5 @@ function ReadContract() {
     <div>Balance: {balance?.toString()}</div>
   )
 }
+
+export default ReadContract
