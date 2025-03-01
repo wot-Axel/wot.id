@@ -3,7 +3,7 @@
 import { useReadContract } from 'wagmi'
 import { wagmiContractConfig } from './contracts'
 
-function ReadContract() {
+export default function ReadContract() {
   const { data: balance } = useReadContract({
     ...wagmiContractConfig,
     functionName: 'balanceOf',
@@ -15,4 +15,3 @@ function ReadContract() {
   )
 }
 
-export default ReadContract
