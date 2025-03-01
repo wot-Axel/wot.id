@@ -1,3 +1,5 @@
+'use client'
+
 import { useReadContract } from 'wagmi'
 import { wagmiContractConfig } from './contracts'
 
