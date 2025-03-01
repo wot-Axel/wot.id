@@ -1,6 +1,6 @@
 import { SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 import { useState } from "react";
-import { SCHEMA, SCHEMA_DETAILS } from "./config";
+import { SCHEMA } from "./config";
 import { useEAS } from "./useEAS";
 import { Address } from "viem";
 
