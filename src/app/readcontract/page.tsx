@@ -5,7 +5,7 @@ function ReadContract() {
   const { data: balance } = useReadContract({
     ...wagmiContractConfig,
     functionName: 'balanceOf',
-    args: ['0x03A71968491d55603FFe1b11A9e23eF013f75bCF'],
+    args: ['0xBBfB973B887DD339eC01E3335be71415e0f1D41b'],
   })
 
   return (
