@@ -1,6 +1,8 @@
 //'use client'
 
 import { useReadContract } from 'wagmi'
+import React from 'react'
+
 import { wagmiContractConfig } from './contracts'
 
 export default function ReadContract() {
