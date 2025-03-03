@@ -1,8 +1,10 @@
 // import { cookieStorage, createStorage, http } from '@wagmi/core'
 import { ConnectButton } from "@/components/ConnectButton";
-import { InfoList } from "@/components/InfoList";
+//import { InfoList } from "@/components/InfoList";
 import { ActionButtonList } from "@/components/ActionButtonList";
 import Image from 'next/image';
+import { Footer } from "@/components/Footer";
+
 
 export default function Home() {
 
@@ -19,7 +21,7 @@ export default function Home() {
           This projectId only works on localhost. <br/>Go to <a href="https://cloud.reown.com" target="_blank" className="link-button" rel="Reown Cloud">Reown Cloud</a> to get your own.
         </p>
       </div>
-      <InfoList />
+      <Footer />
     </div>
   );
 }
