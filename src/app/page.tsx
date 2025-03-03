@@ -4,7 +4,7 @@ import { ConnectButton } from "@/components/ConnectButton";
 import { ActionButtonList } from "@/components/ActionButtonList";
 import Image from 'next/image';
 import { Footer } from "@/components/Footer";
-
+import './globals.css';
 
 export default function Home() {
 
