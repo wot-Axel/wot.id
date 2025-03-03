@@ -18,7 +18,8 @@ export default function Home() {
       <ActionButtonList />
       <div className="advice">
         <p>
-          This projectId only works on localhost. <br/>Go to <a href="https://cloud.reown.com" target="_blank" className="link-button" rel="Reown Cloud">Reown Cloud</a> to get your own.
+          This is an experimental project.<b /> Proceed with caution.
+          
         </p>
       </div>
       <br />
@@ -27,3 +28,6 @@ export default function Home() {
     </div>
   );
 }
+
+
+//<br/>Go to <a href="https://cloud.reown.com" target="_blank" className="link-button" rel="Reown Cloud">Reown Cloud</a> to get your own.
