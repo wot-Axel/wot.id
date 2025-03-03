@@ -1,4 +1,4 @@
-//import { Footer } from "@/components/Footer";
+import { Footer } from "@/components/Footer";
 
 const Legal = () => {
   return (
@@ -57,7 +57,7 @@ const Legal = () => {
       </p>
       <br />
       <br />
-    
+    <Footer />
     </div>
   );
 }
