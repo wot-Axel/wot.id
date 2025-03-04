@@ -58,26 +58,7 @@ const App = () => {
     console.log("Creating Attestation:", attestationData);
   };
 
-
-
-    const transaction = await eas.attest({
-      schema: schemaUID,
-      data: {
-        recipient: attestationData.wotid,
-        expirationTime: undefined,
-        revocable: true, // Be aware that if your schema is not revocable, this MUST be false
-        data: encodedData,
-      },
-    });
-
-    const newAttestationUID = await transaction.wait();
-    setAttestationUID(newAttestationUID);
-
-    console.log("New attestation UID:", newAttestationUID);
-    console.log("Creating Attestation:", attestationData);
-  };
-
-  const revokeAttestation = async () => {
+    const revokeAttestation = async () => {
     if (!eas) return;
     const attestation = await eas.getAttestation(attestationUID);
 
