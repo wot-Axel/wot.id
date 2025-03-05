@@ -1,6 +1,6 @@
 // components/AttestationForm.js
 import { EAS } from '@ethereum-attestation-service/eas-sdk';
-//import { ethers } from 'ethers';
+import { ethers } from 'ethers';
 import { useState } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
