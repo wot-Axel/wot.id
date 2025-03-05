@@ -1,10 +1,10 @@
 // components/AttestationForm.js
 import { EAS } from '@ethereum-attestation-service/eas-sdk';
-import { ethers } from 'ethers';
+//import { ethers } from 'ethers';
 import { useState } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
-const EAS_CONTRACT_ADDRESS = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf'; // Replace with actual EAS contract address on Optimism
+const EAS_CONTRACT_ADDRESS = '0x4200000000000000000000000000000000000021'; // Replace with actual EAS contract address on Optimism
 const SCHEMA_ID = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf'; // Replace with actual schema ID
 
 const AttestationForm = () => {
