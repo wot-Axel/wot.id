@@ -13,11 +13,12 @@
     "@reown/appkit": "^1.6.8",
     "@reown/appkit-adapter-wagmi": "^1.6.8",
     "@tanstack/react-query": "^5.66.9",
+    "ethers": "^6.13.5",
     "next": "15.1.6",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "viem": "^2.23.4",
-    "wagmi": "^2.14.11"
+    "wagmi": "^2.14.12"
   },
   "devDependencies": {
     "@types/node": "^22",
