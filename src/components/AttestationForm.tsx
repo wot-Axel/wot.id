@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 
@@ -10,7 +11,9 @@ const EAS_CONTRACT_ADDRESS = '0x4200000000000000000000000000000000000021';
 const SCHEMA_ID = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf';
 
 const AttestationForm = () => {
-  const { address, isConnected } = useAccount();
+  // Use the AppKit account for authentication status
+  const { address, isConnected } = useAppKitAccount();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wotId, setWotId] = useState('');
   const [isHuman, setIsHuman] = useState(true);
@@ -80,7 +83,7 @@ const AttestationForm = () => {
       
       {!isConnected && (
         <div className="section">
-          <p>Please connect your wallet to create an attestation</p>
+          <p>Please connect your wallet with Reown AppKit to create an attestation</p>
         </div>
       )}
       
