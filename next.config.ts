@@ -1,9 +1,11 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  webpack: config => {
-    config.externals.push('pino-pretty', 'lokijs', 'encoding')
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Your existing configuration
+  webpack: (config) => {
+    // Any webpack configs you had before
     return config
+  },
+  // Add these new settings
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -12,4 +14,4 @@ const nextConfig: NextConfig = {
   }
 };
 
-export default nextConfig;
+module.exports = nextConfig;
