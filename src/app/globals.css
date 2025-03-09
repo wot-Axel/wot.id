@@ -382,3 +382,34 @@ label {
     padding: 15px;
   }
 }
+
+/* About Page additional styles */
+.tech-list {
+  margin-top: 10px;
+  padding-left: 25px;
+}
+
+.tech-list li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.tech-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Make the legal-page class more generic for reuse */
+.legal-page, .about-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  color: var(--foreground);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tech-list {
+    padding-left: 20px;
+  }
+}
+
