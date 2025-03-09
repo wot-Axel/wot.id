@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
@@ -33,13 +32,28 @@ const AttestationForm = () => {
     setTxHash('');
 
     try {
-      // Get the provider from window.ethereum
+      // Get the provider - adjusted for ethers v6 compatibility
       if (!window.ethereum) {
         throw new Error('No wallet detected. Please install a wallet like MetaMask');
       }
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
+      // Use correct syntax based on ethers version
+      let provider;
+      let signer;
+      
+      // For ethers v6
+      if (typeof ethers.BrowserProvider === 'function') {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+      } 
+      // For ethers v5
+      else if (ethers.providers && typeof ethers.providers.Web3Provider === 'function') {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+      }
+      else {
+        throw new Error('Unsupported ethers version');
+      }
       
       // Initialize EAS SDK
       const eas = new EAS(EAS_CONTRACT_ADDRESS);
