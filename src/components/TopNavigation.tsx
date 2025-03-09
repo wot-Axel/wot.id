@@ -44,11 +44,11 @@ export const TopNavigation = () => {
               Read
             </Link>
             <Link 
-              href="/attestation" 
-              className={`nav-link ${isActive('/attestation') ? 'active' : ''}`}
+              href="/write" 
+              className={`nav-link ${isActive('/write') ? 'active' : ''}`}
             >
-              Attestation
-            </Link>
+              Write
+            </Link>            
             {isConnected ? (
               <Link 
                 href="/account" 
