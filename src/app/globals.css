@@ -432,7 +432,7 @@ label {
   }
 }
 
-/* Top Navigation Styles */
+/* Left-aligned Top Navigation with Bold Site Name */
 .top-nav-container {
   width: 100%;
   background-color: white;
@@ -447,9 +447,12 @@ label {
   max-width: 1200px;
   margin: 0 auto;
   padding: 12px 20px;
+}
+
+.nav-left-section {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 20px;
 }
 
 .nav-logo {
@@ -462,10 +465,24 @@ label {
   align-items: center;
 }
 
+/* Enhanced site name styling */
+.site-name {
+  font-size: 1.5rem;  /* Larger font size */
+  font-weight: 700;   /* Bolder font weight */
+  margin-right: 20px; /* More spacing after the name */
+  letter-spacing: -0.02em; /* Slight letter spacing adjustment */
+}
+
+.site-name a {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
 .nav-links {
   display: flex;
   align-items: center;
   gap: 5px;
+  margin-left: 10px; /* Added margin to create separation */
 }
 
 .nav-link {
@@ -486,10 +503,6 @@ label {
   font-weight: 600;
 }
 
-.nav-account {
-  margin-left: 5px;
-}
-
 .connect-wrapper {
   /* Style container for the appkit-button */
   display: flex;
@@ -503,6 +516,15 @@ label {
     padding: 10px 15px;
   }
   
+  .nav-left-section {
+    gap: 10px;
+  }
+  
+  .site-name {
+    font-size: 1.3rem;
+    margin-right: 15px;
+  }
+  
   .nav-links {
     gap: 2px;
   }
@@ -514,6 +536,23 @@ label {
 }
 
 @media (max-width: 480px) {
+  .nav-left-section {
+    flex-wrap: wrap;
+  }
+  
+  .site-name {
+    order: -1;
+    margin-right: auto;
+    font-size: 1.2rem;
+  }
+  
+  .nav-links {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 8px;
+    margin-left: 0;
+  }
+  
   .nav-link {
     padding: 6px 8px;
     font-size: 0.8rem;
