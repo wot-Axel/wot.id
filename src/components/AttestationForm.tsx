@@ -9,6 +9,11 @@ import { ethers } from 'ethers';
 const EAS_CONTRACT_ADDRESS = '0x4200000000000000000000000000000000000021';
 const SCHEMA_ID = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf';
 
+// Create a type for our transaction that allows dynamic access
+type LooseObject = {
+  [key: string]: any;
+};
+
 const AttestationForm = () => {
   // Use the AppKit account for authentication status
   const { address, isConnected } = useAppKitAccount();
@@ -53,7 +58,7 @@ const AttestationForm = () => {
       ]);
 
       // Create the attestation
-      const tx = await eas.attest({
+      const txResponse = await eas.attest({
         schema: SCHEMA_ID,
         data: {
           recipient: address,
@@ -62,31 +67,42 @@ const AttestationForm = () => {
         },
       });
 
-      // Handle the transaction result - use a more flexible approach to extract the hash
-      let transactionHash = '';
+      // Use type assertion to work with the transaction
+      // This avoids TypeScript errors while allowing us to access properties at runtime
+      // eslint-disable-next-line
+      const tx = txResponse as LooseObject;
       
-      if (typeof tx === 'string') {
-        // If the result is a string, it's probably already the transaction hash
-        transactionHash = tx;
-      } else if (tx && typeof tx === 'object') {
-        // Try different properties that might contain the hash
-        // Use optional chaining to avoid errors if properties don't exist
-        transactionHash = tx.transactionHash || 
-                         (tx.transaction && tx.transaction.hash) || 
-                         (tx.receipt && tx.receipt.transactionHash) ||
-                         '';
-                         
-        // If we still don't have a hash, try to stringify the object
-        if (!transactionHash) {
-          try {
-            transactionHash = JSON.stringify(tx);
-          } catch {
-            transactionHash = 'Transaction created';
+      // Extract transaction hash safely
+      let extractedHash = '';
+      
+      try {
+        if (typeof tx === 'string') {
+          extractedHash = tx;
+        } else if (tx && typeof tx === 'object') {
+          if (tx.hash) extractedHash = tx.hash;
+          else if (tx.transactionHash) extractedHash = tx.transactionHash;
+          else if (tx.transaction?.hash) extractedHash = tx.transaction.hash;
+          else if (tx.receipt?.transactionHash) extractedHash = tx.receipt.transactionHash;
+          
+          // Wait for transaction if needed and not yet waited
+          if (!extractedHash && typeof tx.wait === 'function') {
+            const receipt = await tx.wait();
+            if (receipt.transactionHash) {
+              extractedHash = receipt.transactionHash;
+            }
+          }
+          
+          // Fallback to string representation
+          if (!extractedHash) {
+            extractedHash = 'Transaction submitted';
           }
         }
+      } catch (err) {
+        console.error('Error extracting hash:', err);
+        extractedHash = 'Transaction submitted';
       }
       
-      setTxHash(transactionHash);
+      setTxHash(extractedHash);
       
       // Reset form after successful submission
       setWotId('');
