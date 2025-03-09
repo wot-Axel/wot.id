@@ -3,14 +3,30 @@
 import { Footer } from "@/components/Footer";
 import { ConnectButton } from "@/components/ConnectButton";
 import AttestationForm from '@/components/AttestationForm';
+import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
+import { useClientMounted } from "@/hooks/useClientMount";
 
 const AttestationPage = () => {
+  const { isConnected } = useAppKitAccount();
+  const { open } = useAppKit();
+  const mounted = useClientMounted();
+
+  if (!mounted) {
+    return null; // Prevent rendering until client is mounted
+  }
+
   return (
     <div className="pages">
       <h1>Ethereum Attestation Service</h1>
       <p>Create your attestation on the Optimism blockchain</p>
       
       <ConnectButton />
+      
+      {!isConnected && (
+        <div style={{ margin: '20px 0' }}>
+          <button onClick={() => open()}>Connect Wallet</button>
+        </div>
+      )}
       
       <div className="attestation-container">
         <AttestationForm />
