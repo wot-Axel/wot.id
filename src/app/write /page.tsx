@@ -46,4 +46,4 @@ const AttestationPage = () => {
   );
 };
 
-export default AttestationPage;
+export default WritePage;
