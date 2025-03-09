@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-
-
-import { headers } from 'next/headers' // added
+import { headers } from 'next/headers';
 import './globals.css';
-import ContextProvider from '@/context'
+import ContextProvider from '@/context';
+import { TopNavigation } from '@/components/TopNavigation';
 
 export const metadata: Metadata = {
   title: "wot.id",
@@ -21,7 +20,12 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ContextProvider cookies={cookies}>{children}</ContextProvider>
+        <ContextProvider cookies={cookies}>
+          <TopNavigation />
+          <main className="main-content">
+            {children}
+          </main>
+        </ContextProvider>
       </body>
     </html>
   );
