@@ -37,9 +37,8 @@ const AttestationForm = () => {
         throw new Error('No wallet detected. Please install a wallet like MetaMask');
       }
 
-      // Use a type assertion with unknown as an intermediate step to avoid type errors
-      const ethereumProvider = window.ethereum as unknown;
-      const provider = new ethers.BrowserProvider(ethereumProvider as ethers.Eip1193Provider);
+      // Use type assertion to cast window.ethereum
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
       const signer = await provider.getSigner();
       
       // Initialize EAS SDK
@@ -65,8 +64,13 @@ const AttestationForm = () => {
 
       // Wait for the transaction to be processed
       const receipt = await tx.wait();
-      // In ethers v6, transactionHash might be structured differently
-      const transactionHash = receipt.hash || receipt.transactionHash;
+      
+      // Instead of trying to access properties on receipt, just use tx.hash if available
+      // or the whole receipt as a string if needed
+      const transactionHash = typeof tx === 'object' && tx !== null && 'hash' in tx 
+        ? tx.hash as string
+        : String(receipt); // fallback
+        
       setTxHash(transactionHash);
       
       // Reset form after successful submission
