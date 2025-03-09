@@ -37,7 +37,8 @@ const AttestationForm = () => {
         throw new Error('No wallet detected. Please install a wallet like MetaMask');
       }
 
-      // Use type assertion to cast window.ethereum
+      // Directly accessing ethereum provider
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const provider = new ethers.BrowserProvider(window.ethereum as any);
       const signer = await provider.getSigner();
       
@@ -62,15 +63,21 @@ const AttestationForm = () => {
         },
       });
 
-      // Wait for the transaction to be processed
-      const receipt = await tx.wait();
+      // Simplify transaction hash extraction
+      let transactionHash = '';
       
-      // Instead of trying to access properties on receipt, just use tx.hash if available
-      // or the whole receipt as a string if needed
-      const transactionHash = typeof tx === 'object' && tx !== null && 'hash' in tx 
-        ? tx.hash as string
-        : String(receipt); // fallback
-        
+      if (tx && typeof tx === 'object') {
+        if ('hash' in tx) {
+          transactionHash = String(tx.hash);
+        } else if ('transactionHash' in tx) {
+          transactionHash = String(tx.transactionHash);
+        }
+      }
+      
+      if (!transactionHash && tx) {
+        transactionHash = String(tx);
+      }
+      
       setTxHash(transactionHash);
       
       // Reset form after successful submission
