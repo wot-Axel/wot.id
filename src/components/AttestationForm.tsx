@@ -5,6 +5,11 @@ import { useAppKitAccount } from '@reown/appkit/react';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 
+// Define a minimal interface for Ethereum provider
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
 // Constants for EAS
 const EAS_CONTRACT_ADDRESS = '0x4200000000000000000000000000000000000021';
 const SCHEMA_ID = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf';
@@ -34,12 +39,13 @@ const AttestationForm = () => {
     try {
       // Check if ethereum provider exists
       if (!window.ethereum) {
-        throw new Error('No wallet detected. Please install a wallet like MetaMask');
+        throw new Error('No wallet detection available. Please use the Reown AppKit to connect your wallet.');
+        return;
       }
 
-      // Directly accessing ethereum provider
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      // Cast to our minimal interface which should be compatible with ethers
+      const ethereumProvider = window.ethereum as EthereumProvider;
+      const provider = new ethers.BrowserProvider(ethereumProvider);
       const signer = await provider.getSigner();
       
       // Initialize EAS SDK
