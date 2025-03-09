@@ -18,22 +18,24 @@ export const TopNavigation = () => {
     <header className="top-nav-container">
       <div className="top-nav">
         <div className="nav-left-section">
-          <div className="nav-logo">
-            <Link href="/">
-              <Image 
-                src="/wot_logo_light.png" 
-                alt="wot.id logo" 
-                width={40} 
-                height={40} 
-                priority 
-              />
-            </Link>
-          </div>
-          
-          <div className="site-name">
-            <Link href="/">
-              wot.id
-            </Link>
+          <div className="site-name-wrapper">
+            <div className="nav-logo">
+              <Link href="/">
+                <Image 
+                  src="/wot_logo_light.png" 
+                  alt="wot.id logo" 
+                  width={40} 
+                  height={40} 
+                  priority 
+                />
+              </Link>
+            </div>
+            
+            <div className="site-name">
+              <Link href="/">
+                wot.id
+              </Link>
+            </div>
           </div>
           
           <nav className="nav-links">
@@ -49,21 +51,19 @@ export const TopNavigation = () => {
             >
               Attestation
             </Link>
-            <div className="nav-account">
-              {isConnected ? (
-                <Link 
-                  href="/account" 
-                  className={`nav-link account-link ${isActive('/account') ? 'active' : ''}`}
-                >
-                  Account
-                </Link>
-              ) : (
-                <div className="connect-wrapper">
-                  {/* @ts-expect-error Add this line while our team fix the upgrade to react 19 for global components */}
-                  <appkit-button />
-                </div>
-              )}
-            </div>
+            {isConnected ? (
+              <Link 
+                href="/account" 
+                className={`nav-link ${isActive('/account') ? 'active' : ''}`}
+              >
+                Account
+              </Link>
+            ) : (
+              <div className="connect-wrapper">
+                {/* @ts-expect-error Add this line while our team fix the upgrade to react 19 for global components */}
+                <appkit-button />
+              </div>
+            )}
           </nav>
         </div>
       </div>
