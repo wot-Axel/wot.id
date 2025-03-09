@@ -38,7 +38,6 @@ const AttestationForm = () => {
       }
 
       // Cast window.ethereum to unknown first, then to the correct type
-      // This avoids TypeScript errors while still providing the right runtime behavior
       const provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
       const signer = await provider.getSigner();
       
@@ -63,8 +62,31 @@ const AttestationForm = () => {
         },
       });
 
-      // Simplify transaction handling
-      setTxHash(typeof tx === 'string' ? tx : tx.hash || '');
+      // Handle the transaction result - use a more flexible approach to extract the hash
+      let transactionHash = '';
+      
+      if (typeof tx === 'string') {
+        // If the result is a string, it's probably already the transaction hash
+        transactionHash = tx;
+      } else if (tx && typeof tx === 'object') {
+        // Try different properties that might contain the hash
+        // Use optional chaining to avoid errors if properties don't exist
+        transactionHash = tx.transactionHash || 
+                         (tx.transaction && tx.transaction.hash) || 
+                         (tx.receipt && tx.receipt.transactionHash) ||
+                         '';
+                         
+        // If we still don't have a hash, try to stringify the object
+        if (!transactionHash) {
+          try {
+            transactionHash = JSON.stringify(tx);
+          } catch {
+            transactionHash = 'Transaction created';
+          }
+        }
+      }
+      
+      setTxHash(transactionHash);
       
       // Reset form after successful submission
       setWotId('');
@@ -130,13 +152,15 @@ const AttestationForm = () => {
             <div className="success">
               <p>Attestation created successfully!</p>
               <p>
-                Transaction: <a 
-                  href={`https://optimistic.etherscan.io/tx/${txHash}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  {txHash.substring(0, 10)}...{txHash.substring(txHash.length - 8)}
-                </a>
+                Transaction: {txHash.length > 20 ? (
+                  <a 
+                    href={`https://optimistic.etherscan.io/tx/${txHash}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    {txHash.substring(0, 10)}...{txHash.substring(txHash.length - 8)}
+                  </a>
+                ) : txHash}
               </p>
             </div>
           )}
