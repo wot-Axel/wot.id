@@ -32,31 +32,18 @@ const AttestationForm = () => {
     setTxHash('');
 
     try {
-      // Get the provider - adjusted for ethers v6 compatibility
+      // Get the provider - using ethers v6 syntax
       if (!window.ethereum) {
         throw new Error('No wallet detected. Please install a wallet like MetaMask');
       }
 
-      // Use correct syntax based on ethers version
-      let provider;
-      let signer;
-      
-      // For ethers v6
-      if (typeof ethers.BrowserProvider === 'function') {
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
-      } 
-      // For ethers v5
-      else if (ethers.providers && typeof ethers.providers.Web3Provider === 'function') {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = provider.getSigner();
-      }
-      else {
-        throw new Error('Unsupported ethers version');
-      }
+      // Ethers v6 syntax
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       
       // Initialize EAS SDK
       const eas = new EAS(EAS_CONTRACT_ADDRESS);
+      // Connect with ethers v6 signer
       eas.connect(signer);
 
       // Schema encoding based on your schema structure
@@ -78,7 +65,9 @@ const AttestationForm = () => {
 
       // Wait for the transaction to be processed
       const receipt = await tx.wait();
-      setTxHash(receipt.transactionHash);
+      // In ethers v6, transactionHash might be structured differently
+      const transactionHash = receipt.hash || receipt.transactionHash;
+      setTxHash(transactionHash);
       
       // Reset form after successful submission
       setWotId('');
