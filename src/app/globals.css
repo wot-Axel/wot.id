@@ -556,3 +556,13 @@ label {
   text-decoration: underline;
 }
 
+/* Main content area styling */
+.main-content {
+  padding-top: 20px;
+  min-height: calc(100vh - 64px - 100px); /* account for nav and footer */
+}
+
+/* Additional body styling */
+body {
+  padding-top: 0; /* Remove any existing padding */
+}
