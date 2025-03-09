@@ -5,11 +5,6 @@ import { useAppKitAccount } from '@reown/appkit/react';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 
-// Define a minimal interface for Ethereum provider
-interface EthereumProvider {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-}
-
 // Constants for EAS
 const EAS_CONTRACT_ADDRESS = '0x4200000000000000000000000000000000000021';
 const SCHEMA_ID = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf';
@@ -40,12 +35,11 @@ const AttestationForm = () => {
       // Check if ethereum provider exists
       if (!window.ethereum) {
         throw new Error('No wallet detection available. Please use the Reown AppKit to connect your wallet.');
-        return;
       }
 
-      // Cast to our minimal interface which should be compatible with ethers
-      const ethereumProvider = window.ethereum as EthereumProvider;
-      const provider = new ethers.BrowserProvider(ethereumProvider);
+      // Cast window.ethereum to unknown first, then to the correct type
+      // This avoids TypeScript errors while still providing the right runtime behavior
+      const provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
       const signer = await provider.getSigner();
       
       // Initialize EAS SDK
@@ -65,26 +59,12 @@ const AttestationForm = () => {
         data: {
           recipient: address,
           data: encodedData,
-          revocable: true, // Whether the attestation can be revoked
+          revocable: true,
         },
       });
 
-      // Simplify transaction hash extraction
-      let transactionHash = '';
-      
-      if (tx && typeof tx === 'object') {
-        if ('hash' in tx) {
-          transactionHash = String(tx.hash);
-        } else if ('transactionHash' in tx) {
-          transactionHash = String(tx.transactionHash);
-        }
-      }
-      
-      if (!transactionHash && tx) {
-        transactionHash = String(tx);
-      }
-      
-      setTxHash(transactionHash);
+      // Simplify transaction handling
+      setTxHash(typeof tx === 'string' ? tx : tx.hash || '');
       
       // Reset form after successful submission
       setWotId('');
