@@ -5,13 +5,6 @@ import { useAppKitAccount } from '@reown/appkit/react';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 
-// Define a more specific type for window.ethereum
-declare global {
-  interface Window {
-    ethereum?: ethers.Eip1193Provider;
-  }
-}
-
 // Constants for EAS
 const EAS_CONTRACT_ADDRESS = '0x4200000000000000000000000000000000000021';
 const SCHEMA_ID = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf';
@@ -39,18 +32,18 @@ const AttestationForm = () => {
     setTxHash('');
 
     try {
-      // Get the provider - using ethers v6 syntax
+      // Check if ethereum provider exists
       if (!window.ethereum) {
         throw new Error('No wallet detected. Please install a wallet like MetaMask');
       }
 
-      // No need to cast since we defined the type properly
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      // Use a type assertion with unknown as an intermediate step to avoid type errors
+      const ethereumProvider = window.ethereum as unknown;
+      const provider = new ethers.BrowserProvider(ethereumProvider as ethers.Eip1193Provider);
       const signer = await provider.getSigner();
       
       // Initialize EAS SDK
       const eas = new EAS(EAS_CONTRACT_ADDRESS);
-      // Connect with ethers v6 signer
       eas.connect(signer);
 
       // Schema encoding based on your schema structure
