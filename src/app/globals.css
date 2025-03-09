@@ -235,3 +235,77 @@ label {
   text-align: center;
   color: #666;
 }
+/* Legal Page Styling */
+.legal-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  color: var(--foreground);
+}
+
+.page-title {
+  text-align: center;
+  margin-bottom: 40px;
+  font-size: 2.2rem;
+  border-bottom: 2px solid #eaeaea;
+  padding-bottom: 15px;
+}
+
+.legal-section {
+  margin-bottom: 30px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.legal-section h2 {
+  background-color: #000;
+  color: white;
+  padding: 15px 20px;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.legal-content {
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.legal-content p {
+  margin-bottom: 15px;
+}
+
+.legal-content p:last-child {
+  margin-bottom: 0;
+}
+
+.support-note {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed #ddd;
+  font-style: italic;
+  color: #555;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .legal-page {
+    padding: 15px;
+  }
+  
+  .page-title {
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+  }
+  
+  .legal-section h2 {
+    font-size: 1.2rem;
+    padding: 12px 15px;
+  }
+  
+  .legal-content {
+    padding: 15px;
+  }
+}
