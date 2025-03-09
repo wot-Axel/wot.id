@@ -111,3 +111,50 @@ pre {
    margin-bottom: 10px;
    line-height: 25px;
 }
+
+/* Form styling for attestation */
+.form-input, .form-select {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.form-input:focus, .form-select:focus {
+  border-color: black;
+  outline: none;
+}
+
+.attestation-container {
+  width: 90%;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.error {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 15px;
+  border-radius: 6px;
+  margin: 20px 0;
+  border-left: 4px solid #c62828;
+}
+
+.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 15px;
+  border-radius: 6px;
+  margin: 20px 0;
+  border-left: 4px solid #2e7d32;
+}
+
+label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 5px;
+}
