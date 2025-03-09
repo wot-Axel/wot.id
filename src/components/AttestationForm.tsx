@@ -5,10 +5,10 @@ import { useAppKitAccount } from '@reown/appkit/react';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 
-// Add this to handle the window.ethereum type
+// Define a more specific type for window.ethereum
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: ethers.Eip1193Provider;
   }
 }
 
@@ -44,8 +44,8 @@ const AttestationForm = () => {
         throw new Error('No wallet detected. Please install a wallet like MetaMask');
       }
 
-      // Cast window.ethereum to the expected type
-      const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
+      // No need to cast since we defined the type properly
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       
       // Initialize EAS SDK
