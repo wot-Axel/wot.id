@@ -3,20 +3,22 @@ import Link from 'next/link';
 
 export const Footer = () => {
   return (
-    <div id="section_footer">
-      <div className='text-center py-4'>
-        < Link href="/legal" className='btn btn-link'>
-          Legal 
-        </Link>
-        <span> | </ span>
-        <Link href="https://app.ens.domains/wot.eth" target="_blank" className='btn btn-link'>
-          Support: wot.eth 
-        </Link>
-        <span> | </span>
-        <Link href="/about" className='btn btn-link'>
-          About 
-        </Link>
+    <footer className="site-footer">
+      <div className="footer-container">
+        <nav className="footer-nav">
+          <Link href="/legal" className="footer-link">
+            Legal
+          </Link>
+          <div className="footer-divider"></div>
+          <Link href="https://app.ens.domains/wot.eth" target="_blank" className="footer-link">
+            Support: wot.eth
+          </Link>
+          <div className="footer-divider"></div>
+          <Link href="/about" className="footer-link">
+            About
+          </Link>
+        </nav>
       </div>
-    </div>
+    </footer>
   );
 }
