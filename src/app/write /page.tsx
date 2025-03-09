@@ -6,7 +6,7 @@ import AttestationForm from '@/components/AttestationForm';
 import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
 import { useClientMounted } from "@/hooks/useClientMount";
 
-const AttestationPage = () => {
+const WritePage = () => {
   const { isConnected } = useAppKitAccount();
   const { open } = useAppKit();
   const mounted = useClientMounted();
