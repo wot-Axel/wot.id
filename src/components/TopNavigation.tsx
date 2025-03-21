@@ -17,8 +17,15 @@ export const TopNavigation = () => {
   return (
     <header className="top-nav-container">
       <div className="top-nav">
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-          <div className="nav-left-section" style={{ display: 'flex', alignItems: 'center' }}>
+        <div className="nav-left-section" style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          width: '100%', 
+          alignItems: 'center',
+          padding: '0 12px',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div className="nav-logo">
               <Link href="/">
                 <Image 
@@ -62,7 +69,7 @@ export const TopNavigation = () => {
           </div>
           
           {!isConnected && (
-            <div className="connect-wrapper" style={{ marginRight: '20px' }}>
+            <div className="connect-wrapper">
               {/* @ts-expect-error Add this line while our team fix the upgrade to react 19 for global components */}
               <appkit-button />
             </div>
