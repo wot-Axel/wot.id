@@ -46,16 +46,16 @@ export const TopNavigation = () => {
             
             <nav className="nav-links">
               <Link 
-                href="/read" 
-                className={`nav-link ${isActive('/read') ? 'active' : ''}`}
-              >
-                Read
-              </Link>
-              <Link 
                 href="/write" 
                 className={`nav-link ${isActive('/write') ? 'active' : ''}`}
               >
                 Write
+              </Link>
+              <Link 
+                href="/read" 
+                className={`nav-link ${isActive('/read') ? 'active' : ''}`}
+              >
+                Read
               </Link>            
               {isConnected && (
                 <Link 
