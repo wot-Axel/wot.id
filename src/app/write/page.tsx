@@ -17,7 +17,7 @@ const WritePage = () => {
 
   return (
     <div className="pages">
-      <h1>Give Attestations</h1>
+      <h1>Give Trust</h1>
       <p>Create your attestation on the Optimism blockchain</p>
       
       <ConnectButton />

@@ -117,7 +117,7 @@ const AttestationForm = () => {
 
   return (
     <div className="pages">
-      <h2>Create Attestation</h2>
+      <h2>Give Trust</h2>
       
       {!isConnected && (
         <div className="section">
@@ -154,7 +154,7 @@ const AttestationForm = () => {
             </div>
             
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating Attestation...' : 'Create Attestation'}
+              {isSubmitting ? 'Processing...' : 'Is True'}
             </button>
           </form>
           

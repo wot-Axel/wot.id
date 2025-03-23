@@ -113,7 +113,7 @@ const ReadAttestationPage = () => {
 
   return (
     <div className="pages">
-      <h1>Get Attestations</h1>
+      <h1>Get Trust</h1>
       <p>View attestations for the schema: <code>{SCHEMA_ID.substring(0, 10)}...{SCHEMA_ID.substring(SCHEMA_ID.length - 8)}</code></p>
       
       <ConnectButton />
