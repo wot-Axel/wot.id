@@ -46,7 +46,7 @@ const AccountPage = () => {
             <h2>Your Attestations</h2>
             <div className="legal-content">
               <p>
-                View your attestations on the <a href="/read" className="text-link">Read page</a>.
+                View your attestations on the <a href="/read" className="text-link">Get page</a>.
               </p>
             </div>
           </div>
