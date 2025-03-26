@@ -4,6 +4,7 @@ import { useAppKitAccount, useDisconnect } from '@reown/appkit/react';
 import { ConnectButton } from "@/components/ConnectButton";
 import { Footer } from "@/components/Footer";
 import { PrivateDataSection } from "@/components/PrivateDataSection";
+import { MedicalDataSection } from "@/components/MedicalDataSection";
 import { useEffect, useState } from 'react';
 import { formatAddress } from '@/utils/attestationUtils';
 
@@ -53,6 +54,8 @@ const MePage = () => {
           </div>
           
           <PrivateDataSection />
+          
+          <MedicalDataSection />
           
           <div className="legal-section">
             <div className="legal-content" style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>

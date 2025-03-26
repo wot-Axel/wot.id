@@ -742,3 +742,47 @@ body {
   background-color: #cccccc;
   cursor: not-allowed;
 }
+
+/* Medical Data Styles */
+.medical-data-section {
+  margin-bottom: 1.5rem;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.section-title {
+  background-color: #f5f5f5;
+  padding: 0.75rem 1rem;
+  margin: 0;
+  font-size: 1rem;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.medical-data-container {
+  margin-top: 1.5rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0;
+  font-size: 0.9rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.5rem;
+  border: 1px solid #eaeaea;
+  text-align: left;
+}
+
+.data-table th {
+  background-color: #f9f9f9;
+  font-weight: 600;
+}
+
+.table-container {
+  overflow-x: auto;
+  padding: 1rem;
+}
