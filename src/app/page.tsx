@@ -1,7 +1,6 @@
 // import { cookieStorage, createStorage, http } from '@wagmi/core'
 import { ConnectButton } from "@/components/ConnectButton";
 //import { InfoList } from "@/components/InfoList";
-import { ActionButtonList } from "@/components/ActionButtonList";
 import Image from 'next/image';
 import { Footer } from "@/components/Footer";
 import './globals.css';
@@ -15,7 +14,6 @@ export default function Home() {
       <h3>My safe Identity on the Web Of Trust</h3>
 
       <ConnectButton />
-      <ActionButtonList />
       <div className="advice">
         <p>
           This is an experimental project.<b /> Proceed with caution.
