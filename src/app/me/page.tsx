@@ -20,7 +20,6 @@ const MePage = () => {
   
   return (
     <div className="legal-page">
-      <h1 className="page-title">My Account</h1>
       
       {!isConnected ? (
         <div className="legal-section">
