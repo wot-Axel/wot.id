@@ -119,11 +119,18 @@ body {
 }
 
 @media (max-width: 580px) {
+  .footer-container {
+    padding: 0 10px;
+    width: 100%;
+    max-width: 100%;
+  }
+
   .footer-nav {
     flex-direction: row;
     justify-content: space-between;
     gap: 5px;
     padding: 12px;
+    width: 100%;
   }
   
   .footer-divider {
@@ -489,9 +496,11 @@ label {
 }
 
 .top-nav {
-  max-width: 800px; /* Match the footer container width */
+  max-width: 1200px; /* Match the main content width */
   margin: 0 auto;
   padding: 15px 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .nav-left-section {
@@ -533,7 +542,7 @@ label {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   flex-wrap: nowrap; /* Prevent wrapping by default */
 }
 
@@ -558,6 +567,12 @@ label {
   font-weight: 600;
 }
 
+.nav-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
 .connect-wrapper {
   display: flex;
   align-items: center;
@@ -579,41 +594,51 @@ label {
 @media (max-width: 600px) {
   .nav-left-section {
     padding: 8px 10px;
-    gap: 10px;
+    gap: 6px;
   }
   
   .site-name {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
   }
   
   .nav-link {
-    padding: 6px 10px;
+    padding: 6px 8px;
     font-size: 0.85rem;
   }
   
-  /* Only allow wrapping at very small sizes */
+  /* Hide connect button on mobile */
+  .nav-connect-button {
+    display: none;
+  }
+  
+  /* Keep links in one line */
   .nav-links {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 }
 
 /* Only allow major layout changes at the smallest screens */
 @media (max-width: 480px) {
   .nav-left-section {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: space-between;
+    gap: 4px;
   }
   
-  .site-name-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  .site-name {
+    font-size: 1.1rem;
+  }
+  
+  .nav-link {
+    padding: 5px 6px;
+    font-size: 0.8rem;
   }
   
   .nav-links {
-    width: 100%;
+    width: auto;
     justify-content: flex-start;
-    margin-top: 8px;
+    margin-top: 0;
+    gap: 2px;
   }
 }
 

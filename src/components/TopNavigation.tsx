@@ -18,50 +18,41 @@ export const TopNavigation = () => {
   return (
     <header className="top-nav-container">
       <div className="top-nav">
-        <div className="nav-left-section" style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          width: '100%', 
-          alignItems: 'center',
-          padding: '0 12px',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div className="nav-logo">
-              <Link href={isConnected ? "/me" : "/"}>
-                <Image 
-                  src="/wot_logo_light.png" 
-                  alt="wot.id logo" 
-                  width={40} 
-                  height={40} 
-                  priority 
-                />
-              </Link>
-            </div>
-            
-            <div className="site-name">
-              <Link href={isConnected ? "/me" : "/"}>
-                wot.id
-              </Link>
-            </div>
-            
-            <nav className="nav-links">
-              <Link 
-                href="/write" 
-                className={`nav-link ${isActive('/write') ? 'active' : ''}`}
-              >
-                Give Trust
-              </Link>
-              <Link 
-                href="/read" 
-                className={`nav-link ${isActive('/read') ? 'active' : ''}`}
-              >
-                Get Trust
-              </Link>
-            </nav>
+        <div className="nav-left-section">
+          <div className="nav-logo">
+            <Link href={isConnected ? "/me" : "/"}>
+              <Image 
+                src="/wot_logo_light.png" 
+                alt="wot.id logo" 
+                width={36} 
+                height={36} 
+                priority 
+              />
+            </Link>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div className="site-name">
+            <Link href={isConnected ? "/me" : "/"}>
+              wot.id
+            </Link>
+          </div>
+          
+          <nav className="nav-links">
+            <Link 
+              href="/write" 
+              className={`nav-link ${isActive('/write') ? 'active' : ''}`}
+            >
+              Give Trust
+            </Link>
+            <Link 
+              href="/read" 
+              className={`nav-link ${isActive('/read') ? 'active' : ''}`}
+            >
+              Get Trust
+            </Link>
+          </nav>
+          
+          <div className="nav-right">
             {isConnected && (
               <Link 
                 href="/me" 
