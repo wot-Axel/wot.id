@@ -35,6 +35,13 @@ body {
   background-color: #333333;
 }
 
+/* Navigation Connect Button Styles */
+.nav-connect-button {
+  padding: 8px 16px;
+  font-size: 14px;
+  margin: 0;
+}
+
 /* Footer Styles - Aligned with Legal Page */
 .site-footer {
   width: 100%;

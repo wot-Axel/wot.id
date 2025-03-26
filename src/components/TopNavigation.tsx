@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
 
 export const TopNavigation = () => {
   const pathname = usePathname();
   const { isConnected } = useAppKitAccount();
+  const { open } = useAppKit();
   
   // Helper function to determine if a link is active
   const isActive = (path: string) => {
@@ -72,8 +73,12 @@ export const TopNavigation = () => {
             
             {!isConnected && (
               <div className="connect-wrapper">
-                {/* @ts-expect-error Add this line while our team fix the upgrade to react 19 for global components */}
-                <appkit-button />
+                <button 
+                  onClick={() => open()}
+                  className="connect-button nav-connect-button"
+                >
+                  Connect
+                </button>
               </div>
             )}
           </div>
