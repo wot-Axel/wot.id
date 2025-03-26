@@ -18,6 +18,23 @@ body {
 }
 
 
+/* Connect Button Styles */
+.connect-button {
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.connect-button:hover {
+  background-color: #333333;
+}
+
 /* Footer Styles - Aligned with Legal Page */
 .site-footer {
   width: 100%;
