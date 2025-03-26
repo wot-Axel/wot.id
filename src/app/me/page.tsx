@@ -1,6 +1,6 @@
 'use client';
 
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useAppKitAccount, useDisconnect } from '@reown/appkit/react';
 import { ConnectButton } from "@/components/ConnectButton";
 import { Footer } from "@/components/Footer";
 import { PrivateDataSection } from "@/components/PrivateDataSection";
@@ -9,6 +9,7 @@ import { formatAddress } from '@/utils/attestationUtils';
 
 const MePage = () => {
   const { address, isConnected } = useAppKitAccount();
+  const { disconnect } = useDisconnect();
   const [walletAddress, setWalletAddress] = useState<string>('');
   
   useEffect(() => {
@@ -53,6 +54,17 @@ const MePage = () => {
           </div>
           
           <PrivateDataSection />
+          
+          <div className="legal-section">
+            <div className="legal-content" style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+              <button 
+                onClick={() => disconnect()}
+                className="disconnect-button"
+              >
+                Disconnect
+              </button>
+            </div>
+          </div>
         </>
       )}
       

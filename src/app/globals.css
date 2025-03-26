@@ -42,6 +42,23 @@ body {
   margin: 0;
 }
 
+/* Disconnect Button Styles */
+.disconnect-button {
+  background-color: #f44336;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.disconnect-button:hover {
+  background-color: #d32f2f;
+}
+
 /* Footer Styles - Aligned with Legal Page */
 .site-footer {
   width: 100%;
