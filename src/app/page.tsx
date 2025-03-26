@@ -1,3 +1,5 @@
+'use client';
+
 // import { cookieStorage, createStorage, http } from '@wagmi/core'
 import { ConnectButton } from "@/components/ConnectButton";
 //import { InfoList } from "@/components/InfoList";
