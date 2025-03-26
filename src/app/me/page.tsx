@@ -34,7 +34,7 @@ const MePage = () => {
       ) : (
         <>
           <div className="legal-section">
-            <h2>Wallet Information</h2>
+            <h2>My Ethereum Account</h2>
             <div className="legal-content">
               <div className="account-detail">
                 <span className="detail-label">Address:</span>
