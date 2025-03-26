@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { useEffect, useState } from 'react';
 import { formatAddress } from '@/utils/attestationUtils';
 
-const AccountPage = () => {
+const MePage = () => {
   const { address, isConnected } = useAppKitAccount();
   const [walletAddress, setWalletAddress] = useState<string>('');
   
@@ -18,7 +18,7 @@ const AccountPage = () => {
   
   return (
     <div className="legal-page">
-      <h1 className="page-title">Account</h1>
+      <h1 className="page-title">My Account</h1>
       
       {!isConnected ? (
         <div className="legal-section">
@@ -58,4 +58,4 @@ const AccountPage = () => {
   );
 };
 
-export default AccountPage;
+export default MePage;

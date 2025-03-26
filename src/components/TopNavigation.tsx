@@ -56,24 +56,27 @@ export const TopNavigation = () => {
                 className={`nav-link ${isActive('/read') ? 'active' : ''}`}
               >
                 Get
-              </Link>            
-              {isConnected && (
-                <Link 
-                  href="/account" 
-                  className={`nav-link ${isActive('/account') ? 'active' : ''}`}
-                >
-                  Account
-                </Link>
-              )}
+              </Link>
             </nav>
           </div>
           
-          {!isConnected && (
-            <div className="connect-wrapper">
-              {/* @ts-expect-error Add this line while our team fix the upgrade to react 19 for global components */}
-              <appkit-button />
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {isConnected && (
+              <Link 
+                href="/me" 
+                className={`nav-link ${isActive('/me') ? 'active' : ''}`}
+              >
+                Me
+              </Link>
+            )}
+            
+            {!isConnected && (
+              <div className="connect-wrapper">
+                {/* @ts-expect-error Add this line while our team fix the upgrade to react 19 for global components */}
+                <appkit-button />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
