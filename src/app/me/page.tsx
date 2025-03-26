@@ -35,16 +35,6 @@ const MePage = () => {
       ) : (
         <>
           <div className="legal-section">
-            <h2>My Ethereum Account</h2>
-            <div className="legal-content">
-              <div className="account-detail">
-                <span className="detail-label">Address:</span>
-                <span className="detail-value">{address}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="legal-section">
             <h2>Your Attestations</h2>
             <div className="legal-content">
               <p>
@@ -56,6 +46,16 @@ const MePage = () => {
           <PrivateDataSection />
           
           <MedicalDataSection />
+          
+          <div className="legal-section">
+            <h2>My Ethereum Account</h2>
+            <div className="legal-content">
+              <div className="account-detail">
+                <span className="detail-label">Address:</span>
+                <span className="detail-value">{address}</span>
+              </div>
+            </div>
+          </div>
           
           <div className="legal-section">
             <div className="legal-content" style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
