@@ -719,3 +719,26 @@ body {
   border: 1px solid #f5c6cb;
   color: #721c24;
 }
+
+/* Primary Button Style */
+.button-primary {
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 15px 0;
+}
+
+.button-primary:hover {
+  background-color: #333333;
+}
+
+.button-primary:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
