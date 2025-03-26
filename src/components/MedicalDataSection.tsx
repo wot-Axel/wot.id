@@ -5,10 +5,10 @@ import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { optimism } from '@reown/appkit/networks';
 import { 
   initTableland, 
-  createPrivateTable, 
-  insertPrivateData, 
-  getPrivateData,
-  checkTableExists,
+  createMedicalTable, 
+  insertMedicalData, 
+  getMedicalData,
+  checkMedicalTableExists,
   type PrivateData
 } from '@/utils/tablelandUtils';
 import { Database } from '@tableland/sdk';
@@ -50,13 +50,13 @@ export const MedicalDataSection = () => {
       const tablelandDb = await initTableland();
       setDb(tablelandDb);
       
-      // Check if table exists
-      const existingTable = await checkTableExists(tablelandDb, address as string);
+      // Check if medical table exists
+      const existingTable = await checkMedicalTableExists(tablelandDb, address as string);
       
       if (existingTable) {
         setTableName(existingTable);
         // Load existing data
-        const data = await getPrivateData(tablelandDb, existingTable);
+        const data = await getMedicalData(tablelandDb, existingTable);
         setPrivateData(data);
         
         // Check if medical data is already imported
@@ -81,12 +81,12 @@ export const MedicalDataSection = () => {
       setLoading(true);
       setError('');
       
-      const name = await createPrivateTable(db, address);
+      const name = await createMedicalTable(db, address);
       setTableName(name);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating table');
+      setError(err.message || 'Error creating medical table');
       setLoading(false);
     }
   };
@@ -117,17 +117,17 @@ export const MedicalDataSection = () => {
       // Parse the CSV data
       const medicalData = parseMedicalData();
       
-      // Store each data point in the private table
+      // Store each data point in the medical table
       for (const section in medicalData) {
         for (const entry of medicalData[section]) {
           const key = `${section}.${entry.parameter}|${entry.date}`;
           const value = `${entry.unit}|${entry.referenceRange}|${entry.value}`;
-          await insertPrivateData(db, tableName, key, value);
+          await insertMedicalData(db, tableName, key, value);
         }
       }
       
       // Refresh data
-      const data = await getPrivateData(db, tableName);
+      const data = await getMedicalData(db, tableName);
       setPrivateData(data);
       organizeMedicalData(data);
       setImportedData(true);
@@ -281,7 +281,7 @@ export const MedicalDataSection = () => {
 
   return (
     <div className="legal-section">
-      <h2>Medical Data</h2>
+      <h2>Medical Lab Data</h2>
       <div className="legal-content">
         {!isOptimismNetwork ? (
           <div className="alert alert-warning">
@@ -300,18 +300,18 @@ export const MedicalDataSection = () => {
             
             {!tableName ? (
               <div>
-                <p>You don't have a private data table yet. Create one to store your medical data securely.</p>
+                <p>You don't have a medical data table yet. Create one to store your lab results securely.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
                   disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create Private Table'}
+                  {loading ? 'Creating...' : 'Create Medical Table'}
                 </button>
               </div>
             ) : (
               <div>
-                <p>Your medical data is stored privately on Tableland on the Optimism network.</p>
+                <p>Your lab results are stored privately on Tableland on the Optimism network.</p>
                 
                 {!importedData ? (
                   <div>

@@ -10,9 +10,11 @@ export interface PrivateData {
   created_at: string;
 }
 
-// Mock database for development
-let mockDatabase: PrivateData[] = [];
-let mockTableCreated = false;
+// Mock databases for development
+let mockPrivateDatabase: PrivateData[] = [];
+let mockMedicalDatabase: PrivateData[] = [];
+let mockPrivateTableCreated = false;
+let mockMedicalTableCreated = false;
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async () => {
@@ -30,11 +32,24 @@ export const initTableland = async () => {
 export const createPrivateTable = async (db: Database, address: string) => {
   try {
     // For development, we'll simulate creating a table
-    mockTableCreated = true;
+    mockPrivateTableCreated = true;
     const tableName = `wot_private_${address.substring(2, 10).toLowerCase()}`;
     return tableName;
   } catch (error) {
     console.error('Error creating private table:', error);
+    throw error;
+  }
+};
+
+// Create a new medical data table for the user
+export const createMedicalTable = async (db: Database, address: string) => {
+  try {
+    // For development, we'll simulate creating a table
+    mockMedicalTableCreated = true;
+    const tableName = `wot_medical_${address.substring(2, 10).toLowerCase()}`;
+    return tableName;
+  } catch (error) {
+    console.error('Error creating medical table:', error);
     throw error;
   }
 };
@@ -44,7 +59,7 @@ export const insertPrivateData = async (db: Database, tableName: string, key: st
   try {
     // For development, we'll add to our mock database
     const timestamp = new Date().toISOString();
-    const newId = mockDatabase.length > 0 ? Math.max(...mockDatabase.map(item => item.id)) + 1 : 1;
+    const newId = mockPrivateDatabase.length > 0 ? Math.max(...mockPrivateDatabase.map(item => item.id)) + 1 : 1;
     
     const newItem: PrivateData = {
       id: newId,
@@ -53,7 +68,7 @@ export const insertPrivateData = async (db: Database, tableName: string, key: st
       created_at: timestamp
     };
     
-    mockDatabase.unshift(newItem); // Add to beginning for reverse chronological order
+    mockPrivateDatabase.unshift(newItem); // Add to beginning for reverse chronological order
     return true;
   } catch (error) {
     console.error('Error inserting private data:', error);
@@ -61,27 +76,86 @@ export const insertPrivateData = async (db: Database, tableName: string, key: st
   }
 };
 
+// Insert data into medical table
+export const insertMedicalData = async (db: Database, tableName: string, key: string, value: string) => {
+  try {
+    // For development, we'll add to our mock medical database
+    const timestamp = new Date().toISOString();
+    const newId = mockMedicalDatabase.length > 0 ? Math.max(...mockMedicalDatabase.map(item => item.id)) + 1 : 1;
+    
+    const newItem: PrivateData = {
+      id: newId,
+      key,
+      value,
+      created_at: timestamp
+    };
+    
+    mockMedicalDatabase.unshift(newItem); // Add to beginning for reverse chronological order
+    return true;
+  } catch (error) {
+    console.error('Error inserting medical data:', error);
+    throw error;
+  }
+};
+
 // Get all private data for a user
 export const getPrivateData = async (db: Database, tableName: string) => {
   try {
-    // For development, return our mock database
-    return mockDatabase;
+    // For development, return our mock private database
+    return mockPrivateDatabase;
   } catch (error) {
     console.error('Error getting private data:', error);
     return [];
   }
 };
 
-// Check if a table exists for a user
+// Get all medical data for a user
+export const getMedicalData = async (db: Database, tableName: string) => {
+  try {
+    // For development, return our mock medical database
+    return mockMedicalDatabase;
+  } catch (error) {
+    console.error('Error getting medical data:', error);
+    return [];
+  }
+};
+
+// Check if a private table exists for a user
 export const checkTableExists = async (db: Database, address: string) => {
   try {
     // For development, check our mock flag
-    if (mockTableCreated) {
+    if (mockPrivateTableCreated) {
       return `wot_private_${address.substring(2, 10).toLowerCase()}`;
     }
     return '';
   } catch (error) {
     // Table doesn't exist
     return '';
+  }
+};
+
+// Check if a medical table exists for a user
+export const checkMedicalTableExists = async (db: Database, address: string) => {
+  try {
+    // For development, check our mock flag
+    if (mockMedicalTableCreated) {
+      return `wot_medical_${address.substring(2, 10).toLowerCase()}`;
+    }
+    return '';
+  } catch (error) {
+    // Table doesn't exist
+    return '';
+  }
+};
+
+// Clear all private data
+export const clearPrivateData = async (db: Database, tableName: string) => {
+  try {
+    // For development, clear our mock private database
+    mockPrivateDatabase = [];
+    return true;
+  } catch (error) {
+    console.error('Error clearing private data:', error);
+    throw error;
   }
 };

@@ -9,6 +9,7 @@ import {
   insertPrivateData, 
   getPrivateData,
   checkTableExists,
+  clearPrivateData,
   type PrivateData
 } from '@/utils/tablelandUtils';
 import { Database } from '@tableland/sdk';
@@ -111,6 +112,26 @@ export const PrivateDataSection = () => {
     }
   };
 
+  const handleClearPrivateData = async () => {
+    if (!db || !tableName) return;
+    
+    try {
+      setLoading(true);
+      setError('');
+      
+      await clearPrivateData(db, tableName);
+      
+      // Refresh data
+      const data = await getPrivateData(db, tableName);
+      setPrivateData(data);
+      
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Error clearing private data');
+      setLoading(false);
+    }
+  };
+
   if (!isConnected) {
     return null;
   }
@@ -182,6 +203,19 @@ export const PrivateDataSection = () => {
                     {loading ? 'Adding...' : 'Add Data'}
                   </button>
                 </form>
+                
+                <div style={{ marginTop: '1rem' }}>
+                  <button 
+                    className="button-primary"
+                    onClick={handleClearPrivateData}
+                    disabled={loading}
+                  >
+                    {loading ? 'Clearing...' : 'Clear All Private Data'}
+                  </button>
+                  <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                    This will remove all data from the private data section.
+                  </p>
+                </div>
                 
                 <div className="private-data-list">
                   <h3>Your Private Data</h3>
