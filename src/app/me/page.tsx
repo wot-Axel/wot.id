@@ -3,6 +3,7 @@
 import { useAppKitAccount } from '@reown/appkit/react';
 import { ConnectButton } from "@/components/ConnectButton";
 import { Footer } from "@/components/Footer";
+import { PrivateDataSection } from "@/components/PrivateDataSection";
 import { useEffect, useState } from 'react';
 import { formatAddress } from '@/utils/attestationUtils';
 
@@ -50,6 +51,8 @@ const MePage = () => {
               </p>
             </div>
           </div>
+          
+          <PrivateDataSection />
         </>
       )}
       

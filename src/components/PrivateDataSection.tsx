@@ -1,0 +1,218 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
+import { optimism } from '@reown/appkit/networks';
+import { 
+  initTableland, 
+  createPrivateTable, 
+  insertPrivateData, 
+  getPrivateData,
+  checkTableExists,
+  type PrivateData
+} from '@/utils/tablelandUtils';
+import { Database } from '@tableland/sdk';
+
+export const PrivateDataSection = () => {
+  const { address, isConnected } = useAppKitAccount();
+  const { switchNetwork } = useAppKitNetwork();
+  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [db, setDb] = useState<Database | null>(null);
+  const [tableName, setTableName] = useState<string>('');
+  const [privateData, setPrivateData] = useState<PrivateData[]>([]);
+  const [newKey, setNewKey] = useState<string>('');
+  const [newValue, setNewValue] = useState<string>('');
+
+  // Check network and initialize Tableland
+  useEffect(() => {
+    if (isConnected && address) {
+      // We'll assume we're on Optimism for the mock implementation
+      // In a real implementation, we would check the current network
+      setIsOptimismNetwork(true);
+      initTablelandDb();
+    }
+  }, [isConnected, address]);
+
+  // Function to switch to Optimism network
+  const handleSwitchToOptimism = () => {
+    switchNetwork(optimism);
+    setIsOptimismNetwork(true);
+  };
+
+  const initTablelandDb = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      // In a real implementation, we would check if we're on Optimism
+      // For now, we'll just proceed with the mock implementation
+      
+      // Initialize Tableland
+      const tablelandDb = await initTableland();
+      setDb(tablelandDb);
+      
+      // Check if table exists
+      const existingTable = await checkTableExists(tablelandDb, address as string);
+      
+      if (existingTable) {
+        setTableName(existingTable);
+        // Load existing data
+        const data = await getPrivateData(tablelandDb, existingTable);
+        setPrivateData(data);
+      }
+      
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Error initializing Tableland');
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTable = async () => {
+    if (!db || !address) return;
+    
+    try {
+      setLoading(true);
+      setError('');
+      
+      const name = await createPrivateTable(db, address);
+      setTableName(name);
+      
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Error creating table');
+      setLoading(false);
+    }
+  };
+
+  const handleAddData = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !tableName || !newKey || !newValue) return;
+    
+    try {
+      setLoading(true);
+      setError('');
+      
+      await insertPrivateData(db, tableName, newKey, newValue);
+      
+      // Refresh data
+      const data = await getPrivateData(db, tableName);
+      setPrivateData(data);
+      
+      // Clear form
+      setNewKey('');
+      setNewValue('');
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Error adding data');
+      setLoading(false);
+    }
+  };
+
+  if (!isConnected) {
+    return null;
+  }
+
+  return (
+    <div className="legal-section">
+      <h2>Private Data (Tableland)</h2>
+      <div className="legal-content">
+        {!isOptimismNetwork ? (
+          <div className="alert alert-warning">
+            <p>Please switch to Optimism network to use private data storage.</p>
+            <button 
+              className="button-primary" 
+              onClick={handleSwitchToOptimism}
+              disabled={loading}
+            >
+              Switch to Optimism
+            </button>
+          </div>
+        ) : (
+          <>
+            {error && <div className="alert alert-error">{error}</div>}
+            
+            {!tableName ? (
+              <div>
+                <p>You don't have a private data table yet. Create one to store your private data on Tableland.</p>
+                <button 
+                  className="button-primary" 
+                  onClick={handleCreateTable}
+                  disabled={loading}
+                >
+                  {loading ? 'Creating...' : 'Create Private Table'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p>Your private data is stored on Tableland on the Optimism network.</p>
+                
+                <form onSubmit={handleAddData} className="private-data-form">
+                  <div className="form-group">
+                    <label htmlFor="dataKey">Key:</label>
+                    <input
+                      type="text"
+                      id="dataKey"
+                      value={newKey}
+                      onChange={(e) => setNewKey(e.target.value)}
+                      required
+                      placeholder="Enter key"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="dataValue">Value:</label>
+                    <input
+                      type="text"
+                      id="dataValue"
+                      value={newValue}
+                      onChange={(e) => setNewValue(e.target.value)}
+                      required
+                      placeholder="Enter value"
+                    />
+                  </div>
+                  
+                  <button 
+                    type="submit" 
+                    className="button-primary"
+                    disabled={loading || !newKey || !newValue}
+                  >
+                    {loading ? 'Adding...' : 'Add Data'}
+                  </button>
+                </form>
+                
+                <div className="private-data-list">
+                  <h3>Your Private Data</h3>
+                  {privateData.length === 0 ? (
+                    <p>No private data yet. Add some using the form above.</p>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Key</th>
+                          <th>Value</th>
+                          <th>Created</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {privateData.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.key}</td>
+                            <td>{item.value}</td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
