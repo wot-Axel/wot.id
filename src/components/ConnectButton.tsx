@@ -1,16 +1,16 @@
 'use client'
 
-import { useAppKitAccount } from '@reown/appkit/react'
-import { modal } from '../context'
+import { useAppKitAccount, useAppKit } from '@reown/appkit/react'
 
 export const ConnectButton = () => {
   const { isConnected } = useAppKitAccount()
+  const { open } = useAppKit()
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '1rem 0' }}>
       {!isConnected ? (
         <button 
-          onClick={() => modal.open()}
+          onClick={() => open()}
           className="connect-button"
         >
           Connect
