@@ -28,7 +28,7 @@ export const TopNavigation = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div className="nav-logo">
-              <Link href="/">
+              <Link href={isConnected ? "/me" : "/"}>
                 <Image 
                   src="/wot_logo_light.png" 
                   alt="wot.id logo" 
@@ -40,7 +40,7 @@ export const TopNavigation = () => {
             </div>
             
             <div className="site-name">
-              <Link href="/">
+              <Link href={isConnected ? "/me" : "/"}>
                 wot.id
               </Link>
             </div>

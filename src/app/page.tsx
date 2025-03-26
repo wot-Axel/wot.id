@@ -4,8 +4,19 @@ import { ConnectButton } from "@/components/ConnectButton";
 import Image from 'next/image';
 import { Footer } from "@/components/Footer";
 import './globals.css';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const { isConnected } = useAppKitAccount();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isConnected) {
+      router.push('/me');
+    }
+  }, [isConnected, router]);
 
   return (
     <div className={"pages"}>
