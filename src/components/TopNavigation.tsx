@@ -50,13 +50,13 @@ export const TopNavigation = () => {
                 href="/write" 
                 className={`nav-link ${isActive('/write') ? 'active' : ''}`}
               >
-                Give
+                Give Trust
               </Link>
               <Link 
                 href="/read" 
                 className={`nav-link ${isActive('/read') ? 'active' : ''}`}
               >
-                Get
+                Get Trust
               </Link>
             </nav>
           </div>
