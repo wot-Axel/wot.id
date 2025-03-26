@@ -12,7 +12,7 @@ export default function Home() {
     <div className={"pages"}>
       <Image src="/wot_logo_light.png" alt="wot_logo_light" width={150} height={150} priority />
       <h1>Just me</h1>
-      <h3>My Trusted Identity on the Ethereum Blockchain</h3>
+      <h3>My safe Identity on the Web Of Trust</h3>
 
       <ConnectButton />
       <ActionButtonList />
