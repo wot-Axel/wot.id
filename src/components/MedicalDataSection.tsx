@@ -328,7 +328,20 @@ export const MedicalDataSection = () => {
                   <div className="medical-data-container">
                     <h3>Your Medical History</h3>
                     
-                    {Object.keys(medicalDataSections).map(section => (
+                    {/* Display sections in the same order as in the CSV file */}
+                    {[
+                      'Basic Blood Tests',
+                      'Kidney Function',
+                      'Electrolytes',
+                      'Lipid Profile',
+                      'Inflammation Markers',
+                      'Thyroid Function',
+                      'Blood Cell Count',
+                      'Immune Proteins',
+                      'COVID-19 Tests',
+                      'Additional Values',
+                      'Urinalysis'
+                    ].map(section => (
                       <MedicalDataTable 
                         key={section} 
                         sectionTitle={section} 
