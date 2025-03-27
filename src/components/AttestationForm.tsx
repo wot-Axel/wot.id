@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 
@@ -17,6 +17,8 @@ type LooseObject = {
 const AttestationForm = () => {
   // Use the AppKit account for authentication status
   const { address, isConnected } = useAppKitAccount();
+  // Use the AppKit hook for wallet connection
+  const { open } = useAppKit();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wotId, setWotId] = useState('');
@@ -37,12 +39,12 @@ const AttestationForm = () => {
     setTxHash('');
 
     try {
-      // Check if ethereum provider exists
+      // Use window.ethereum with the AppKit connection
       if (!window.ethereum) {
-        throw new Error('No wallet detection available. Please use the Reown AppKit to connect your wallet.');
+        throw new Error('No wallet provider available. Please make sure your wallet is properly connected with Reown AppKit.');
       }
 
-      // Cast window.ethereum to unknown first, then to the correct type
+      // Use the provider
       const provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
       const signer = await provider.getSigner();
       
