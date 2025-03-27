@@ -936,7 +936,7 @@ body {
   padding: 1rem;
 }
 
-/* Feature List and Caution List Styles */
+/* Feature List Styles */
 .feature-list {
   list-style-type: disc;
   padding-left: 20px;
@@ -948,13 +948,22 @@ body {
   line-height: 1.5;
 }
 
-.caution-list {
-  list-style-type: disc;
-  padding-left: 20px;
-  margin-top: 10px;
+/* Caution Text Styles */
+.caution-text {
+  margin: 40px 0 20px;
+  padding: 15px 20px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #856404;
+  text-align: center;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.caution-list li {
-  margin-bottom: 12px;
-  line-height: 1.5;
+.caution-text p {
+  margin: 0;
+  line-height: 1.6;
 }

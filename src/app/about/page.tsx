@@ -104,17 +104,12 @@ const About = () => {
       </div>
       */}
       
-      <div className="legal-section">
-        <h2>Caution</h2>
-        <div className="legal-content">
-          <ul className="caution-list">
-            <li>I understand this dApp is experimental</li>
-            <li>I have the necessary knowledge of blockchain technology</li>
-            <li>I fully understand and consent to the conditions in the disclaimer</li>
-            <li>I am aware of the risks involved in using this technology</li>
-            <li>I take responsibility for managing my own digital identity</li>
-          </ul>
-        </div>
+      <div className="caution-text">
+        <p>
+          Caution: I understand this dApp is experimental and requires thorough knowledge of blockchain technology. 
+          I fully understand and consent to the conditions provided in the disclaimer. 
+          I am aware of the risks involved and take responsibility for managing my own digital identity.
+        </p>
       </div>
       
       <Footer />
