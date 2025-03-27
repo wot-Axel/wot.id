@@ -8,6 +8,7 @@ import { MedicalDataSection } from "@/components/MedicalDataSection";
 import { IdentitySection } from "@/components/IdentitySection";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { RealWorldAssetsSection } from "@/components/RealWorldAssetsSection";
+import { TrustBalanceSection } from "@/components/TrustBalanceSection";
 import { useEffect, useState } from 'react';
 import { formatAddress } from '@/utils/attestationUtils';
 
@@ -43,14 +44,7 @@ const MePage = () => {
           
           <RealWorldAssetsSection />
           
-          <div className="legal-section">
-            <h2>The Trust I Got</h2>
-            <div className="legal-content">
-              <p>
-                View your attestations on the <a href="/read" className="text-link">Get Trust page</a>.
-              </p>
-            </div>
-          </div>
+          <TrustBalanceSection />
           
           {/* Private Data Section temporarily hidden
           <PrivateDataSection />

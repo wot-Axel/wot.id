@@ -967,3 +967,81 @@ body {
   margin: 0;
   line-height: 1.6;
 }
+
+/* Trust Balance Styles */
+.trust-balance-container {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.trust-balance-table {
+  width: 100%;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.trust-balance-header {
+  display: flex;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.trust-balance-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.trust-balance-row {
+  display: flex;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.trust-balance-row:last-child {
+  border-bottom: none;
+}
+
+.trust-balance-cell {
+  flex: 1;
+  padding: 15px;
+  border-right: 1px solid #eaeaea;
+}
+
+.trust-balance-cell:last-child {
+  border-right: none;
+}
+
+.header-cell {
+  font-weight: 600;
+  text-align: center;
+  padding: 12px 15px;
+}
+
+.trust-item {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.trust-date {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 5px;
+}
+
+.empty-row {
+  color: #888;
+  text-align: center;
+  font-style: italic;
+}
+
+.trust-links {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.separator {
+  color: #ccc;
+}
