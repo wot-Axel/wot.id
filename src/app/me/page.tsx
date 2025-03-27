@@ -36,18 +36,18 @@ const MePage = () => {
         </div>
       ) : (
         <>
-          <div className="legal-section">
-            <h2>Your Attestations</h2>
-            <div className="legal-content">
-              <p>
-                View your attestations on the <a href="/read" className="text-link">Get page</a>.
-              </p>
-            </div>
-          </div>
-          
           <IdentitySection />
           
           <DocumentsSection />
+          
+          <div className="legal-section">
+            <h2>The Trust I Got</h2>
+            <div className="legal-content">
+              <p>
+                View your attestations on the <a href="/read" className="text-link">Get Trust page</a>.
+              </p>
+            </div>
+          </div>
           
           {/* Private Data Section temporarily hidden
           <PrivateDataSection />
