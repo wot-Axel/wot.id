@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 const About = () => {
   return (
     <div className="legal-page">
-      <h1 className="page-title">About</h1>
+      <h1 className="page-title">My Trusted Identity</h1>
       
       <div className="legal-section">
         <h2>Caution</h2>
@@ -40,6 +40,42 @@ const About = () => {
           
           <p>
             By creating and receiving attestations, users build a web of trust that can be used to establish reputation and identity without relying on centralized authorities.
+          </p>
+        </div>
+      </div>
+      
+      <div className="legal-section">
+        <h2>For Everything</h2>
+        <div className="legal-content">
+          <p>
+            Your digital identity should encompass all aspects of your life. From personal information and documents to real-world assets and medical data, our platform provides a comprehensive solution for managing your entire digital identity in one secure place.
+          </p>
+        </div>
+      </div>
+      
+      <div className="legal-section">
+        <h2>For Everywhere</h2>
+        <div className="legal-content">
+          <p>
+            Your identity travels with you across the digital landscape. With blockchain-based attestations, you can prove your identity and credentials anywhere, anytime, without relying on centralized authorities or carrying physical documents.
+          </p>
+        </div>
+      </div>
+      
+      <div className="legal-section">
+        <h2>For Everyone (I choose)</h2>
+        <div className="legal-content">
+          <p>
+            You have complete control over who can access your identity information. Share specific attestations with only the people and organizations you trust, maintaining privacy while still proving your credentials when needed.
+          </p>
+        </div>
+      </div>
+      
+      <div className="legal-section">
+        <h2>For Ever</h2>
+        <div className="legal-content">
+          <p>
+            Blockchain technology ensures your identity attestations are permanent and immutable. Your digital identity will persist through time, providing a lasting record of your credentials and reputation that can't be erased or altered.
           </p>
         </div>
       </div>
