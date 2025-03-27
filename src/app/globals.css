@@ -935,3 +935,26 @@ body {
   overflow-x: auto;
   padding: 1rem;
 }
+
+/* Feature List and Caution List Styles */
+.feature-list {
+  list-style-type: disc;
+  padding-left: 20px;
+  margin-top: 10px;
+}
+
+.feature-list li {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.caution-list {
+  list-style-type: disc;
+  padding-left: 20px;
+  margin-top: 10px;
+}
+
+.caution-list li {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}

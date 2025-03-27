@@ -38,36 +38,52 @@ const About = () => {
       <div className="legal-section">
         <h2>For Everything</h2>
         <div className="legal-content">
-          <p>
-            Your digital identity should encompass all aspects of your life. From personal information and documents to real-world assets and medical data, our platform provides a comprehensive solution for managing your entire digital identity in one secure place.
-          </p>
+          <ul className="feature-list">
+            <li>I can store all aspects of my life in one place</li>
+            <li>My personal information is securely managed</li>
+            <li>I can organize my documents digitally</li>
+            <li>My real-world assets are tracked and verified</li>
+            <li>My medical data is accessible when I need it</li>
+          </ul>
         </div>
       </div>
       
       <div className="legal-section">
         <h2>For Everywhere</h2>
         <div className="legal-content">
-          <p>
-            Your identity travels with you across the digital landscape. With blockchain-based attestations, you can prove your identity and credentials anywhere, anytime, without relying on centralized authorities or carrying physical documents.
-          </p>
+          <ul className="feature-list">
+            <li>I can access my identity from anywhere in the world</li>
+            <li>My credentials are always available when I need them</li>
+            <li>I don't need to carry physical documents anymore</li>
+            <li>I can prove who I am without relying on centralized authorities</li>
+            <li>My blockchain-based attestations are universally verifiable</li>
+          </ul>
         </div>
       </div>
       
       <div className="legal-section">
         <h2>For Everyone (I choose)</h2>
         <div className="legal-content">
-          <p>
-            You have complete control over who can access your identity information. Share specific attestations with only the people and organizations you trust, maintaining privacy while still proving your credentials when needed.
-          </p>
+          <ul className="feature-list">
+            <li>I decide who can see my information</li>
+            <li>I can share specific credentials with only those I trust</li>
+            <li>I maintain my privacy while still proving my identity</li>
+            <li>I control which organizations have access to my data</li>
+            <li>I can revoke access to my information at any time</li>
+          </ul>
         </div>
       </div>
       
       <div className="legal-section">
         <h2>For Ever</h2>
         <div className="legal-content">
-          <p>
-            Blockchain technology ensures your identity attestations are permanent and immutable. Your digital identity will persist through time, providing a lasting record of your credentials and reputation that can't be erased or altered.
-          </p>
+          <ul className="feature-list">
+            <li>My identity attestations are permanent and immutable</li>
+            <li>I have a lasting record of my credentials that can't be erased</li>
+            <li>My reputation is preserved through time</li>
+            <li>I don't have to worry about losing important documents</li>
+            <li>My digital identity will persist as long as the blockchain exists</li>
+          </ul>
         </div>
       </div>
       
@@ -91,13 +107,13 @@ const About = () => {
       <div className="legal-section">
         <h2>Caution</h2>
         <div className="legal-content">
-          <p>
-            This dApp is experimental and not to be used without the necessary thorough knowledge of blockchain technology.
-          </p>
-          
-          <p>
-            Any use is with a full understanding of and consent to the conditions provided in the disclaimer.
-          </p>
+          <ul className="caution-list">
+            <li>I understand this dApp is experimental</li>
+            <li>I have the necessary knowledge of blockchain technology</li>
+            <li>I fully understand and consent to the conditions in the disclaimer</li>
+            <li>I am aware of the risks involved in using this technology</li>
+            <li>I take responsibility for managing my own digital identity</li>
+          </ul>
         </div>
       </div>
       
