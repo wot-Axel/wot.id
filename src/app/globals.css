@@ -44,9 +44,9 @@ body {
 
 /* Disconnect Button Styles */
 .disconnect-button {
-  background-color: #f44336;
-  color: #ffffff;
-  border: none;
+  background-color: #ffffff;
+  color: #000000;
+  border: 2px solid #000000;
   border-radius: 8px;
   padding: 10px 20px;
   font-size: 16px;
@@ -56,7 +56,7 @@ body {
 }
 
 .disconnect-button:hover {
-  background-color: #d32f2f;
+  background-color: #f5f5f5;
 }
 
 /* Footer Styles - Aligned with Legal Page */
@@ -204,22 +204,22 @@ button {
   background-color: white;
   color: black;
   border: 2px solid black;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   margin: 15px; /* Space between buttons */
 }
 
 button:hover {
-  background-color: black;
-    color: white;
+  background-color: #f5f5f5;
+  color: black;
 }
 
 button:active {
-  background-color: #333; /* Dark gray on click */
-    color: white;
+  background-color: #f0f0f0; /* Light gray on click */
+  color: black;
 }
 
 h1 {
@@ -234,20 +234,17 @@ pre {
 
 
 .link-button {
-  background-color: black;
-  color: white;
+  background-color: white;
+  color: black;
   padding: 5px 10px;
   text-decoration: none;
-  border-radius: 5px;
+  border-radius: 8px;
+  border: 2px solid black;
 }
 
 .link-button:hover {
-  background-color: #333;  /* Darken the background on hover */
-}
-
-.link-button:hover {
-  background-color: white;  /* Change background to white on hover */
-  color: black;  /* Change text color to black on hover */
+  background-color: #f5f5f5;  /* Light gray background on hover */
+  color: black;
 }
 
 .advice {
@@ -833,11 +830,28 @@ body {
   color: #721c24;
 }
 
+/* Logged-in Button Style - Used for all buttons when user is logged in */
+.logged-in-button {
+  background-color: #ffffff;
+  color: #000000;
+  border: 2px solid #000000;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logged-in-button:hover {
+  background-color: #f5f5f5;
+}
+
 /* Primary Button Style */
 .button-primary {
-  background-color: #000000;
-  color: #ffffff;
-  border: none;
+  background-color: #ffffff;
+  color: #000000;
+  border: 2px solid #000000;
   border-radius: 8px;
   padding: 10px 20px;
   font-size: 16px;
@@ -848,7 +862,7 @@ body {
 }
 
 .button-primary:hover {
-  background-color: #333333;
+  background-color: #f5f5f5;
 }
 
 .button-primary:disabled {

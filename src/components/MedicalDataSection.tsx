@@ -287,7 +287,7 @@ export const MedicalDataSection = () => {
           <div className="alert alert-warning">
             <p>Please switch to Optimism network to use private data storage.</p>
             <button 
-              className="button-primary" 
+              className="button-primary logged-in-button" 
               onClick={handleSwitchToOptimism}
               disabled={loading}
             >
@@ -302,7 +302,7 @@ export const MedicalDataSection = () => {
               <div>
                 <p>You don't have a medical data table yet. Create one to store your lab results securely.</p>
                 <button 
-                  className="button-primary" 
+                  className="button-primary logged-in-button" 
                   onClick={handleCreateTable}
                   disabled={loading}
                 >
@@ -317,7 +317,7 @@ export const MedicalDataSection = () => {
                   <div>
                     <p>Import your medical data to view it in a structured format.</p>
                     <button 
-                      className="button-primary" 
+                      className="button-primary logged-in-button" 
                       onClick={handleImportMedicalData}
                       disabled={loading}
                     >

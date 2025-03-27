@@ -69,6 +69,7 @@ const MePage = () => {
             <div className="legal-content" style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
               <button 
                 onClick={() => disconnect()}
+                className="logged-in-button"
               >
                 Disconnect
               </button>

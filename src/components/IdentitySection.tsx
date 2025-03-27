@@ -172,7 +172,7 @@ export const IdentitySection = () => {
       ) : !isOptimismNetwork ? (
         <div className="legal-content">
           <p>Please switch to the Optimism network to use this feature.</p>
-          <button onClick={handleSwitchToOptimism} className="button-primary">
+          <button onClick={handleSwitchToOptimism} className="button-primary logged-in-button">
             Switch to Optimism
           </button>
         </div>
@@ -183,7 +183,7 @@ export const IdentitySection = () => {
           ) : error ? (
             <div className="error-message">
               <p>{error}</p>
-              <button onClick={initTablelandDb} className="button-primary">
+              <button onClick={initTablelandDb} className="button-primary logged-in-button">
                 Try Again
               </button>
             </div>
@@ -208,14 +208,14 @@ export const IdentitySection = () => {
                   <div className="button-group">
                     <button 
                       onClick={saveIdentityData} 
-                      className="button-primary"
+                      className="button-primary logged-in-button"
                       disabled={loading}
                     >
                       {loading ? 'Saving...' : 'Save'}
                     </button>
                     <button 
                       onClick={() => setIsEditing(false)} 
-                      className="button-secondary"
+                      className="button-secondary logged-in-button"
                     >
                       Cancel
                     </button>
@@ -243,7 +243,7 @@ export const IdentitySection = () => {
                       </div>
                       <button 
                         onClick={() => setIsEditing(true)} 
-                        className="button-primary"
+                        className="button-primary logged-in-button"
                       >
                         Edit Identity
                       </button>
@@ -253,7 +253,7 @@ export const IdentitySection = () => {
                       <p>You haven't added any identity information yet.</p>
                       <button 
                         onClick={() => setIsEditing(true)} 
-                        className="button-primary"
+                        className="button-primary logged-in-button"
                       >
                         Add Identity Information
                       </button>
