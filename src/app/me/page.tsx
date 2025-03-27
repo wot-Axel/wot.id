@@ -49,7 +49,9 @@ const MePage = () => {
           
           <DocumentsSection />
           
+          {/* Private Data Section temporarily hidden
           <PrivateDataSection />
+          */}
           
           <MedicalDataSection />
           
