@@ -3,9 +3,7 @@ import { Footer } from "@/components/Footer";
 const About = () => {
   return (
     <div className="legal-page">
-      {/* Main headline temporarily hidden
       <h1 className="page-title">My Trusted Identity</h1>
-      */}
       
       {/* About Web of Trust section temporarily hidden
       <div className="legal-section">
