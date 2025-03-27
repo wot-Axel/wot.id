@@ -106,9 +106,8 @@ const About = () => {
       
       <div className="caution-text">
         <p>
-          Caution: I understand this dApp is experimental and requires thorough knowledge of blockchain technology. 
-          I fully understand and consent to the conditions provided in the disclaimer. 
-          I am aware of the risks involved and take responsibility for managing my own digital identity.
+          Caution: This dApp is experimental and not to be used without the necessary thorough knowledge of blockchain technology. 
+          Any use is with a full understanding of and consent to the conditions provided in the disclaimer.
         </p>
       </div>
       
