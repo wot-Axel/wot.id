@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { PrivateDataSection } from "@/components/PrivateDataSection";
 import { MedicalDataSection } from "@/components/MedicalDataSection";
 import { IdentitySection } from "@/components/IdentitySection";
+import { DocumentsSection } from "@/components/DocumentsSection";
 import { useEffect, useState } from 'react';
 import { formatAddress } from '@/utils/attestationUtils';
 
@@ -49,6 +50,8 @@ const MePage = () => {
           <MedicalDataSection />
           
           <IdentitySection />
+          
+          <DocumentsSection />
           
           <div className="legal-section">
             <h2>My Ethereum Account</h2>

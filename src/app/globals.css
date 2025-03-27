@@ -732,6 +732,28 @@ body {
   flex-grow: 1;
 }
 
+/* Documents Section Styles */
+.documents-form {
+  margin-top: 20px;
+  margin-bottom: 30px;
+  max-width: 600px;
+}
+
+.documents-display {
+  margin-top: 10px;
+}
+
+.documents-fields {
+  margin-bottom: 20px;
+}
+
+.document-field {
+  display: flex;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
 .empty-state {
   text-align: center;
   padding: 20px;
