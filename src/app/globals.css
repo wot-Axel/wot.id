@@ -751,6 +751,28 @@ body {
   border-bottom: 1px solid #f0f0f0;
 }
 
+/* Real World Assets Section Styles */
+.assets-form {
+  margin-top: 20px;
+  margin-bottom: 30px;
+  max-width: 600px;
+}
+
+.assets-display {
+  margin-top: 10px;
+}
+
+.assets-fields {
+  margin-bottom: 20px;
+}
+
+.asset-field {
+  display: flex;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
 .empty-state {
   text-align: center;
   padding: 20px;

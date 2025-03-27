@@ -7,6 +7,7 @@ import { PrivateDataSection } from "@/components/PrivateDataSection";
 import { MedicalDataSection } from "@/components/MedicalDataSection";
 import { IdentitySection } from "@/components/IdentitySection";
 import { DocumentsSection } from "@/components/DocumentsSection";
+import { RealWorldAssetsSection } from "@/components/RealWorldAssetsSection";
 import { useEffect, useState } from 'react';
 import { formatAddress } from '@/utils/attestationUtils';
 
@@ -39,6 +40,8 @@ const MePage = () => {
           <IdentitySection />
           
           <DocumentsSection />
+          
+          <RealWorldAssetsSection />
           
           <div className="legal-section">
             <h2>The Trust I Got</h2>
