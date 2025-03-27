@@ -45,13 +45,13 @@ const MePage = () => {
             </div>
           </div>
           
-          <PrivateDataSection />
-          
-          <MedicalDataSection />
-          
           <IdentitySection />
           
           <DocumentsSection />
+          
+          <PrivateDataSection />
+          
+          <MedicalDataSection />
           
           <div className="legal-section">
             <h2>My Ethereum Account</h2>

@@ -281,7 +281,7 @@ export const MedicalDataSection = () => {
 
   return (
     <div className="legal-section">
-      <h2>Medical Lab Data</h2>
+      <h2>My Medical Data</h2>
       <div className="legal-content">
         {!isOptimismNetwork ? (
           <div className="alert alert-warning">
