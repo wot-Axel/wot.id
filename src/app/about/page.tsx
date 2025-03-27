@@ -3,21 +3,11 @@ import { Footer } from "@/components/Footer";
 const About = () => {
   return (
     <div className="legal-page">
+      {/* Main headline temporarily hidden
       <h1 className="page-title">My Trusted Identity</h1>
+      */}
       
-      <div className="legal-section">
-        <h2>Caution</h2>
-        <div className="legal-content">
-          <p>
-            This dApp is experimental and not to be used without the necessary thorough knowledge of blockchain technology.
-          </p>
-          
-          <p>
-            Any use is with a full understanding of and consent to the conditions provided in the disclaimer.
-          </p>
-        </div>
-      </div>
-      
+      {/* About Web of Trust section temporarily hidden
       <div className="legal-section">
         <h2>About Web of Trust</h2>
         <div className="legal-content">
@@ -30,7 +20,9 @@ const About = () => {
           </p>
         </div>
       </div>
+      */}
       
+      {/* How It Works section temporarily hidden
       <div className="legal-section">
         <h2>How It Works</h2>
         <div className="legal-content">
@@ -43,6 +35,7 @@ const About = () => {
           </p>
         </div>
       </div>
+      */}
       
       <div className="legal-section">
         <h2>For Everything</h2>
@@ -80,6 +73,7 @@ const About = () => {
         </div>
       </div>
       
+      {/* Technology section temporarily hidden
       <div className="legal-section">
         <h2>Technology</h2>
         <div className="legal-content">
@@ -92,6 +86,20 @@ const About = () => {
             <li>Optimism for scalable blockchain transactions</li>
             <li>Reown AppKit for wallet connection</li>
           </ul>
+        </div>
+      </div>
+      */}
+      
+      <div className="legal-section">
+        <h2>Caution</h2>
+        <div className="legal-content">
+          <p>
+            This dApp is experimental and not to be used without the necessary thorough knowledge of blockchain technology.
+          </p>
+          
+          <p>
+            Any use is with a full understanding of and consent to the conditions provided in the disclaimer.
+          </p>
         </div>
       </div>
       
