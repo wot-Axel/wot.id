@@ -76,6 +76,8 @@ body {
   padding: 0 20px;
   width: 100%; /* Use percentage width for better responsiveness */
   box-sizing: border-box;
+  display: flex;
+  justify-content: center;
 }
 
 .footer-nav {
@@ -85,10 +87,11 @@ body {
   flex-wrap: wrap;
   background-color: #f5f5f5;
   border-radius: 10px;
-  padding: 8px 12px;
+  padding: 15px 20px; /* Match the top-nav padding exactly */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   border: 1px solid #eaeaea;
   width: 100%;
+  max-width: 760px; /* 800px - 2*20px padding to match exact content width */
   box-sizing: border-box;
   margin: 0 auto;
 }
@@ -133,8 +136,9 @@ body {
     flex-direction: row;
     justify-content: space-between;
     gap: 5px;
-    padding: 12px;
+    padding: 10px 15px;
     width: 100%;
+    max-width: 780px; /* Ensure consistent width with top nav on mobile */
   }
   
   .footer-divider {
