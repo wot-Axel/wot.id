@@ -15,10 +15,12 @@ let mockPrivateDatabase: PrivateData[] = [];
 let mockMedicalDatabase: PrivateData[] = [];
 let mockAccountsDatabase: PrivateData[] = [];
 let mockContactsDatabase: PrivateData[] = [];
+let mockAffiliationsDatabase: PrivateData[] = [];
 let mockPrivateTableCreated = false;
 let mockMedicalTableCreated = false;
 let mockAccountsTableCreated = false;
 let mockContactsTableCreated = false;
+let mockAffiliationsTableCreated = false;
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async () => {
@@ -304,6 +306,78 @@ export const clearContactsData = async (db: Database, tableName: string) => {
     return true;
   } catch (error) {
     console.error('Error clearing contacts data:', error);
+    throw error;
+  }
+};
+
+// Create a new affiliations table for the user
+export const createAffiliationsTable = async (db: Database, address: string) => {
+  try {
+    // For development, we'll simulate creating a table
+    mockAffiliationsTableCreated = true;
+    const tableName = `wot_affiliations_${address.substring(2, 10).toLowerCase()}`;
+    return tableName;
+  } catch (error) {
+    console.error('Error creating affiliations table:', error);
+    throw error;
+  }
+};
+
+// Insert data into affiliations table
+export const insertAffiliationData = async (db: Database, tableName: string, key: string, value: string) => {
+  try {
+    // For development, we'll add to our mock affiliations database
+    const timestamp = new Date().toISOString();
+    const newId = mockAffiliationsDatabase.length > 0 ? Math.max(...mockAffiliationsDatabase.map(item => item.id)) + 1 : 1;
+    
+    const newItem: PrivateData = {
+      id: newId,
+      key,
+      value,
+      created_at: timestamp
+    };
+    
+    mockAffiliationsDatabase.unshift(newItem); // Add to beginning for reverse chronological order
+    return true;
+  } catch (error) {
+    console.error('Error inserting affiliation data:', error);
+    throw error;
+  }
+};
+
+// Get all affiliations data for a user
+export const getAffiliationsData = async (db: Database, tableName: string) => {
+  try {
+    // For development, return our mock affiliations database
+    return mockAffiliationsDatabase;
+  } catch (error) {
+    console.error('Error getting affiliations data:', error);
+    return [];
+  }
+};
+
+// Check if an affiliations table exists for a user
+export const checkAffiliationsTableExists = async (db: Database, address: string) => {
+  try {
+    // For development, check our mock flag
+    if (mockAffiliationsTableCreated) {
+      return `wot_affiliations_${address.substring(2, 10).toLowerCase()}`;
+    }
+    return '';
+  } catch (error) {
+    // Table doesn't exist
+    return '';
+  }
+};
+
+// Clear all affiliations data
+export const clearAffiliationsData = async (db: Database, tableName: string) => {
+  try {
+    // For development, clear our mock affiliations database
+    mockAffiliationsDatabase = [];
+    return true;
+  } catch (error) {
+    console.error('Error clearing affiliations data:', error);
     throw error;
   }
 };
