@@ -16,11 +16,13 @@ let mockMedicalDatabase: PrivateData[] = [];
 let mockAccountsDatabase: PrivateData[] = [];
 let mockContactsDatabase: PrivateData[] = [];
 let mockAffiliationsDatabase: PrivateData[] = [];
+let mockCurrenciesDatabase: PrivateData[] = [];
 let mockPrivateTableCreated = false;
 let mockMedicalTableCreated = false;
 let mockAccountsTableCreated = false;
 let mockContactsTableCreated = false;
 let mockAffiliationsTableCreated = false;
+let mockCurrenciesTableCreated = false;
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async () => {
@@ -378,6 +380,78 @@ export const clearAffiliationsData = async (db: Database, tableName: string) => 
     return true;
   } catch (error) {
     console.error('Error clearing affiliations data:', error);
+    throw error;
+  }
+};
+
+// Create a new currencies table for the user
+export const createCurrenciesTable = async (db: Database, address: string) => {
+  try {
+    // For development, we'll simulate creating a table
+    mockCurrenciesTableCreated = true;
+    const tableName = `wot_currencies_${address.substring(2, 10).toLowerCase()}`;
+    return tableName;
+  } catch (error) {
+    console.error('Error creating currencies table:', error);
+    throw error;
+  }
+};
+
+// Insert data into currencies table
+export const insertCurrencyData = async (db: Database, tableName: string, key: string, value: string) => {
+  try {
+    // For development, we'll add to our mock currencies database
+    const timestamp = new Date().toISOString();
+    const newId = mockCurrenciesDatabase.length > 0 ? Math.max(...mockCurrenciesDatabase.map(item => item.id)) + 1 : 1;
+    
+    const newItem: PrivateData = {
+      id: newId,
+      key,
+      value,
+      created_at: timestamp
+    };
+    
+    mockCurrenciesDatabase.unshift(newItem); // Add to beginning for reverse chronological order
+    return true;
+  } catch (error) {
+    console.error('Error inserting currency data:', error);
+    throw error;
+  }
+};
+
+// Get all currencies data for a user
+export const getCurrenciesData = async (db: Database, tableName: string) => {
+  try {
+    // For development, return our mock currencies database
+    return mockCurrenciesDatabase;
+  } catch (error) {
+    console.error('Error getting currencies data:', error);
+    return [];
+  }
+};
+
+// Check if a currencies table exists for a user
+export const checkCurrenciesTableExists = async (db: Database, address: string) => {
+  try {
+    // For development, check our mock flag
+    if (mockCurrenciesTableCreated) {
+      return `wot_currencies_${address.substring(2, 10).toLowerCase()}`;
+    }
+    return '';
+  } catch (error) {
+    // Table doesn't exist
+    return '';
+  }
+};
+
+// Clear all currencies data
+export const clearCurrenciesData = async (db: Database, tableName: string) => {
+  try {
+    // For development, clear our mock currencies database
+    mockCurrenciesDatabase = [];
+    return true;
+  } catch (error) {
+    console.error('Error clearing currencies data:', error);
     throw error;
   }
 };
