@@ -68,7 +68,7 @@ body {
 }
 
 .footer-container {
-  max-width: 1200px; /* Match the main content width */
+  max-width: 800px; /* Match the section width */
   margin: 0 auto;
   padding: 0 20px;
   width: 100%;
@@ -187,9 +187,10 @@ section {
   padding: 16px;
   background-color: #f9f9f9;
   padding: 13px;
-  margin: 10px;
-  width: 90%;
+  margin: 10px auto;
+  width: 100%;
   text-align: left;
+  box-sizing: border-box;
 }
 
 .pages {
@@ -491,7 +492,7 @@ label {
 }
 
 .top-nav {
-  max-width: 1200px; /* Match the main content width */
+  max-width: 800px; /* Match the section width */
   margin: 0 auto;
   padding: 15px 20px;
   width: 100%;
@@ -677,6 +678,10 @@ label {
 .main-content {
   padding-top: 20px;
   min-height: calc(100vh - 64px - 100px); /* account for nav and footer */
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Additional body styling */
@@ -688,7 +693,7 @@ body {
 .private-data-form {
   margin-top: 20px;
   margin-bottom: 30px;
-  max-width: 600px;
+  width: 100%;
 }
 
 .form-group {
@@ -699,7 +704,7 @@ body {
 .identity-form {
   margin-top: 20px;
   margin-bottom: 30px;
-  max-width: 600px;
+  width: 100%;
 }
 
 .identity-display {
@@ -731,7 +736,7 @@ body {
 .documents-form {
   margin-top: 20px;
   margin-bottom: 30px;
-  max-width: 600px;
+  width: 100%;
 }
 
 .documents-display {
@@ -753,7 +758,7 @@ body {
 .assets-form {
   margin-top: 20px;
   margin-bottom: 30px;
-  max-width: 600px;
+  width: 100%;
 }
 
 .assets-display {
