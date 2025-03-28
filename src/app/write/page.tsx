@@ -3,13 +3,26 @@
 import { Footer } from "@/components/Footer";
 import { ConnectButton } from "@/components/ConnectButton";
 import AttestationForm from '@/components/AttestationForm';
+import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
 import { useClientMounted } from "@/hooks/useClientMount";
+import { useState, useEffect } from 'react';
 
 const WritePage = () => {
-  const { isConnected } = useAppKitAccount();
+  const { isConnected, address } = useAppKitAccount();
   const { open } = useAppKit();
   const mounted = useClientMounted();
+  const [qrData, setQrData] = useState('');
+
+  // Generate QR code data when address is available
+  useEffect(() => {
+    if (address) {
+      // Create a URL that can be used to make an attestation
+      // Format: https://wot.id/write?recipient=<address>
+      const attestationUrl = `https://wot.id/write?recipient=${address}`;
+      setQrData(attestationUrl);
+    }
+  }, [address]);
 
   if (!mounted) {
     return null; // Prevent rendering until client is mounted
@@ -31,6 +44,14 @@ const WritePage = () => {
       <div className="attestation-container">
         <AttestationForm />
       </div>
+      
+      {isConnected && address && (
+        <QRCodeDisplay 
+          data={qrData} 
+          title="Scan to Give Trust"
+          description="Scan this QR code with your mobile device to give trust to this address"
+        />
+      )}
       
       <div className="advice">
         <p>

@@ -6,6 +6,7 @@ import { EAS } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 import { Footer } from "@/components/Footer";
 import { ConnectButton } from "@/components/ConnectButton";
+import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { 
   decodeAttestationData, 
   formatAddress, 
@@ -111,12 +112,32 @@ const ReadAttestationPage = () => {
     return addr.toLowerCase() === address?.toLowerCase();
   };
 
+  // Generate QR code data when address is available
+  const [qrData, setQrData] = useState('');
+
+  useEffect(() => {
+    if (address) {
+      // Create a URL that can be used to view attestations for this address
+      // Format: https://wot.id/read?address=<address>
+      const attestationUrl = `https://wot.id/read?address=${address}`;
+      setQrData(attestationUrl);
+    }
+  }, [address]);
+
   return (
     <div className="pages">
       <h1>Get Trust</h1>
       <p>View attestations for the schema: <code>{SCHEMA_ID.substring(0, 10)}...{SCHEMA_ID.substring(SCHEMA_ID.length - 8)}</code></p>
       
       <ConnectButton />
+      
+      {isConnected && address && (
+        <QRCodeDisplay 
+          data={qrData} 
+          title="Scan to View Trust"
+          description="Scan this QR code to view attestations for this address"
+        />
+      )}
       
       {isConnected && (
         <div className="attestation-container">

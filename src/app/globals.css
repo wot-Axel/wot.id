@@ -1108,3 +1108,70 @@ body {
 .separator {
   color: #ccc;
 }
+
+/* QR Code Styles */
+.qr-code-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  max-width: 800px;
+  width: 100%;
+}
+
+.qr-code {
+  margin: 15px 0;
+  padding: 15px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.qr-code-data {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+.qr-data-text {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+  word-break: break-all;
+}
+
+.copy-button {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-button:hover {
+  background-color: #e0e0e0;
+}
+
+.copy-button:active {
+  background-color: #d0d0d0;
+}
+
+@media (max-width: 580px) {
+  .qr-code-container {
+    padding: 15px 10px;
+  }
+  
+  .qr-code {
+    margin: 10px 0;
+    padding: 10px;
+  }
+}
