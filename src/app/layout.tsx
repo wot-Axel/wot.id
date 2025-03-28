@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import './globals.css';
 import ContextProvider from '@/context';
 import { TopNavigation } from '@/components/TopNavigation';
+import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: "wot.id",
@@ -25,6 +26,7 @@ export default async function RootLayout({
           <main className="main-content">
             {children}
           </main>
+          <Footer />
         </ContextProvider>
       </body>
     </html>

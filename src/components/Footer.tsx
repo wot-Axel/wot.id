@@ -4,8 +4,8 @@ import Link from 'next/link';
 export const Footer = () => {
   return (
     <footer className="site-footer">
-      <div className="footer-container">
-        <nav className="footer-nav">
+      <div className="main-footer">
+        <nav className="footer-links">
           <Link href="/legal" className="footer-link">
             Legal
           </Link>
