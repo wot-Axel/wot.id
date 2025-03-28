@@ -98,16 +98,23 @@ const Scanner: React.FC<ScannerProps> = ({
     setCapturedImage(null);
     
     try {
+      // Check if this is an iOS device
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      console.log('Device detection:', isIOS ? 'iOS device' : 'Non-iOS device');
+      
       // Simple constraints that work well on iOS
       const constraints = {
         video: {
           facingMode: selectedCamera === 'environment' ? 'environment' : 'user',
           width: { ideal: 1280 },
           height: { ideal: 720 }
-        }
+        },
+        audio: false
       };
       
+      console.log('Requesting camera access with constraints:', JSON.stringify(constraints));
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('Camera access granted, stream tracks:', stream.getVideoTracks().length);
       
       if (videoRef.current) {
         // These attributes are essential for iOS
@@ -116,12 +123,32 @@ const Scanner: React.FC<ScannerProps> = ({
         videoRef.current.setAttribute('autoplay', 'true');
         videoRef.current.setAttribute('muted', 'true');
         
+        // For iOS, we need to ensure the video is actually playing
+        try {
+          await videoRef.current.play();
+          console.log('Video playback started successfully');
+        } catch (playErr) {
+          console.error('Error starting video playback:', playErr);
+        }
+        
+        // Add event listener to know when video is actually ready
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded, dimensions:', 
+                      videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
+          setError('Camera ready! Position your ' + 
+                  (scannerType === 'qrcode' ? 'QR code' : 'document') + 
+                  ' in view and tap the Capture button.');
+        };
+        
         // Show helpful instructions based on scanner type
         if (scannerType === 'qrcode') {
-          setError('Position the QR code in view and tap the Capture button when ready.');
+          setError('Starting camera... Position the QR code in view when ready.');
         } else {
-          setError('Position your document in view and tap the Capture button when ready.');
+          setError('Starting camera... Position your document in view when ready.');
         }
+      } else {
+        console.error('Video reference is null');
+        throw new Error('Video element not available');
       }
     } catch (err) {
       console.error('Camera access error:', err);
@@ -138,24 +165,48 @@ const Scanner: React.FC<ScannerProps> = ({
   
   // Capture image from video stream
   const captureImage = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      console.error('Video or canvas ref is null');
+      setError('Error capturing image: Video or canvas not ready');
+      return;
+    }
     
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
     
-    if (!context) return;
+    if (!context) {
+      console.error('Could not get canvas context');
+      setError('Error capturing image: Canvas context not available');
+      return;
+    }
     
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // Convert to data URL
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    setCapturedImage(imageData);
+    try {
+      console.log('Capturing image from video stream');
+      console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+      
+      // Make sure video is playing and has dimensions
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.error('Video dimensions are zero');
+        setError('Error capturing image: Video not ready. Please wait a moment and try again.');
+        return;
+      }
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      
+      // Draw current video frame to canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Convert to data URL
+      const imageData = canvas.toDataURL('image/jpeg', 0.8);
+      console.log('Image captured successfully');
+      setCapturedImage(imageData);
+    } catch (err) {
+      console.error('Error capturing image:', err);
+      setError(`Error capturing image: ${err}`);
+    }
   };
   
   // Stop scanner
@@ -174,53 +225,83 @@ const Scanner: React.FC<ScannerProps> = ({
   
   // Process captured document image
   const processDocumentImage = () => {
-    if (!capturedImage) return;
+    if (!capturedImage) {
+      console.error('No captured image to process');
+      setError('Error: No image captured. Please capture an image first.');
+      return;
+    }
     
+    console.log('Processing document image...');
     setIsProcessing(true);
     setError('Processing document... This may take a moment.');
     
     // For a real implementation, you would use OCR here
     // Since we're avoiding external libraries, we'll simulate OCR with a timeout
     setTimeout(() => {
-      // Generate sample text that looks like an ID card
-      const sampleText = [
-        "IDENTIFICATION CARD",
-        "Name: John Smith",
-        "Date of Birth: 01/01/1980",
-        "ID Number: ABC123456",
-        "Nationality: United States",
-        "Issue Date: 01/01/2020",
-        "Expiry Date: 01/01/2030"
-      ].join('\n');
-      
-      // Clear the processing message
-      setError('');
-      
-      // Return the sample text
-      onScanSuccess(sampleText, 'document');
-      setIsProcessing(false);
+      try {
+        console.log('Document processing completed');
+        
+        // Generate sample text that looks like an ID card
+        const sampleText = [
+          "IDENTIFICATION CARD",
+          "Name: John Smith",
+          "Date of Birth: 01/01/1980",
+          "ID Number: ABC123456",
+          "Nationality: United States",
+          "Issue Date: 01/01/2020",
+          "Expiry Date: 01/01/2030"
+        ].join('\n');
+        
+        // Clear the processing message
+        setError('');
+        
+        // Return the sample text
+        console.log('Sending scan success with document data');
+        onScanSuccess(sampleText, 'document');
+      } catch (err) {
+        console.error('Error in document processing:', err);
+        setError(`Error processing document: ${err}`);
+        if (onScanError) onScanError(`Error processing document: ${err}`);
+      } finally {
+        setIsProcessing(false);
+      }
     }, 2000);
   };
   
   // Process captured QR code image
   const processQRCode = () => {
-    if (!capturedImage) return;
+    if (!capturedImage) {
+      console.error('No captured image to process');
+      setError('Error: No image captured. Please capture an image first.');
+      return;
+    }
     
+    console.log('Processing QR code image...');
     setIsProcessing(true);
     setError('Processing QR code...');
     
     // For a real implementation, you would use a QR code reader here
     // Since we're avoiding external libraries, we'll simulate QR code reading with a timeout
     setTimeout(() => {
-      // Simulate a successful QR code scan
-      const qrData = "https://wot.id/scanned-qr-code";
-      
-      // Clear the processing message
-      setError('');
-      
-      // Return the QR code data
-      onScanSuccess(qrData, 'qrcode');
-      setIsProcessing(false);
+      try {
+        console.log('QR code processing completed');
+        
+        // Simulate a successful QR code scan
+        const qrData = "https://wot.id/scanned-qr-code";
+        
+        // Clear the processing message
+        setError('');
+        
+        // Return the QR code data
+        console.log('Sending scan success with QR code data');
+        onScanSuccess(qrData, 'qrcode');
+      } catch (err) {
+        console.error('Error in QR code processing:', err);
+        setError(`Error processing QR code: ${err}`);
+        if (onScanError) onScanError(`Error processing QR code: ${err}`);
+      } finally {
+        setIsProcessing(false);
+      }
     }, 1000);
   };
   
