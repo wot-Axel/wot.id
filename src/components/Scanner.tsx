@@ -37,20 +37,36 @@ const Scanner: React.FC<ScannerProps> = ({
     // Dynamically import the libraries only on the client side
     const loadLibraries = async () => {
       try {
-        // Import html5-qrcode
-        const html5QrcodeModule = await import('html5-qrcode');
-        Html5Qrcode = html5QrcodeModule.Html5Qrcode;
+        // Check if we're on iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
         
-        // Import tesseract.js
-        const tesseractModule = await import('tesseract.js');
-        Tesseract = tesseractModule.default;
-        
-        // Initialize the scanner after libraries are loaded
-        if (Html5Qrcode) {
-          scannerRef.current = new Html5Qrcode('scanner-container');
+        // Import html5-qrcode with error handling
+        try {
+          const html5QrcodeModule = await import('html5-qrcode');
+          Html5Qrcode = html5QrcodeModule.Html5Qrcode;
+          
+          // Initialize the scanner after libraries are loaded
+          if (Html5Qrcode) {
+            scannerRef.current = new Html5Qrcode('scanner-container');
+          }
+        } catch (qrError) {
+          console.error('Error loading QR code library:', qrError);
+          // Continue to load Tesseract even if QR code library fails
         }
         
-        // Get available cameras
+        // Import tesseract.js with error handling
+        try {
+          const tesseractModule = await import('tesseract.js');
+          Tesseract = tesseractModule.default;
+        } catch (ocrError) {
+          console.error('Error loading OCR library:', ocrError);
+          // If we're specifically in document scanning mode, this is a critical error
+          if (scannerType === 'document') {
+            throw new Error('Could not load document scanning library');
+          }
+        }
+        
+        // Get available cameras with better error handling for iOS
         if (Html5Qrcode) {
           try {
             const devices = await Html5Qrcode.getCameras();
@@ -59,18 +75,36 @@ const Scanner: React.FC<ScannerProps> = ({
                 id: device.id,
                 label: device.label || `Camera ${device.id}`
               })));
-              setSelectedCamera(devices[0].id);
+              
+              // On iOS, prefer the back camera (environment facing)
+              if (isIOS) {
+                const backCamera = devices.find((device: { id: string; label: string }) => 
+                  device.label && device.label.toLowerCase().includes('back'));
+                setSelectedCamera(backCamera ? backCamera.id : devices[0].id);
+              } else {
+                setSelectedCamera(devices[0].id);
+              }
             } else {
-              setError('No camera devices found.');
+              // If no cameras found through the API, try a direct approach for mobile
+              setSelectedCamera('environment');
+              setCameras([{ id: 'environment', label: 'Back Camera' }]);
             }
           } catch (err: any) {
-            setError('Error getting cameras: ' + err);
-            if (onScanError) onScanError('Error getting cameras: ' + err);
+            console.error('Error getting cameras:', err);
+            // Fallback for iOS devices that may not expose camera list
+            if (isIOS) {
+              setSelectedCamera('environment');
+              setCameras([{ id: 'environment', label: 'Back Camera' }]);
+            } else {
+              setError('Error accessing cameras: ' + err);
+              if (onScanError) onScanError('Error accessing cameras: ' + err);
+            }
           }
         }
       } catch (error: any) {
         console.error('Error loading libraries:', error);
         setError('Failed to load scanning libraries. Please try again later.');
+        if (onScanError) onScanError('Failed to load scanning libraries: ' + error);
       }
     };
     
@@ -95,12 +129,25 @@ const Scanner: React.FC<ScannerProps> = ({
     setError('');
     
     try {
+      // Check if we're using the environment fallback
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      };
+      
+      // Add specific config for iOS devices
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS) {
+        // iOS devices may need different settings
+        Object.assign(config, {
+          aspectRatio: 1.0,
+          formatsToSupport: ['QR_CODE'],
+        });
+      }
+      
       await scannerRef.current.start(
         selectedCamera,
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-        },
+        config,
         (decodedText: string) => {
           // QR Code scanned successfully
           onScanSuccess(decodedText, 'qrcode');
@@ -112,9 +159,15 @@ const Scanner: React.FC<ScannerProps> = ({
         }
       );
     } catch (err: any) {
+      console.error('QR scanner error:', err);
       setIsScanning(false);
       setError('Error starting scanner: ' + err);
       if (onScanError) onScanError('Error starting scanner: ' + err);
+      
+      // Try alternative approach for iOS if the first method fails
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        setError('Having trouble with the scanner? Try using the document scanner instead.');
+      }
     }
   };
   
@@ -169,19 +222,71 @@ const Scanner: React.FC<ScannerProps> = ({
     setError('');
     
     try {
+      // Check if Tesseract is loaded
+      if (!Tesseract) {
+        throw new Error('Document scanning library not available');
+      }
+      
+      // Show processing status to user
+      setError('Processing document... This may take a moment.');
+      
+      // For iOS, we might need to compress the image first
+      let imageToProcess = capturedImage;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (isIOS) {
+        // Attempt to reduce memory usage for iOS devices
+        const img = new Image();
+        img.src = capturedImage;
+        await new Promise(resolve => { img.onload = resolve; });
+        
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Resize to a more manageable size for processing
+        const maxDimension = 1200;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height && width > maxDimension) {
+          height = (height * maxDimension) / width;
+          width = maxDimension;
+        } else if (height > maxDimension) {
+          width = (width * maxDimension) / height;
+          height = maxDimension;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Use lower quality for better performance
+        imageToProcess = canvas.toDataURL('image/jpeg', 0.7);
+      }
+      
       const result = await Tesseract.recognize(
-        capturedImage,
+        imageToProcess,
         'eng',
         { 
-          logger: (m: any) => console.log(m)
+          logger: (m: any) => {
+            console.log(m);
+            // Update progress for user
+            if (m.status === 'recognizing text' && m.progress) {
+              setError(`Processing document: ${Math.floor(m.progress * 100)}%`);
+            }
+          }
         }
       );
+      
+      // Clear the processing message
+      setError('');
       
       // Extract the recognized text
       const text = result.data.text;
       onScanSuccess(text, 'document');
       
     } catch (err) {
+      console.error('Document processing error:', err);
       setError('Error processing document: ' + err);
       if (onScanError) onScanError('Error processing document: ' + err);
     } finally {
@@ -196,14 +301,38 @@ const Scanner: React.FC<ScannerProps> = ({
     setCapturedImage(null);
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
+      // Check if Tesseract is loaded before starting document scanner
+      if (!Tesseract && scannerType === 'document') {
+        throw new Error('Document scanning library not loaded');
+      }
+      
+      // iOS specific constraints
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: 'environment',
+          // Add iOS specific constraints
+          ...(isIOS ? {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } : {})
+        }
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        
+        // For iOS, we need to ensure the video plays
+        if (isIOS) {
+          videoRef.current.setAttribute('playsinline', 'true');
+          videoRef.current.setAttribute('autoplay', 'true');
+          videoRef.current.setAttribute('muted', 'true');
+        }
       }
     } catch (err) {
+      console.error('Camera access error:', err);
       setIsScanning(false);
       setError('Error accessing camera: ' + err);
       if (onScanError) onScanError('Error accessing camera: ' + err);
@@ -280,6 +409,7 @@ const Scanner: React.FC<ScannerProps> = ({
                   className="document-video" 
                   autoPlay 
                   playsInline
+                  muted
                 ></video>
                 <button 
                   className="capture-button"
