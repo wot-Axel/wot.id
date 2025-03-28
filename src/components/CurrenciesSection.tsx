@@ -187,10 +187,59 @@ export const CurrenciesSection = () => {
       const name = await createCurrenciesTable(db, address);
       setTableName(name);
       
+      // Add default currencies automatically
+      await addDefaultCurrencies(name);
+      
+      // Refresh data
+      const data = await getCurrenciesData(db, name);
+      setCurrenciesData(data);
+      
       setLoading(false);
     } catch (err: any) {
       setError(err.message || 'Error creating table');
       setLoading(false);
+    }
+  };
+  
+  // Function to add default currencies automatically
+  const addDefaultCurrencies = async (tableName: string) => {
+    if (!db) return;
+    
+    const defaultCurrencies = [
+      {
+        symbol: 'ETH',
+        name: 'Ethereum',
+        amount: '1.5',
+        network: 'Ethereum',
+      },
+      {
+        symbol: 'BTC',
+        name: 'Bitcoin',
+        amount: '0.25',
+        network: 'Bitcoin',
+      },
+      {
+        symbol: 'OP',
+        name: 'Optimism',
+        amount: '500',
+        network: 'Optimism',
+      },
+      {
+        symbol: 'USDC',
+        name: 'USD Coin',
+        amount: '1000',
+        network: 'Ethereum',
+      },
+      {
+        symbol: 'MATIC',
+        name: 'Polygon',
+        amount: '2500',
+        network: 'Polygon',
+      }
+    ];
+    
+    for (const currency of defaultCurrencies) {
+      await insertCurrencyData(db, tableName, currency.symbol, JSON.stringify(currency));
     }
   };
 
