@@ -18,10 +18,13 @@ export default async function RootLayout({
 }>) {
   const headersData = await headers();
   const cookies = headersData.get('cookie');
+  
+  // Check if user is logged in based on cookies
+  const isLoggedIn = cookies?.includes('appkit.auth.token=');
 
   return (
     <html lang="en">
-      <body>
+      <body className={isLoggedIn ? 'logged-in' : ''}>
         <ContextProvider cookies={cookies}>
           <TopNavigation />
           <main className="main-content">
