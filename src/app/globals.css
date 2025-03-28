@@ -201,6 +201,7 @@ section {
   align-items: center;
   justify-items: center;
   text-align: center;
+  min-height: 60vh;
 }
 
 /* Left-align headings while keeping page content centered */
@@ -701,11 +702,13 @@ label {
 /* Main content area styling */
 .main-content {
   padding-top: 20px;
-  min-height: calc(100vh - 64px - 100px); /* account for nav and footer */
+  min-height: calc(100vh - 64px - 150px); /* account for nav and footer */
   max-width: 800px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Additional body styling */

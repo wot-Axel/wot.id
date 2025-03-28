@@ -32,11 +32,8 @@ export default function Home() {
       <div className="advice">
         <p>
           This is an experimental project.<b /> Proceed with caution.
-          
         </p>
       </div>
-      <br />
-      <br />
     </div>
   );
 }
