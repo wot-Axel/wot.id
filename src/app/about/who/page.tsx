@@ -1,6 +1,6 @@
 'use client';
 
-import { Footer } from "@/components/Footer";
+// Footer is now included in the layout
 import { AboutSubNav } from "@/components/AboutSubNav";
 
 const AboutWho = () => {
@@ -41,7 +41,7 @@ const AboutWho = () => {
         </div>
       </div>
       
-      <Footer />
+      {/* Footer is now included in the layout */}
     </div>
   );
 }

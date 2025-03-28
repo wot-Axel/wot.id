@@ -1,6 +1,6 @@
 'use client';
 
-import { Footer } from "@/components/Footer";
+// Footer is now included in the layout
 import { ConnectButton } from "@/components/ConnectButton";
 import AttestationForm from '@/components/AttestationForm';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
@@ -62,7 +62,7 @@ const WritePage = () => {
         </p>
       </div>
       
-      <Footer />
+      {/* Footer is now included in the layout */}
     </div>
   );
 };

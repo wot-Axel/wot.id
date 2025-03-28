@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { EAS } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
-import { Footer } from "@/components/Footer";
+// Footer is now included in the layout
 import { ConnectButton } from "@/components/ConnectButton";
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { 
@@ -239,7 +239,7 @@ const ReadAttestationPage = () => {
         </p>
       </div>
       
-      <Footer />
+      {/* Footer is now included in the layout */}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { Footer } from "@/components/Footer";
+// Footer is now included in the layout
 
 const Legal = () => {
   return (
@@ -67,7 +67,7 @@ const Legal = () => {
         </div>
       </div>
       
-      <Footer />
+      {/* Footer is now included in the layout */}
     </div>
   );
 }

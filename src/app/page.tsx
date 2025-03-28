@@ -4,7 +4,7 @@
 import { ConnectButton } from "@/components/ConnectButton";
 //import { InfoList } from "@/components/InfoList";
 import Image from 'next/image';
-import { Footer } from "@/components/Footer";
+// Footer is now included in the layout
 import './globals.css';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { useEffect } from 'react';
@@ -35,7 +35,6 @@ export default function Home() {
       </div>
       <br />
       <br />
-      <Footer />
     </div>
   );
 }

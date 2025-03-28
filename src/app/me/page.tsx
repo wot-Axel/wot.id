@@ -1,7 +1,7 @@
 'use client';
 
 import { useAppKitAccount, useDisconnect } from '@reown/appkit/react';
-import { Footer } from "@/components/Footer";
+// Footer is now included in the layout
 import { PrivateDataSection } from "@/components/PrivateDataSection";
 import { MedicalDataSection } from "@/components/MedicalDataSection";
 import { AccountsPasswordsSection } from "@/components/AccountsPasswordsSection";
@@ -86,7 +86,7 @@ const MePage = () => {
         </>
       )}
       
-      {isConnected && <Footer />}
+      {/* Footer is now included in the layout */}
     </div>
   );
 };
