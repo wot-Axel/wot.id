@@ -394,9 +394,11 @@ label {
 /* Legal Page Styling */
 .legal-page {
   max-width: 800px;
+  width: 100%;
   margin: 0 auto;
   padding: 20px;
   color: var(--foreground);
+  box-sizing: border-box;
 }
 
 .page-title {
@@ -413,6 +415,8 @@ label {
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Reduce spacing for the disconnect section */
@@ -438,6 +442,10 @@ label {
 .legal-content {
   padding: 20px;
   line-height: 1.6;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .legal-content p {
@@ -460,6 +468,7 @@ label {
 @media (max-width: 768px) {
   .legal-page {
     padding: 15px;
+    max-width: 100%;
   }
   
   .page-title {
@@ -474,6 +483,13 @@ label {
   
   .legal-content {
     padding: 15px;
+    font-size: 0.95rem;
+  }
+  
+  /* Fix for long text on mobile */
+  .detail-value {
+    word-break: break-all;
+    font-size: 0.9rem;
   }
 }
 
