@@ -14,9 +14,11 @@ export interface PrivateData {
 let mockPrivateDatabase: PrivateData[] = [];
 let mockMedicalDatabase: PrivateData[] = [];
 let mockAccountsDatabase: PrivateData[] = [];
+let mockContactsDatabase: PrivateData[] = [];
 let mockPrivateTableCreated = false;
 let mockMedicalTableCreated = false;
 let mockAccountsTableCreated = false;
+let mockContactsTableCreated = false;
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async () => {
@@ -230,6 +232,78 @@ export const clearAccountsData = async (db: Database, tableName: string) => {
     return true;
   } catch (error) {
     console.error('Error clearing accounts data:', error);
+    throw error;
+  }
+};
+
+// Create a new contacts table for the user
+export const createContactsTable = async (db: Database, address: string) => {
+  try {
+    // For development, we'll simulate creating a table
+    mockContactsTableCreated = true;
+    const tableName = `wot_contacts_${address.substring(2, 10).toLowerCase()}`;
+    return tableName;
+  } catch (error) {
+    console.error('Error creating contacts table:', error);
+    throw error;
+  }
+};
+
+// Insert data into contacts table
+export const insertContactData = async (db: Database, tableName: string, key: string, value: string) => {
+  try {
+    // For development, we'll add to our mock contacts database
+    const timestamp = new Date().toISOString();
+    const newId = mockContactsDatabase.length > 0 ? Math.max(...mockContactsDatabase.map(item => item.id)) + 1 : 1;
+    
+    const newItem: PrivateData = {
+      id: newId,
+      key,
+      value,
+      created_at: timestamp
+    };
+    
+    mockContactsDatabase.unshift(newItem); // Add to beginning for reverse chronological order
+    return true;
+  } catch (error) {
+    console.error('Error inserting contact data:', error);
+    throw error;
+  }
+};
+
+// Get all contacts data for a user
+export const getContactsData = async (db: Database, tableName: string) => {
+  try {
+    // For development, return our mock contacts database
+    return mockContactsDatabase;
+  } catch (error) {
+    console.error('Error getting contacts data:', error);
+    return [];
+  }
+};
+
+// Check if a contacts table exists for a user
+export const checkContactsTableExists = async (db: Database, address: string) => {
+  try {
+    // For development, check our mock flag
+    if (mockContactsTableCreated) {
+      return `wot_contacts_${address.substring(2, 10).toLowerCase()}`;
+    }
+    return '';
+  } catch (error) {
+    // Table doesn't exist
+    return '';
+  }
+};
+
+// Clear all contacts data
+export const clearContactsData = async (db: Database, tableName: string) => {
+  try {
+    // For development, clear our mock contacts database
+    mockContactsDatabase = [];
+    return true;
+  } catch (error) {
+    console.error('Error clearing contacts data:', error);
     throw error;
   }
 };
