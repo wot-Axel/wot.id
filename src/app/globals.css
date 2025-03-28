@@ -63,10 +63,8 @@ body {
 .site-footer {
   width: 100%;
   margin-top: 60px;
-  padding: 20px 0;
+  padding: 0;
   text-align: center;
-  display: flex;
-  justify-content: center;
   box-sizing: border-box;
 }
 
@@ -74,10 +72,8 @@ body {
   max-width: 800px; /* Match the section width */
   margin: 0 auto;
   padding: 0 20px;
-  width: 100%; /* Use percentage width for better responsiveness */
+  width: 100%;
   box-sizing: border-box;
-  display: flex;
-  justify-content: center;
 }
 
 .footer-nav {
@@ -90,8 +86,7 @@ body {
   padding: 15px 20px; /* Match the top-nav padding exactly */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   border: 1px solid #eaeaea;
-  width: 100%;
-  max-width: 760px; /* 800px - 2*20px padding to match exact content width */
+  width: calc(100% - 40px); /* Account for container padding */
   box-sizing: border-box;
   margin: 0 auto;
 }
@@ -137,8 +132,7 @@ body {
     justify-content: space-between;
     gap: 5px;
     padding: 10px 15px;
-    width: 100%;
-    max-width: 780px; /* Ensure consistent width with top nav on mobile */
+    width: calc(100% - 20px); /* Account for container padding on mobile */
   }
   
   .footer-divider {
