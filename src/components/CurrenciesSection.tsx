@@ -391,7 +391,6 @@ export const CurrenciesSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your cryptocurrency holdings are stored securely on Tableland on the Optimism network.</p>
                 
                 {/* Portfolio Summary */}
                 {currenciesData.length > 0 && (
@@ -428,16 +427,7 @@ export const CurrenciesSection = () => {
                   </div>
                 )}
                 
-                {/* Add Currency Button */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <button 
-                    className="button-primary"
-                    onClick={() => setShowAddForm(!showAddForm)}
-                    style={{ marginBottom: '0.5rem' }}
-                  >
-                    {showAddForm ? 'Cancel' : '+ Add Currency'}
-                  </button>
-                </div>
+
                 
                 {/* Add Currency Form */}
                 {showAddForm && (
@@ -582,7 +572,6 @@ export const CurrenciesSection = () => {
                 
                 {/* Currency List */}
                 <div className="private-data-list">
-                  <h3>Your Cryptocurrency Holdings</h3>
                   
 
                   
@@ -823,9 +812,16 @@ export const CurrenciesSection = () => {
                   )}
                 </div>
                 
-                {/* Clear All Button */}
-                {currenciesData.length > 0 && (
-                  <div style={{ marginTop: '1.5rem' }}>
+                {/* Add and Clear Buttons */}
+                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <button 
+                    className="button-primary"
+                    onClick={() => setShowAddForm(!showAddForm)}
+                  >
+                    {showAddForm ? 'Cancel' : '+ Add Currency'}
+                  </button>
+                  
+                  {currenciesData.length > 0 && (
                     <button 
                       className="button-primary"
                       onClick={handleClearCurrenciesData}
@@ -833,10 +829,14 @@ export const CurrenciesSection = () => {
                     >
                       {loading ? 'Clearing...' : 'Clear All Currencies'}
                     </button>
-                    <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
-                      This will remove all saved currency data.
-                    </p>
-                  </div>
+                  )}
+                </div>
+                
+                {/* Explanation text */}
+                {currenciesData.length > 0 && (
+                  <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                    Clearing will remove all saved currency data.
+                  </p>
                 )}
               </div>
             )}
