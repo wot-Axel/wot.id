@@ -124,7 +124,7 @@ body {
   .footer-container {
     padding: 0 10px;
     width: 100%;
-    max-width: 100%;
+    max-width: 800px;
   }
 
   .footer-nav {
