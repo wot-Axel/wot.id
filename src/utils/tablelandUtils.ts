@@ -13,8 +13,10 @@ export interface PrivateData {
 // Mock databases for development
 let mockPrivateDatabase: PrivateData[] = [];
 let mockMedicalDatabase: PrivateData[] = [];
+let mockAccountsDatabase: PrivateData[] = [];
 let mockPrivateTableCreated = false;
 let mockMedicalTableCreated = false;
+let mockAccountsTableCreated = false;
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async () => {
@@ -156,6 +158,78 @@ export const clearPrivateData = async (db: Database, tableName: string) => {
     return true;
   } catch (error) {
     console.error('Error clearing private data:', error);
+    throw error;
+  }
+};
+
+// Create a new accounts table for the user
+export const createAccountsTable = async (db: Database, address: string) => {
+  try {
+    // For development, we'll simulate creating a table
+    mockAccountsTableCreated = true;
+    const tableName = `wot_accounts_${address.substring(2, 10).toLowerCase()}`;
+    return tableName;
+  } catch (error) {
+    console.error('Error creating accounts table:', error);
+    throw error;
+  }
+};
+
+// Insert data into accounts table
+export const insertAccountData = async (db: Database, tableName: string, key: string, value: string) => {
+  try {
+    // For development, we'll add to our mock accounts database
+    const timestamp = new Date().toISOString();
+    const newId = mockAccountsDatabase.length > 0 ? Math.max(...mockAccountsDatabase.map(item => item.id)) + 1 : 1;
+    
+    const newItem: PrivateData = {
+      id: newId,
+      key,
+      value,
+      created_at: timestamp
+    };
+    
+    mockAccountsDatabase.unshift(newItem); // Add to beginning for reverse chronological order
+    return true;
+  } catch (error) {
+    console.error('Error inserting account data:', error);
+    throw error;
+  }
+};
+
+// Get all accounts data for a user
+export const getAccountsData = async (db: Database, tableName: string) => {
+  try {
+    // For development, return our mock accounts database
+    return mockAccountsDatabase;
+  } catch (error) {
+    console.error('Error getting accounts data:', error);
+    return [];
+  }
+};
+
+// Check if an accounts table exists for a user
+export const checkAccountsTableExists = async (db: Database, address: string) => {
+  try {
+    // For development, check our mock flag
+    if (mockAccountsTableCreated) {
+      return `wot_accounts_${address.substring(2, 10).toLowerCase()}`;
+    }
+    return '';
+  } catch (error) {
+    // Table doesn't exist
+    return '';
+  }
+};
+
+// Clear all accounts data
+export const clearAccountsData = async (db: Database, tableName: string) => {
+  try {
+    // For development, clear our mock accounts database
+    mockAccountsDatabase = [];
+    return true;
+  } catch (error) {
+    console.error('Error clearing accounts data:', error);
     throw error;
   }
 };
