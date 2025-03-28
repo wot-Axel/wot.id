@@ -1,7 +1,6 @@
 'use client';
 
 import { useAppKitAccount, useDisconnect } from '@reown/appkit/react';
-import { ConnectButton } from "@/components/ConnectButton";
 import { Footer } from "@/components/Footer";
 import { PrivateDataSection } from "@/components/PrivateDataSection";
 import { MedicalDataSection } from "@/components/MedicalDataSection";
@@ -13,32 +12,29 @@ import { RealWorldAssetsSection } from "@/components/RealWorldAssetsSection";
 import { TrustBalanceSection } from "@/components/TrustBalanceSection";
 import { useEffect, useState } from 'react';
 import { formatAddress } from '@/utils/attestationUtils';
+import { useRouter } from 'next/navigation';
 
 const MePage = () => {
   const { address, isConnected } = useAppKitAccount();
   const { disconnect } = useDisconnect();
   const [walletAddress, setWalletAddress] = useState<string>('');
+  const router = useRouter();
   
   useEffect(() => {
     if (address) {
       setWalletAddress(address);
     }
-  }, [address]);
+    
+    // Redirect to homepage if not connected
+    if (!isConnected) {
+      router.push('/');
+    }
+  }, [address, isConnected, router]);
   
   return (
     <div className="legal-page">
       
-      {!isConnected ? (
-        <div className="legal-section">
-          <h2>Connect to your Web of Trust Account</h2>
-          <div className="legal-content">
-            <p>Please connect to view your Web of Trust account information.</p>
-            <div className="connect-container">
-              <ConnectButton />
-            </div>
-          </div>
-        </div>
-      ) : (
+      {isConnected && (
         <>
           <IdentitySection />
           
@@ -81,7 +77,7 @@ const MePage = () => {
         </>
       )}
       
-      <Footer />
+      {isConnected && <Footer />}
     </div>
   );
 };
