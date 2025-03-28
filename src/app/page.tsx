@@ -29,11 +29,6 @@ export default function Home() {
 
       <ConnectButton />
       
-      <div className="scan-actions">
-        <ScanButton scannerType="qrcode" buttonText="Scan QR Code" />
-        <ScanButton scannerType="document" buttonText="Scan Document" />
-      </div>
-      
       <div className="advice">
         <p>
           This is an experimental project.<b /> Proceed with caution.
