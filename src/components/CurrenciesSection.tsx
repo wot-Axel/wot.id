@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { optimism } from '@reown/appkit/networks';
 import { formatEther } from 'viem';
@@ -584,163 +584,101 @@ export const CurrenciesSection = () => {
                 <div className="private-data-list">
                   <h3>Your Cryptocurrency Holdings</h3>
                   
-                  {/* Display connected wallet's ETH balance */}
-                  {ethBalanceData && (
-                    <div className="currency-cards" style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-                      gap: '1rem',
-                      marginBottom: '1rem'
-                    }}>
-                      <div 
-                        className="currency-card" 
-                        style={{ 
-                          border: '1px solid #eaeaea',
-                          borderRadius: '8px',
-                          padding: '1rem',
-                          backgroundColor: '#f9f9ff',
-                          borderLeft: '4px solid #6366f1'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <div style={{ 
-                              width: '36px', 
-                              height: '36px', 
-                              borderRadius: '50%', 
-                              backgroundColor: '#eef2ff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              marginRight: '0.75rem',
-                              fontWeight: 'bold'
-                            }}>
-                              Ξ
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 'bold' }}>ETH</div>
-                              <div style={{ fontSize: '0.8rem', color: '#666' }}>Ethereum</div>
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontWeight: 'bold' }}>{parseFloat(formatEther(ethBalanceData.value)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</div>
-                            <div style={{ fontSize: '0.8rem', color: '#666' }}>${(parseFloat(formatEther(ethBalanceData.value)) * 3000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                          </div>
-                        </div>
-                        
-                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
-                          <strong>Network:</strong> Ethereum
-                        </div>
-                        
-                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
-                          <strong>Address:</strong> 
-                          <div style={{ 
-                            wordBreak: 'break-all', 
-                            backgroundColor: '#f5f5f5', 
-                            padding: '0.25rem 0.5rem', 
-                            borderRadius: '4px',
-                            marginTop: '0.25rem',
-                            fontSize: '0.8rem'
-                          }}>
-                            {address}
-                          </div>
-                        </div>
-                        
-                        <div style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                          <span style={{ 
-                            backgroundColor: '#eef2ff', 
-                            color: '#6366f1', 
-                            padding: '0.25rem 0.5rem', 
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold'
-                          }}>
-                            Connected Wallet
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
                   
                   {/* Show message if no currencies at all */}
                   {currenciesData.length === 0 && !ethBalanceData && (
                     <p>No currencies added yet. Add some using the form above.</p>
                   )}
                   
-                  {/* Show stored currencies if any exist */}
-                  {currenciesData.length > 0 && (
-                    <div className="currency-cards" style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-                      gap: '1rem',
-                      marginTop: ethBalanceData ? '1rem' : '0'
+                  {/* Currency Table */}
+                  {(ethBalanceData || currenciesData.length > 0) && (
+                    <div className="currency-table-container" style={{ 
+                      marginTop: '1rem',
+                      overflowX: 'auto'
                     }}>
-                      {/* Stored currencies */}
-                      {currenciesData.map((item) => {
-                        const currencyInfo = parseCurrencyData(item.value);
-                        const icon = currencyIcons[currencyInfo.symbol] || currencyInfo.symbol;
-                        
-                        // Mock value calculation - in a real app, would use an API
-                        const mockPrice = 
-                          currencyInfo.symbol === 'BTC' ? 60000 :
-                          currencyInfo.symbol === 'ETH' ? 3000 :
-                          currencyInfo.symbol === 'USDC' || currencyInfo.symbol === 'USDT' || currencyInfo.symbol === 'DAI' ? 1 :
-                          currencyInfo.symbol === 'SOL' ? 120 :
-                          currencyInfo.symbol === 'MATIC' ? 0.7 :
-                          currencyInfo.symbol === 'AVAX' ? 35 :
-                          currencyInfo.symbol === 'OP' ? 3.5 :
-                          currencyInfo.symbol === 'ARB' ? 1.2 :
-                          10; // Default value for unknown tokens
-                        
-                        const value = parseFloat(currencyInfo.amount) * mockPrice;
-                        
-                        return (
-                          <div 
-                            key={item.id} 
-                            className="currency-card" 
-                            style={{ 
-                              border: '1px solid #eaeaea',
-                              borderRadius: '8px',
-                              padding: '1rem',
-                              backgroundColor: selectedCurrency === item.id.toString() ? '#f0f7ff' : 'white',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onClick={() => setSelectedCurrency(selectedCurrency === item.id.toString() ? null : item.id.toString())}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <div style={{ 
-                                  width: '36px', 
-                                  height: '36px', 
-                                  borderRadius: '50%', 
-                                  backgroundColor: '#f0f0f0',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  marginRight: '0.75rem',
-                                  fontWeight: 'bold'
-                                }}>
-                                  {icon}
+                      <table style={{ 
+                        width: '100%', 
+                        borderCollapse: 'collapse',
+                        fontSize: '0.9rem',
+                        border: '1px solid #eaeaea',
+                        borderRadius: '8px',
+                        overflow: 'hidden'
+                      }}>
+                        <thead>
+                          <tr style={{ 
+                            backgroundColor: '#f9fafb',
+                            borderBottom: '1px solid #eaeaea'
+                          }}>
+                            <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '600' }}>Asset</th>
+                            <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '600' }}>Name</th>
+                            <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600' }}>Amount</th>
+                            <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600' }}>Value</th>
+                            <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '600' }}>Network</th>
+                            <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '600' }}>Details</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* Connected Wallet ETH Row */}
+                          {ethBalanceData && (
+                            <tr style={{ 
+                              borderBottom: '1px solid #eaeaea',
+                              backgroundColor: '#f9f9ff'
+                            }}>
+                              <td style={{ 
+                                padding: '0.75rem 1rem', 
+                                borderLeft: '4px solid #6366f1'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  <div style={{ 
+                                    width: '28px', 
+                                    height: '28px', 
+                                    borderRadius: '50%', 
+                                    backgroundColor: '#eef2ff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginRight: '0.75rem',
+                                    fontWeight: 'bold'
+                                  }}>
+                                    Ξ
+                                  </div>
+                                  <span style={{ fontWeight: '600' }}>ETH</span>
                                 </div>
-                                <div>
-                                  <div style={{ fontWeight: 'bold' }}>{currencyInfo.symbol}</div>
-                                  <div style={{ fontSize: '0.8rem', color: '#666' }}>{currencyInfo.name}</div>
-                                </div>
-                              </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontWeight: 'bold' }}>{parseFloat(currencyInfo.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#666' }}>${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                              </div>
-                            </div>
-                            
-                            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
-                              <strong>Network:</strong> {currencyInfo.network}
-                            </div>
-                            
-                            {selectedCurrency === item.id.toString() && (
-                              <div style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
-                                {currencyInfo.address && (
+                              </td>
+                              <td style={{ padding: '0.75rem 1rem' }}>Ethereum</td>
+                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                {parseFloat(formatEther(ethBalanceData.value)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}
+                              </td>
+                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                ${(parseFloat(formatEther(ethBalanceData.value)) * 3000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td style={{ padding: '0.75rem 1rem' }}>Ethereum</td>
+                              <td style={{ padding: '0.75rem 1rem' }}>
+                                <button 
+                                  onClick={() => setSelectedCurrency(selectedCurrency === 'wallet-eth' ? null : 'wallet-eth')}
+                                  style={{ 
+                                    border: 'none',
+                                    background: 'none',
+                                    cursor: 'pointer',
+                                    color: '#6366f1',
+                                    fontWeight: '500',
+                                    padding: '0.25rem 0.5rem',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#eef2ff'
+                                  }}
+                                >
+                                  {selectedCurrency === 'wallet-eth' ? 'Hide' : 'View'}
+                                </button>
+                              </td>
+                            </tr>
+                          )}
+                          
+                          {/* Wallet ETH Details Row */}
+                          {selectedCurrency === 'wallet-eth' && (
+                            <tr style={{ backgroundColor: '#f5f7ff' }}>
+                              <td colSpan={6} style={{ padding: '0.75rem 1rem' }}>
+                                <div style={{ fontSize: '0.85rem', padding: '0.5rem' }}>
                                   <div style={{ marginBottom: '0.5rem' }}>
                                     <strong>Address:</strong> 
                                     <div style={{ 
@@ -751,26 +689,136 @@ export const CurrenciesSection = () => {
                                       marginTop: '0.25rem',
                                       fontSize: '0.8rem'
                                     }}>
-                                      {currencyInfo.address}
+                                      {address}
                                     </div>
                                   </div>
-                                )}
-                                
-                                {currencyInfo.notes && (
-                                  <div style={{ marginBottom: '0.5rem' }}>
-                                    <strong>Notes:</strong> 
-                                    <div style={{ marginTop: '0.25rem' }}>{currencyInfo.notes}</div>
+                                  <div>
+                                    <span style={{ 
+                                      backgroundColor: '#eef2ff', 
+                                      color: '#6366f1', 
+                                      padding: '0.25rem 0.5rem', 
+                                      borderRadius: '4px',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 'bold'
+                                    }}>
+                                      Connected Wallet
+                                    </span>
                                   </div>
-                                )}
-                                
-                                <div>
-                                  <strong>Added:</strong> {new Date(item.created_at).toLocaleString()}
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                              </td>
+                            </tr>
+                          )}
+                          
+                          {/* Stored Currencies Rows */}
+                          {currenciesData.map((item) => {
+                            const currencyInfo = parseCurrencyData(item.value);
+                            const icon = currencyIcons[currencyInfo.symbol] || currencyInfo.symbol;
+                            
+                            // Mock value calculation - in a real app, would use an API
+                            const mockPrice = 
+                              currencyInfo.symbol === 'BTC' ? 60000 :
+                              currencyInfo.symbol === 'ETH' ? 3000 :
+                              currencyInfo.symbol === 'USDC' || currencyInfo.symbol === 'USDT' || currencyInfo.symbol === 'DAI' ? 1 :
+                              currencyInfo.symbol === 'SOL' ? 120 :
+                              currencyInfo.symbol === 'MATIC' ? 0.7 :
+                              currencyInfo.symbol === 'AVAX' ? 35 :
+                              currencyInfo.symbol === 'OP' ? 3.5 :
+                              currencyInfo.symbol === 'ARB' ? 1.2 :
+                              10; // Default value for unknown tokens
+                            
+                            const value = parseFloat(currencyInfo.amount) * mockPrice;
+                            
+                            return (
+                              <React.Fragment key={item.id}>
+                                <tr style={{ 
+                                  borderBottom: '1px solid #eaeaea',
+                                  backgroundColor: selectedCurrency === item.id.toString() ? '#f0f7ff' : 'white'
+                                }}>
+                                  <td style={{ padding: '0.75rem 1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                      <div style={{ 
+                                        width: '28px', 
+                                        height: '28px', 
+                                        borderRadius: '50%', 
+                                        backgroundColor: '#f0f0f0',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginRight: '0.75rem',
+                                        fontWeight: 'bold'
+                                      }}>
+                                        {icon}
+                                      </div>
+                                      <span style={{ fontWeight: '600' }}>{currencyInfo.symbol}</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '0.75rem 1rem' }}>{currencyInfo.name}</td>
+                                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                    {parseFloat(currencyInfo.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}
+                                  </td>
+                                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                    ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                  <td style={{ padding: '0.75rem 1rem' }}>{currencyInfo.network}</td>
+                                  <td style={{ padding: '0.75rem 1rem' }}>
+                                    <button 
+                                      onClick={() => setSelectedCurrency(selectedCurrency === item.id.toString() ? null : item.id.toString())}
+                                      style={{ 
+                                        border: 'none',
+                                        background: 'none',
+                                        cursor: 'pointer',
+                                        color: '#6366f1',
+                                        fontWeight: '500',
+                                        padding: '0.25rem 0.5rem',
+                                        borderRadius: '4px',
+                                        backgroundColor: '#eef2ff'
+                                      }}
+                                    >
+                                      {selectedCurrency === item.id.toString() ? 'Hide' : 'View'}
+                                    </button>
+                                  </td>
+                                </tr>
+                                
+                                {/* Details Row */}
+                                {selectedCurrency === item.id.toString() && (
+                                  <tr style={{ backgroundColor: '#f5f7ff' }}>
+                                    <td colSpan={6} style={{ padding: '0.75rem 1rem' }}>
+                                      <div style={{ fontSize: '0.85rem', padding: '0.5rem' }}>
+                                        {currencyInfo.address && (
+                                          <div style={{ marginBottom: '0.5rem' }}>
+                                            <strong>Address:</strong> 
+                                            <div style={{ 
+                                              wordBreak: 'break-all', 
+                                              backgroundColor: '#f5f5f5', 
+                                              padding: '0.25rem 0.5rem', 
+                                              borderRadius: '4px',
+                                              marginTop: '0.25rem',
+                                              fontSize: '0.8rem'
+                                            }}>
+                                              {currencyInfo.address}
+                                            </div>
+                                          </div>
+                                        )}
+                                        
+                                        {currencyInfo.notes && (
+                                          <div style={{ marginBottom: '0.5rem' }}>
+                                            <strong>Notes:</strong> 
+                                            <div style={{ marginTop: '0.25rem' }}>{currencyInfo.notes}</div>
+                                          </div>
+                                        )}
+                                        
+                                        <div>
+                                          <strong>Added:</strong> {new Date(item.created_at).toLocaleString()}
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
