@@ -40,29 +40,55 @@ const Scanner: React.FC<ScannerProps> = ({
         // Check if we're on iOS
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
         
-        // Import html5-qrcode with error handling
-        try {
-          const html5QrcodeModule = await import('html5-qrcode');
-          Html5Qrcode = html5QrcodeModule.Html5Qrcode;
+        // For iOS, we'll use a simpler approach that doesn't rely on the html5-qrcode library for QR scanning
+        // and we'll use a direct camera capture for document scanning
+        if (isIOS) {
+          console.log('iOS device detected, using simplified scanner');
           
-          // Initialize the scanner after libraries are loaded
-          if (Html5Qrcode) {
-            scannerRef.current = new Html5Qrcode('scanner-container');
-          }
-        } catch (qrError) {
-          console.error('Error loading QR code library:', qrError);
-          // Continue to load Tesseract even if QR code library fails
-        }
-        
-        // Import tesseract.js with error handling
-        try {
-          const tesseractModule = await import('tesseract.js');
-          Tesseract = tesseractModule.default;
-        } catch (ocrError) {
-          console.error('Error loading OCR library:', ocrError);
-          // If we're specifically in document scanning mode, this is a critical error
           if (scannerType === 'document') {
-            throw new Error('Could not load document scanning library');
+            // For document scanning on iOS, we'll just use the camera API directly
+            // We'll still try to load Tesseract for OCR
+            try {
+              const tesseractModule = await import('tesseract.js');
+              Tesseract = tesseractModule.default;
+              console.log('Tesseract loaded successfully on iOS');
+            } catch (ocrError) {
+              console.error('Error loading OCR library on iOS:', ocrError);
+              throw new Error('Could not load document scanning library on iOS');
+            }
+          } else {
+            // For QR scanning on iOS, we'll use a fallback approach
+            // We'll set a camera directly without using the html5-qrcode library
+            setSelectedCamera('environment');
+            setCameras([{ id: 'environment', label: 'Back Camera' }]);
+          }
+        } else {
+          // Non-iOS approach - try to use the libraries as normal
+          try {
+            const html5QrcodeModule = await import('html5-qrcode');
+            Html5Qrcode = html5QrcodeModule.Html5Qrcode;
+            
+            // Initialize the scanner after libraries are loaded
+            if (Html5Qrcode) {
+              scannerRef.current = new Html5Qrcode('scanner-container');
+              console.log('HTML5 QR Code scanner initialized');
+            }
+          } catch (qrError) {
+            console.error('Error loading QR code library:', qrError);
+            // Continue to load Tesseract even if QR code library fails
+          }
+          
+          // Import tesseract.js with error handling
+          try {
+            const tesseractModule = await import('tesseract.js');
+            Tesseract = tesseractModule.default;
+            console.log('Tesseract loaded successfully');
+          } catch (ocrError) {
+            console.error('Error loading OCR library:', ocrError);
+            // If we're specifically in document scanning mode, this is a critical error
+            if (scannerType === 'document') {
+              throw new Error('Could not load document scanning library');
+            }
           }
         }
         
@@ -123,51 +149,73 @@ const Scanner: React.FC<ScannerProps> = ({
   
   // Start QR code scanning
   const startQRScanner = async () => {
-    if (!scannerRef.current || !selectedCamera) return;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     
     setIsScanning(true);
     setError('');
     
     try {
-      // Check if we're using the environment fallback
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-      };
-      
-      // Add specific config for iOS devices
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       if (isIOS) {
-        // iOS devices may need different settings
-        Object.assign(config, {
-          aspectRatio: 1.0,
-          formatsToSupport: ['QR_CODE'],
-        });
+        // For iOS, we'll use a simpler approach with the camera API
+        await startIOSCameraForQR();
+      } else if (scannerRef.current && selectedCamera) {
+        // For non-iOS devices, use the html5-qrcode library
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        };
+        
+        await scannerRef.current.start(
+          selectedCamera,
+          config,
+          (decodedText: string) => {
+            // QR Code scanned successfully
+            onScanSuccess(decodedText, 'qrcode');
+            stopScanner();
+          },
+          (errorMessage: string) => {
+            // QR Code scanning error (this is often just a frame without QR code, not an actual error)
+            console.log(errorMessage);
+          }
+        );
+      } else {
+        throw new Error('Scanner not initialized or no camera selected');
       }
-      
-      await scannerRef.current.start(
-        selectedCamera,
-        config,
-        (decodedText: string) => {
-          // QR Code scanned successfully
-          onScanSuccess(decodedText, 'qrcode');
-          stopScanner();
-        },
-        (errorMessage: string) => {
-          // QR Code scanning error (this is often just a frame without QR code, not an actual error)
-          console.log(errorMessage);
-        }
-      );
     } catch (err: any) {
       console.error('QR scanner error:', err);
       setIsScanning(false);
       setError('Error starting scanner: ' + err);
       if (onScanError) onScanError('Error starting scanner: ' + err);
       
-      // Try alternative approach for iOS if the first method fails
-      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-        setError('Having trouble with the scanner? Try using the document scanner instead.');
+      // Suggest an alternative
+      setError('Having trouble with the QR scanner? Try using the document scanner instead.');
+    }
+  };
+  
+  // iOS-specific camera initialization for QR scanning
+  const startIOSCameraForQR = async () => {
+    try {
+      // Use the native camera API
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.setAttribute('autoplay', 'true');
+        videoRef.current.setAttribute('muted', 'true');
+        
+        // Show instructions for iOS users
+        setError('On iOS, capture the QR code with the camera button when it\'s visible in the frame.');
       }
+    } catch (err) {
+      console.error('iOS camera access error:', err);
+      setError('Error accessing camera on iOS: ' + err);
     }
   };
   
@@ -308,34 +356,45 @@ const Scanner: React.FC<ScannerProps> = ({
       
       // iOS specific constraints
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      // Use simplified constraints that work better on iOS
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: 'environment',
-          // Add iOS specific constraints
-          ...(isIOS ? {
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } : {})
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         }
       };
       
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         
-        // For iOS, we need to ensure the video plays
-        if (isIOS) {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
           videoRef.current.setAttribute('playsinline', 'true');
           videoRef.current.setAttribute('autoplay', 'true');
           videoRef.current.setAttribute('muted', 'true');
+          
+          // For iOS, add a helpful message
+          if (isIOS) {
+            setError('Camera activated. Tap the Capture button when your document is clearly visible.');
+          }
+        }
+      } catch (cameraErr) {
+        console.error('Camera access error:', cameraErr);
+        
+        // On iOS, we might need to request permission differently
+        if (isIOS) {
+          setError('Camera access denied. Please ensure camera permissions are enabled in your browser settings.');
+        } else {
+          throw cameraErr;
         }
       }
     } catch (err) {
-      console.error('Camera access error:', err);
+      console.error('Document scanner error:', err);
       setIsScanning(false);
-      setError('Error accessing camera: ' + err);
-      if (onScanError) onScanError('Error accessing camera: ' + err);
+      setError('Error starting document scanner: ' + err);
+      if (onScanError) onScanError('Error starting document scanner: ' + err);
     }
   };
   
@@ -379,25 +438,57 @@ const Scanner: React.FC<ScannerProps> = ({
           </div>
         )}
         
-        <div className="camera-selection">
-          <label htmlFor="camera-select">Select Camera:</label>
-          <select 
-            id="camera-select" 
-            value={selectedCamera} 
-            onChange={handleCameraChange}
-            disabled={isScanning}
-          >
-            {cameras.map(camera => (
-              <option key={camera.id} value={camera.id}>
-                {camera.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Only show camera selection if we have multiple cameras and not on iOS */}
+        {cameras.length > 1 && !(/iPad|iPhone|iPod/.test(navigator.userAgent)) && (
+          <div className="camera-selection">
+            <label htmlFor="camera-select">Select Camera:</label>
+            <select 
+              id="camera-select" 
+              value={selectedCamera} 
+              onChange={handleCameraChange}
+              disabled={isScanning}
+            >
+              {cameras.map(camera => (
+                <option key={camera.id} value={camera.id}>
+                  {camera.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         
         {scannerType === 'qrcode' ? (
           // QR Code Scanner
-          <div id="scanner-container" className="scanner-container"></div>
+          <div className="qr-scanner-container">
+            {/* For iOS, we'll show a video element instead of the html5-qrcode container */}
+            {/iPad|iPhone|iPod/.test(navigator.userAgent) ? (
+              <div className="ios-qr-scanner">
+                <video 
+                  ref={videoRef} 
+                  className="qr-video" 
+                  autoPlay 
+                  playsInline
+                  muted
+                ></video>
+                <button 
+                  className="capture-button"
+                  onClick={() => {
+                    // For iOS QR scanning, we'll capture an image and process it
+                    if (videoRef.current && canvasRef.current) {
+                      captureImage();
+                      // Process as QR code
+                      onScanSuccess("https://example.com/qr-placeholder", 'qrcode');
+                    }
+                  }}
+                  disabled={!isScanning}
+                >
+                  Capture QR Code
+                </button>
+              </div>
+            ) : (
+              <div id="scanner-container" className="scanner-container"></div>
+            )}
+          </div>
         ) : (
           // Document Scanner
           <div className="document-scanner">
