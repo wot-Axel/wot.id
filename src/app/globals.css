@@ -67,13 +67,14 @@ body {
   text-align: center;
   display: flex;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .footer-container {
   max-width: 800px; /* Match the section width */
   margin: 0 auto;
   padding: 0 20px;
-  width: 100%;
+  width: 100%; /* Use percentage width for better responsiveness */
   box-sizing: border-box;
 }
 
@@ -89,6 +90,7 @@ body {
   border: 1px solid #eaeaea;
   width: 100%;
   box-sizing: border-box;
+  margin: 0 auto;
 }
 
 .footer-link {
