@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { PrivateDataSection } from "@/components/PrivateDataSection";
 import { MedicalDataSection } from "@/components/MedicalDataSection";
 import { AccountsPasswordsSection } from "@/components/AccountsPasswordsSection";
-import { HumanContactsSection } from "@/components/HumanContactsSection";
+import { HumanRelationshipsSection } from "@/components/HumanRelationshipsSection";
 import { OrganizationalAffiliationsSection } from "@/components/OrganizationalAffiliationsSection";
 import { IdentitySection } from "@/components/IdentitySection";
 import { DocumentsSection } from "@/components/DocumentsSection";
@@ -53,7 +53,7 @@ const MePage = () => {
           
           <AccountsPasswordsSection />
           
-          <HumanContactsSection />
+          <HumanRelationshipsSection />
           
           <OrganizationalAffiliationsSection />
           
