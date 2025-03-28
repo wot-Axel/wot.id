@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { optimism } from '@reown/appkit/networks';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the ScannerModal component with no SSR
+const ScannerModal = dynamic(() => import('./ScannerModal'), {
+  ssr: false,
+  loading: () => <div className="loading-scanner">Loading scanner...</div>
+});
 import { 
   initTableland, 
   createPrivateTable, 
@@ -43,6 +50,7 @@ export const IdentitySection = () => {
   const [identityData, setIdentityData] = useState<PrivateData[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
 
   // Check network and initialize Tableland
   useEffect(() => {
@@ -125,6 +133,76 @@ export const IdentitySection = () => {
       ...prev,
       [fieldId]: value
     }));
+  };
+
+  // Handle opening the scanner
+  const handleOpenScanner = () => {
+    setIsScannerOpen(true);
+  };
+
+  // Handle scanner close
+  const handleCloseScanner = () => {
+    setIsScannerOpen(false);
+  };
+
+  // Process scanned ID document data
+  const handleScanSuccess = (data: string, type: 'qrcode' | 'document') => {
+    if (type === 'document') {
+      // Parse the scanned document text to extract identity information
+      const extractedData = parseIdDocumentText(data);
+      
+      // Update form data with extracted information
+      setFormData(prev => ({
+        ...prev,
+        ...extractedData
+      }));
+      
+      // Close scanner and open edit form
+      setIsScannerOpen(false);
+      setIsEditing(true);
+    } else {
+      // For QR codes, we might handle differently or show an error
+      setError('Please scan an ID document instead of a QR code');
+      setIsScannerOpen(false);
+    }
+  };
+
+  // Parse scanned text to extract identity information
+  const parseIdDocumentText = (text: string): Record<string, string> => {
+    const extractedData: Record<string, string> = {};
+    
+    // Try to extract name (usually in format: LAST, FIRST MIDDLE)
+    const nameMatch = text.match(/([A-Z]+),\s*([A-Z]+)\s*([A-Z]*)/i);
+    if (nameMatch) {
+      extractedData.familyName = nameMatch[1].trim();
+      extractedData.firstName = nameMatch[2].trim();
+      if (nameMatch[3]) extractedData.middleName = nameMatch[3].trim();
+    }
+    
+    // Try to extract date of birth (format: DD.MM.YYYY or similar)
+    const dobMatch = text.match(/(\d{2}[.-/]\d{2}[.-/]\d{4})/i);
+    if (dobMatch) {
+      // Convert to YYYY-MM-DD format
+      const dobParts = dobMatch[1].split(/[.-/]/);
+      if (dobParts.length === 3) {
+        // Assuming DD.MM.YYYY format
+        extractedData.dateOfBirth = `${dobParts[2]}-${dobParts[1]}-${dobParts[0]}`;
+      }
+    }
+    
+    // Try to extract country
+    const countryMatch = text.match(/(?:country|nationality|nation)\s*[:\s]\s*([A-Za-z\s]+)/i);
+    if (countryMatch) {
+      extractedData.country = countryMatch[1].trim();
+    }
+    
+    // Try to extract city/place of birth
+    const pobMatch = text.match(/(?:place\s*of\s*birth|born\s*in)\s*[:\s]\s*([A-Za-z\s]+)/i);
+    if (pobMatch) {
+      extractedData.placeOfBirth = pobMatch[1].trim();
+    }
+    
+    return extractedData;
   };
 
   const saveIdentityData = async () => {
@@ -241,22 +319,38 @@ export const IdentitySection = () => {
                           );
                         })}
                       </div>
-                      <button 
-                        onClick={() => setIsEditing(true)} 
-                        className="button-primary logged-in-button"
-                      >
-                        Edit Identity
-                      </button>
+                      <div className="button-group">
+                        <button 
+                          onClick={() => setIsEditing(true)} 
+                          className="button-primary logged-in-button"
+                        >
+                          Edit Identity
+                        </button>
+                        <button 
+                          onClick={handleOpenScanner} 
+                          className="button-secondary logged-in-button"
+                        >
+                          Scan ID
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <div className="empty-state">
                       <p>You haven't added any identity information yet.</p>
-                      <button 
-                        onClick={() => setIsEditing(true)} 
-                        className="button-primary logged-in-button"
-                      >
-                        Add Identity Information
-                      </button>
+                      <div className="button-group">
+                        <button 
+                          onClick={() => setIsEditing(true)} 
+                          className="button-primary logged-in-button"
+                        >
+                          Add Identity Information
+                        </button>
+                        <button 
+                          onClick={handleOpenScanner} 
+                          className="button-secondary logged-in-button"
+                        >
+                          Scan ID
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -266,5 +360,13 @@ export const IdentitySection = () => {
         </div>
       )}
     </div>
+    
+    {/* Scanner Modal */}
+    <ScannerModal 
+      isOpen={isScannerOpen} 
+      onClose={handleCloseScanner} 
+      onScanSuccess={handleScanSuccess}
+      scannerType="document"
+    />
   );
 };
