@@ -8,6 +8,7 @@ import { AccountsPasswordsSection } from "@/components/AccountsPasswordsSection"
 import { HumanRelationshipsSection } from "@/components/HumanRelationshipsSection";
 import { OrganizationalAffiliationsSection } from "@/components/OrganizationalAffiliationsSection";
 import { CurrenciesSection } from "@/components/CurrenciesSection";
+import { DigitalAssetsSection } from "@/components/DigitalAssetsSection";
 import { IdentitySection } from "@/components/IdentitySection";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { RealWorldAssetsSection } from "@/components/RealWorldAssetsSection";
@@ -59,6 +60,8 @@ const MePage = () => {
           <OrganizationalAffiliationsSection />
           
           <CurrenciesSection />
+          
+          <DigitalAssetsSection />
           
           <div className="legal-section">
             <h2>My Ethereum Account</h2>

@@ -17,12 +17,14 @@ let mockAccountsDatabase: PrivateData[] = [];
 let mockContactsDatabase: PrivateData[] = [];
 let mockAffiliationsDatabase: PrivateData[] = [];
 let mockCurrenciesDatabase: PrivateData[] = [];
+let mockDigitalAssetsDatabase: PrivateData[] = [];
 let mockPrivateTableCreated = false;
 let mockMedicalTableCreated = false;
 let mockAccountsTableCreated = false;
 let mockContactsTableCreated = false;
 let mockAffiliationsTableCreated = false;
 let mockCurrenciesTableCreated = false;
+let mockDigitalAssetsTableCreated = false;
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async () => {
@@ -452,6 +454,79 @@ export const clearCurrenciesData = async (db: Database, tableName: string) => {
     return true;
   } catch (error) {
     console.error('Error clearing currencies data:', error);
+    throw error;
+  }
+};
+
+// Create a new digital assets table for the user
+export const createDigitalAssetsTable = async (db: Database, address: string) => {
+  try {
+    // For development, we'll simulate creating a table
+    mockDigitalAssetsTableCreated = true;
+    const tableName = `wot_digital_assets_${address.substring(2, 10).toLowerCase()}`;
+    return { tableName };
+  } catch (error) {
+    console.error('Error creating digital assets table:', error);
+    throw error;
+  }
+};
+
+// Insert data into digital assets table
+export const insertDigitalAssetData = async (db: Database, tableName: string, value: string) => {
+  try {
+    // For development, we'll add to our mock digital assets database
+    const timestamp = new Date().toISOString();
+    const newId = mockDigitalAssetsDatabase.length > 0 ? Math.max(...mockDigitalAssetsDatabase.map(item => item.id)) + 1 : 1;
+    
+    const newItem: PrivateData = {
+      id: newId,
+      key: `asset_${newId}`,
+      value,
+      created_at: timestamp
+    };
+    
+    mockDigitalAssetsDatabase.unshift(newItem); // Add to beginning for reverse chronological order
+    return true;
+  } catch (error) {
+    console.error('Error inserting digital asset data:', error);
+    throw error;
+  }
+};
+
+// Get all digital assets data for a user
+export const getDigitalAssetsData = async (db: Database, tableName: string) => {
+  try {
+    // For development, return our mock digital assets database
+    return mockDigitalAssetsDatabase;
+  } catch (error) {
+    console.error('Error getting digital assets data:', error);
+    return [];
+  }
+};
+
+// Check if a digital assets table exists for a user
+export const checkDigitalAssetsTableExists = async (db: Database, address: string) => {
+  try {
+    // For development, check our mock flag
+    if (mockDigitalAssetsTableCreated) {
+      const tableName = `wot_digital_assets_${address.substring(2, 10).toLowerCase()}`;
+      return { exists: true, tableName };
+    }
+    return { exists: false, tableName: '' };
+  } catch (error) {
+    // Table doesn't exist
+    return { exists: false, tableName: '' };
+  }
+};
+
+// Clear all digital assets data
+export const clearDigitalAssetsData = async (db: Database, tableName: string) => {
+  try {
+    // For development, clear our mock digital assets database
+    mockDigitalAssetsDatabase = [];
+    return true;
+  } catch (error) {
+    console.error('Error clearing digital assets data:', error);
     throw error;
   }
 };
