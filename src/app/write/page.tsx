@@ -4,6 +4,7 @@
 import { ConnectButton } from "@/components/ConnectButton";
 import AttestationForm from '@/components/AttestationForm';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
+import ScanButton from '@/components/ScanButton';
 import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
 import { useClientMounted } from "@/hooks/useClientMount";
 import { useState, useEffect } from 'react';
@@ -34,6 +35,11 @@ const WritePage = () => {
       <p>Create your attestation on the Optimism blockchain</p>
       
       <ConnectButton />
+      
+      <div className="scan-actions">
+        <ScanButton scannerType="qrcode" buttonText="Scan QR Code" />
+        <ScanButton scannerType="document" buttonText="Scan Document" />
+      </div>
       
       {!isConnected && (
         <div style={{ margin: '20px 0' }}>

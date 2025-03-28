@@ -7,6 +7,7 @@ import { ethers } from 'ethers';
 // Footer is now included in the layout
 import { ConnectButton } from "@/components/ConnectButton";
 import QRCodeDisplay from '@/components/QRCodeDisplay';
+import ScanButton from '@/components/ScanButton';
 import { 
   decodeAttestationData, 
   formatAddress, 
@@ -130,6 +131,11 @@ const ReadAttestationPage = () => {
       <p>View attestations for the schema: <code>{SCHEMA_ID.substring(0, 10)}...{SCHEMA_ID.substring(SCHEMA_ID.length - 8)}</code></p>
       
       <ConnectButton />
+      
+      <div className="scan-actions">
+        <ScanButton scannerType="qrcode" buttonText="Scan QR Code" />
+        <ScanButton scannerType="document" buttonText="Scan Document" />
+      </div>
       
       {isConnected && address && (
         <QRCodeDisplay 

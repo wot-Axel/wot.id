@@ -3,6 +3,7 @@
 // import { cookieStorage, createStorage, http } from '@wagmi/core'
 import { ConnectButton } from "@/components/ConnectButton";
 //import { InfoList } from "@/components/InfoList";
+import ScanButton from '@/components/ScanButton';
 import Image from 'next/image';
 // Footer is now included in the layout
 import './globals.css';
@@ -27,6 +28,12 @@ export default function Home() {
       <h3>My safe Identity on the Web Of Trust</h3>
 
       <ConnectButton />
+      
+      <div className="scan-actions">
+        <ScanButton scannerType="qrcode" buttonText="Scan QR Code" />
+        <ScanButton scannerType="document" buttonText="Scan Document" />
+      </div>
+      
       <div className="advice">
         <p>
           This is an experimental project.<b /> Proceed with caution.
