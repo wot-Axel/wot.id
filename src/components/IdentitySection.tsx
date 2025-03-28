@@ -4,12 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { optimism } from '@reown/appkit/networks';
 import dynamic from 'next/dynamic';
-
-// Dynamically import the ScannerModal component with no SSR
-const ScannerModal = dynamic(() => import('./ScannerModal'), {
-  ssr: false,
-  loading: () => <div className="loading-scanner">Loading scanner...</div>
-});
 import { 
   initTableland, 
   createPrivateTable, 
@@ -19,6 +13,12 @@ import {
   type PrivateData
 } from '@/utils/tablelandUtils';
 import { Database } from '@tableland/sdk';
+
+// Dynamically import the ScannerModal component with no SSR
+const ScannerModal = dynamic(() => import('./ScannerModal'), {
+  ssr: false,
+  loading: () => <div className="loading-scanner">Loading scanner...</div>
+});
 
 // Define identity fields
 interface IdentityField {
@@ -355,18 +355,18 @@ export const IdentitySection = () => {
                   )}
                 </div>
               )}
+              
+              {/* Scanner Modal */}
+              <ScannerModal 
+                isOpen={isScannerOpen} 
+                onClose={handleCloseScanner} 
+                onScanSuccess={handleScanSuccess}
+                scannerType="document"
+              />
             </>
           )}
         </div>
       )}
     </div>
-    
-    {/* Scanner Modal */}
-    <ScannerModal 
-      isOpen={isScannerOpen} 
-      onClose={handleCloseScanner} 
-      onScanSuccess={handleScanSuccess}
-      scannerType="document"
-    />
   );
 };
