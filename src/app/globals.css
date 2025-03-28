@@ -971,7 +971,7 @@ body {
 /* About Page Subnavigation Styles */
 .about-subnav {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
   background-color: #f5f5f5;
@@ -990,7 +990,7 @@ body {
   font-size: 1rem;
   transition: all 0.2s ease;
   border-radius: 6px;
-  margin: 0 8px;
+  margin: 0 8px 0 0;
   white-space: nowrap;
 }
 
@@ -1021,7 +1021,7 @@ body {
   .subnav-link {
     padding: 8px 12px;
     font-size: 0.9rem;
-    margin: 0 4px;
+    margin: 0 4px 0 0;
   }
 }
 
