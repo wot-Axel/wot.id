@@ -1,4 +1,8 @@
+'use client';
+
 import { Footer } from "@/components/Footer";
+import { AboutSubNav } from "@/components/AboutSubNav";
+import Link from "next/link";
 
 const About = () => {
   return (
@@ -109,6 +113,12 @@ const About = () => {
           Caution: This dApp is experimental and not to be used without the necessary thorough knowledge of blockchain technology. 
           Any use is with a full understanding of and consent to the conditions provided in the disclaimer.
         </p>
+      </div>
+      
+      <div className="tell-me-more-button">
+        <Link href="/about/who">
+          <button className="button-primary">Tell me more about wot.id</button>
+        </Link>
       </div>
       
       <Footer />

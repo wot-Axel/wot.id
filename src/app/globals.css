@@ -968,6 +968,63 @@ body {
   line-height: 1.6;
 }
 
+/* About Page Subnavigation Styles */
+.about-subnav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  background-color: #f5f5f5;
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eaeaea;
+  margin: 20px 0 30px 0;
+  width: 100%;
+}
+
+.subnav-link {
+  color: #171717;
+  text-decoration: none;
+  padding: 8px 20px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  margin: 0 8px;
+  white-space: nowrap;
+}
+
+.subnav-link:hover {
+  background-color: white;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.subnav-link.active {
+  background-color: white;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tell-me-more-button {
+  display: block;
+  margin: 40px auto 20px;
+  text-align: center;
+}
+
+@media (max-width: 580px) {
+  .about-subnav {
+    padding: 10px;
+    gap: 5px;
+  }
+  
+  .subnav-link {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    margin: 0 4px;
+  }
+}
+
 /* Trust Balance Styles */
 .trust-balance-container {
   width: 100%;
