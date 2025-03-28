@@ -414,6 +414,16 @@ label {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
+/* Reduce spacing for the disconnect section */
+.disconnect-section {
+  margin-bottom: 10px;
+}
+
+.disconnect-section .logged-in-button {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
 .legal-section h2 {
   background-color: #f5f5f5;
   color: #171717;
