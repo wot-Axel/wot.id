@@ -65,7 +65,6 @@ body {
   margin-top: 60px;
   padding: 20px 0;
   text-align: center;
-  border-top: 1px solid #eaeaea;
 }
 
 .footer-container {
@@ -489,7 +488,6 @@ label {
   position: sticky;
   top: 0;
   z-index: 100;
-  border-bottom: 1px solid #eaeaea;
 }
 
 .top-nav {
