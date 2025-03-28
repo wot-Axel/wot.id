@@ -204,9 +204,9 @@ section {
   min-height: 60vh;
 }
 
-/* Left-align headings while keeping page content centered */
+/* Center headings on the homepage */
 .pages h1, .pages h2, .pages h3 {
-  text-align: left;
+  text-align: center;
   width: 100%;
   max-width: 800px;
   padding: 0 20px;
