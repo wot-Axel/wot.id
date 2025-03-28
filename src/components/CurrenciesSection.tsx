@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { optimism } from '@reown/appkit/networks';
+import { formatEther } from 'viem';
+import { useBalance } from 'wagmi';
 import { 
   initTableland, 
   createCurrenciesTable, 
@@ -113,6 +115,11 @@ export const CurrenciesSection = () => {
   const [db, setDb] = useState<Database | null>(null);
   const [tableName, setTableName] = useState<string>('');
   const [currenciesData, setCurrenciesData] = useState<PrivateData[]>([]);
+  
+  // Fetch the user's ETH balance
+  const { data: ethBalanceData } = useBalance({
+    address: address as `0x${string}`,
+  });
   
   // Form state
   const [symbol, setSymbol] = useState<string>('');
@@ -321,6 +328,14 @@ export const CurrenciesSection = () => {
   useEffect(() => {
     // In a real implementation, this would fetch current prices from an API
     let total = 0;
+    
+    // Add ETH balance value if available
+    if (ethBalanceData) {
+      const ethAmount = parseFloat(formatEther(ethBalanceData.value));
+      total += ethAmount * 3000; // Using the same mock ETH price as elsewhere
+    }
+    
+    // Add values from stored currencies
     currenciesData.forEach(item => {
       const data = parseCurrencyData(item.value);
       // Mock calculation - in reality would use current market prices
@@ -338,7 +353,7 @@ export const CurrenciesSection = () => {
       total += value;
     });
     setTotalValue(total);
-  }, [currenciesData]);
+  }, [currenciesData, ethBalanceData]);
 
   if (!isConnected) {
     return null;
@@ -569,14 +584,98 @@ export const CurrenciesSection = () => {
                 <div className="private-data-list">
                   <h3>Your Cryptocurrency Holdings</h3>
                   
-                  {currenciesData.length === 0 ? (
-                    <p>No currencies added yet. Add some using the form above.</p>
-                  ) : (
+                  {/* Display connected wallet's ETH balance */}
+                  {ethBalanceData && (
                     <div className="currency-cards" style={{ 
                       display: 'grid', 
                       gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-                      gap: '1rem' 
+                      gap: '1rem',
+                      marginBottom: '1rem'
                     }}>
+                      <div 
+                        className="currency-card" 
+                        style={{ 
+                          border: '1px solid #eaeaea',
+                          borderRadius: '8px',
+                          padding: '1rem',
+                          backgroundColor: '#f9f9ff',
+                          borderLeft: '4px solid #6366f1'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <div style={{ 
+                              width: '36px', 
+                              height: '36px', 
+                              borderRadius: '50%', 
+                              backgroundColor: '#eef2ff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginRight: '0.75rem',
+                              fontWeight: 'bold'
+                            }}>
+                              Ξ
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 'bold' }}>ETH</div>
+                              <div style={{ fontSize: '0.8rem', color: '#666' }}>Ethereum</div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 'bold' }}>{parseFloat(formatEther(ethBalanceData.value)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#666' }}>${(parseFloat(formatEther(ethBalanceData.value)) * 3000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                          </div>
+                        </div>
+                        
+                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                          <strong>Network:</strong> Ethereum
+                        </div>
+                        
+                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                          <strong>Address:</strong> 
+                          <div style={{ 
+                            wordBreak: 'break-all', 
+                            backgroundColor: '#f5f5f5', 
+                            padding: '0.25rem 0.5rem', 
+                            borderRadius: '4px',
+                            marginTop: '0.25rem',
+                            fontSize: '0.8rem'
+                          }}>
+                            {address}
+                          </div>
+                        </div>
+                        
+                        <div style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                          <span style={{ 
+                            backgroundColor: '#eef2ff', 
+                            color: '#6366f1', 
+                            padding: '0.25rem 0.5rem', 
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold'
+                          }}>
+                            Connected Wallet
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Show message if no currencies at all */}
+                  {currenciesData.length === 0 && !ethBalanceData && (
+                    <p>No currencies added yet. Add some using the form above.</p>
+                  )}
+                  
+                  {/* Show stored currencies if any exist */}
+                  {currenciesData.length > 0 && (
+                    <div className="currency-cards" style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                      gap: '1rem',
+                      marginTop: ethBalanceData ? '1rem' : '0'
+                    }}>
+                      {/* Stored currencies */}
                       {currenciesData.map((item) => {
                         const currencyInfo = parseCurrencyData(item.value);
                         const icon = currencyIcons[currencyInfo.symbol] || currencyInfo.symbol;
