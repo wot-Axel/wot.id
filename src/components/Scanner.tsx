@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
-import * as Tesseract from 'tesseract.js';
+// Dynamic imports to prevent build-time errors
+type Html5QrcodeType = any;
+type TesseractType = any;
+
+let Html5Qrcode: Html5QrcodeType;
+let Tesseract: TesseractType;
 
 interface ScannerProps {
   onScanSuccess: (data: string, type: 'qrcode' | 'document') => void;
@@ -24,38 +28,61 @@ const Scanner: React.FC<ScannerProps> = ({
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   
-  // Initialize scanner on component mount
+  // Initialize scanner and libraries on component mount
   useEffect(() => {
-    // Initialize the scanner
-    scannerRef.current = new Html5Qrcode('scanner-container');
-    
-    // Get available cameras
-    Html5Qrcode.getCameras()
-      .then(devices => {
-        if (devices && devices.length) {
-          setCameras(devices.map(device => ({
-            id: device.id,
-            label: device.label || `Camera ${device.id}`
-          })));
-          setSelectedCamera(devices[0].id);
-        } else {
-          setError('No camera devices found.');
+    // Dynamically import the libraries only on the client side
+    const loadLibraries = async () => {
+      try {
+        // Import html5-qrcode
+        const html5QrcodeModule = await import('html5-qrcode');
+        Html5Qrcode = html5QrcodeModule.Html5Qrcode;
+        
+        // Import tesseract.js
+        const tesseractModule = await import('tesseract.js');
+        Tesseract = tesseractModule.default;
+        
+        // Initialize the scanner after libraries are loaded
+        if (Html5Qrcode) {
+          scannerRef.current = new Html5Qrcode('scanner-container');
         }
-      })
-      .catch(err => {
-        setError('Error getting cameras: ' + err);
-        if (onScanError) onScanError('Error getting cameras: ' + err);
-      });
+        
+        // Get available cameras
+        if (Html5Qrcode) {
+          try {
+            const devices = await Html5Qrcode.getCameras();
+            if (devices && devices.length) {
+              setCameras(devices.map((device: { id: string; label: string }) => ({
+                id: device.id,
+                label: device.label || `Camera ${device.id}`
+              })));
+              setSelectedCamera(devices[0].id);
+            } else {
+              setError('No camera devices found.');
+            }
+          } catch (err: any) {
+            setError('Error getting cameras: ' + err);
+            if (onScanError) onScanError('Error getting cameras: ' + err);
+          }
+        }
+      } catch (error: any) {
+        console.error('Error loading libraries:', error);
+        setError('Failed to load scanning libraries. Please try again later.');
+      }
+    };
+    
+    loadLibraries();
+    
+    // Cameras are now loaded in the loadLibraries function
       
     return () => {
       // Clean up scanner on component unmount
       if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current.stop()
-          .catch(err => console.error('Error stopping scanner:', err));
+          .catch((err: any) => console.error('Error stopping scanner:', err));
       }
     };
   }, [onScanError]);
@@ -74,17 +101,17 @@ const Scanner: React.FC<ScannerProps> = ({
           fps: 10,
           qrbox: { width: 250, height: 250 },
         },
-        (decodedText) => {
+        (decodedText: string) => {
           // QR Code scanned successfully
           onScanSuccess(decodedText, 'qrcode');
           stopScanner();
         },
-        (errorMessage) => {
+        (errorMessage: string) => {
           // QR Code scanning error (this is often just a frame without QR code, not an actual error)
           console.log(errorMessage);
         }
       );
-    } catch (err) {
+    } catch (err: any) {
       setIsScanning(false);
       setError('Error starting scanner: ' + err);
       if (onScanError) onScanError('Error starting scanner: ' + err);
@@ -98,7 +125,7 @@ const Scanner: React.FC<ScannerProps> = ({
         .then(() => {
           setIsScanning(false);
         })
-        .catch(err => {
+        .catch((err: any) => {
           console.error('Error stopping scanner:', err);
         });
     } else {
@@ -146,7 +173,7 @@ const Scanner: React.FC<ScannerProps> = ({
         capturedImage,
         'eng',
         { 
-          logger: m => console.log(m)
+          logger: (m: any) => console.log(m)
         }
       );
       

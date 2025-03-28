@@ -1,7 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import Scanner from './Scanner';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the Scanner component with no SSR
+const Scanner = dynamic(() => import('./Scanner'), {
+  ssr: false,
+  loading: () => <div className="loading-scanner">Initializing scanner...</div>
+});
 
 interface ScannerModalProps {
   isOpen: boolean;

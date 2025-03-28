@@ -1,8 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import ScannerModal from './ScannerModal';
+import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+
+// Dynamically import the ScannerModal component with no SSR
+const ScannerModal = dynamic(() => import('./ScannerModal'), {
+  ssr: false,
+  loading: () => <div className="loading-scanner">Loading scanner...</div>
+});
 
 interface ScanButtonProps {
   scannerType?: 'qrcode' | 'document';
