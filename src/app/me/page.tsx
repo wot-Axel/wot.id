@@ -30,9 +30,9 @@ const MePage = () => {
       
       {!isConnected ? (
         <div className="legal-section">
-          <h2>Connect Your Wallet</h2>
+          <h2>Connect to your Web of Trust Account</h2>
           <div className="legal-content">
-            <p>Please connect your wallet to view your account information.</p>
+            <p>Please connect to view your Web of Trust account information.</p>
             <div className="connect-container">
               <ConnectButton />
             </div>
