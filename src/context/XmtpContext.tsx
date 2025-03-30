@@ -20,6 +20,67 @@ const getXmtpClient = async () => {
   return XmtpClientModule;
 };
 
+// Create a global utility to add a mock Ethereum provider to the window object
+// This is needed because XMTP internally checks for window.ethereum even when using a custom signer
+const setupMockEthereumProvider = (walletClient: any, address: string) => {
+  // Only run in browser
+  if (typeof window === 'undefined') return;
+  
+  console.log('Setting up mock ethereum provider with address:', address);
+  
+  // Create a mock ethereum provider that mimics the minimum interface needed by XMTP
+  const mockProvider = {
+    isMetaMask: true,
+    request: async ({ method, params }: any) => {
+      console.log('Mock ethereum provider request:', method, params);
+      
+      // Implement the necessary JSON-RPC methods that XMTP might call
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts') {
+        return [address];
+      }
+      
+      if (method === 'eth_chainId') {
+        // Return the current chain ID from walletClient
+        return walletClient?.chain?.id ? `0x${walletClient.chain.id.toString(16)}` : '0x1';
+      }
+      
+      if (method === 'personal_sign' || method === 'eth_sign') {
+        const message = params[0];
+        const signature = await walletClient.signMessage({ message });
+        return signature;
+      }
+      
+      // Add other methods as needed
+      throw new Error(`Method ${method} not implemented in mock provider`);
+    },
+    on: (event: string, callback: any) => {
+      console.log('Mock ethereum provider registered event:', event);
+      // We could implement event handling here if needed
+      return mockProvider;
+    },
+    removeListener: (event: string, callback: any) => {
+      console.log('Mock ethereum provider removed listener for event:', event);
+      return mockProvider;
+    }
+  };
+  
+  // Assign the mock provider to window.ethereum if it doesn't exist
+  if (!window.ethereum) {
+    console.log('Installing mock ethereum provider to window.ethereum');
+    // @ts-ignore - TypeScript doesn't know about window.ethereum
+    window.ethereum = mockProvider;
+  }
+  
+  return mockProvider;
+};
+
+// Add global type definition for window.ethereum
+declare global {
+  interface Window {
+    ethereum?: Record<string, unknown>;
+  }
+}
+
 interface XmtpContextType {
   client: Client | null;
   isLoading: boolean;
@@ -55,7 +116,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   const [db, setDb] = useState<Database | null>(null);
   const [tableName, setTableName] = useState<string>('');
 
-  // Initialize Tableland database
+  // Initialize Tableland database and setup mock ethereum provider
   useEffect(() => {
     const initDb = async () => {
       try {
@@ -67,10 +128,13 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    if (isConnected && address) {
+    // Setup mock ethereum provider when wallet is connected
+    if (isConnected && address && walletClient) {
+      // Initialize the mock ethereum provider
+      setupMockEthereumProvider(walletClient, address);
       initDb();
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, walletClient]);
 
   // Check if chat table exists or create one
   useEffect(() => {
@@ -132,6 +196,9 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       console.log('Wallet address:', address);
       
       try {
+        // Ensure we have a mock ethereum provider setup
+        setupMockEthereumProvider(walletClient, address);
+        
         // Debug walletClient capabilities
         console.log('WalletClient details:');
         console.log('- account:', walletClient.account);
@@ -192,6 +259,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
           setError(new Error('The signature request timed out. Please try again.'));
         } else if (e.message?.includes('not a function')) {
           setError(new Error('Your wallet appears to be incompatible with this messaging system. Please try a different wallet.'));
+        } else if (e.message?.includes('ethereum provider')) {
+          setError(new Error('XMTP requires an ethereum provider. We have created a mock provider, please try again.'));
         } else {
           setError(new Error(`Failed to create message identity: ${e.message || 'Unknown error'}`));
         }
@@ -244,6 +313,10 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
+      // Ensure we have a mock ethereum provider setup
+      console.log('Ensuring mock ethereum provider is setup...');
+      setupMockEthereumProvider(walletClient, address);
+      
       // Create our custom signer for all XMTP interactions
       console.log('Creating custom signer for XMTP...');
       const signer = {
@@ -291,7 +364,13 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
           console.log('User has a message identity, proceeding with client creation');
         } catch (e: any) {
           console.log('Error checking if user can message:', e);
-          console.log('This is expected if user has no identity yet, proceeding to create client anyway');
+          if (e.message?.includes('ethereum provider')) {
+            console.error('Ethereum provider error, retrying with mock provider...');
+            // Try reinitializing the mock provider
+            setupMockEthereumProvider(walletClient, address);
+          } else {
+            console.log('This is expected if user has no identity yet, proceeding to create client anyway');
+          }
           // We'll continue and let Client.create handle any issues
         }
         
@@ -315,6 +394,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             setError(new Error('The signature request timed out. Please try again.'));
           } else if (e.message?.includes('not a function')) {
             setError(new Error('Your wallet appears to be incompatible with this messaging system. Please try a different wallet.'));
+          } else if (e.message?.includes('ethereum provider')) {
+            setError(new Error('XMTP requires an ethereum provider. We have created a mock provider, please try again.'));
           } else {
             setError(new Error(`Failed to create message client: ${e.message || 'Unknown error'}`));
           }
