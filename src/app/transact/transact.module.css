@@ -1,34 +1,9 @@
-/* QR Code section */
-.qrCodeSection {
+/* QR Code container */
+.qrCodeContainer {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background-color: #f9f9f9;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* Container for the transaction content */
-.transactionContainer {
-  display: flex;
-  flex-direction: row;
-  gap: 2rem;
-  margin-top: 1.5rem;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Individual sections (Send Assets and Transaction History) */
-.transactionSection {
-  flex: 1;
-  padding: 1.5rem;
-  border: 1px solid #eaeaea;
-  border-radius: 10px;
-  background-color: white;
-  box-sizing: border-box;
+  padding: 1rem 0;
 }
 
 /* Form container */

@@ -21,17 +21,26 @@ export default function TransactPage() {
 
   return (
     <div className="legal-page">
-      <div className={styles.qrCodeSection}>
-        <QRCodeDisplay
-          data={address || ''}
-          title="My Ethereum Address"
-          description="This is my address on the Ethereum Blockchain where I can receive transactions"
-        />
+      <h1 className="page-title">Transact</h1>
+      
+      {/* Receive Transactions Section */}
+      <div className="legal-section">
+        <h2>Receive Transactions</h2>
+        <div className="legal-content">
+          <div className={styles.qrCodeContainer}>
+            <QRCodeDisplay
+              data={address || ''}
+              title=""
+              description="This is my address on the Ethereum Blockchain where I can receive transactions"
+            />
+          </div>
+        </div>
       </div>
       
-      <div className={styles.transactionContainer}>
-        <div className={styles.transactionSection}>
-          <h2>Send Assets</h2>
+      {/* Send Assets Section */}
+      <div className="legal-section">
+        <h2>Send Assets</h2>
+        <div className="legal-content">
           <p>Send currency or real-world assets to other users</p>
           
           <div className={styles.transactionForm}>
@@ -68,11 +77,13 @@ export default function TransactPage() {
             </button>
           </div>
         </div>
-        
-        <div className={styles.transactionSection}>
-          <h2>Transaction History</h2>
+      </div>
+      
+      {/* Transaction History Section */}
+      <div className="legal-section">
+        <h2>Transaction History</h2>
+        <div className="legal-content">
           <p>View your recent transactions</p>
-          
           <div className={styles.transactionHistory}>
             <p className={styles.emptyState}>No transactions yet</p>
           </div>
