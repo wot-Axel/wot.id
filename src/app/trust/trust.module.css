@@ -1,10 +1,12 @@
-.trust-tabs {
+.trustTabs {
   display: flex;
   margin-bottom: 2rem;
   border-bottom: 1px solid #eaeaea;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.trust-tab {
+.trustTab {
   padding: 0.75rem 1.5rem;
   background: none;
   border: none;
@@ -14,12 +16,12 @@
   color: #666;
 }
 
-.trust-tab.active {
+.trustTab.active {
   color: #0070f3;
   font-weight: 500;
 }
 
-.trust-tab.active::after {
+.trustTab.active::after {
   content: '';
   position: absolute;
   bottom: -1px;
@@ -29,57 +31,74 @@
   background-color: #0070f3;
 }
 
-.trust-content {
+.trustContent {
   padding: 1rem 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.trust-form {
+.giveTrustSection,
+.getTrustSection {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.trustForm {
   max-width: 600px;
   margin-top: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.form-group {
+.formGroup {
   margin-bottom: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.form-group label {
+.formGroup label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
 }
 
-.form-control {
+.formControl {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid #eaeaea;
   border-radius: 6px;
   font-size: 1rem;
+  box-sizing: border-box;
 }
 
-.empty-state {
+.emptyState {
   padding: 2rem;
   text-align: center;
   color: #666;
   background-color: #f9f9f9;
   border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.trust-tip {
+.trustTip {
   margin-top: 1.5rem;
   padding: 1rem;
   background-color: #f0f7ff;
   border-left: 4px solid #0070f3;
   border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .trust-tabs {
+  .trustTabs {
     flex-direction: row;
     overflow-x: auto;
   }
   
-  .trust-form {
+  .trustForm {
     max-width: 100%;
   }
 }
