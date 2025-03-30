@@ -83,7 +83,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [db, address]);
 
-  // Check if user has an XMTP identity and create one if needed
+  // Create XMTP identity using a more direct approach
   const createIdentity = async (): Promise<boolean> => {
     if (!walletClient || !address) {
       setError(new Error('Wallet not connected'));
@@ -94,38 +94,54 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
       
-      console.log('Starting XMTP identity creation process...');
+      console.log('Starting message identity creation process...');
       console.log('Wallet address:', address);
+      console.log('Wallet client available:', !!walletClient);
       
-      // Force a new client creation which will create the identity if it doesn't exist
+      // Directly create a new client which will create the identity
       try {
-        // This will trigger the signature request
-        console.log('Attempting to create XMTP client...');
-        // Create the XMTP client with minimal options to avoid TypeScript errors
-        // This will create the identity if it doesn't exist
-        const xmtp = await Client.create(walletClient as any, { 
+        // Use a more direct approach with the wallet client
+        console.log('Creating XMTP client with wallet...');
+        
+        // Convert walletClient to the format XMTP expects
+        const signer = {
+          getAddress: async () => address,
+          signMessage: async (message: string) => {
+            console.log('Requesting signature for message...');
+            return await walletClient.signMessage({ message });
+          }
+        };
+        
+        // Create the client with our custom signer
+        console.log('Initializing XMTP client...');
+        const xmtp = await Client.create(signer, { 
           env: 'production'
         });
         
-        console.log('XMTP client created successfully');
+        console.log('XMTP client created successfully!');
         setClient(xmtp);
+        setError(null); // Clear any previous errors
         
-        // Load existing conversations
+        // Load conversations after successful client creation
+        console.log('Loading conversations...');
         await loadConversations(xmtp);
         
         return true;
       } catch (e: any) {
-        console.error('Error creating XMTP identity:', e);
-        // Provide more specific error message
-        if (e.message?.includes('User declined to sign')) {
+        console.error('Error creating message identity:', e);
+        
+        // Provide more specific error messages based on the error type
+        if (e.message?.includes('declined') || e.message?.includes('rejected')) {
           setError(new Error('You declined the signature request. Please try again and approve the signature.'));
+        } else if (e.message?.includes('timeout')) {
+          setError(new Error('The signature request timed out. Please try again.'));
         } else {
           setError(new Error(`Failed to create message identity: ${e.message || 'Unknown error'}`));
         }
         return false;
       }
     } catch (e: any) {
-      console.error('Error in identity creation process:', e);
+      console.error('Unexpected error in identity creation:', e);
       setError(new Error(`Error creating message identity: ${e.message || 'Unknown error'}`));
       return false;
     } finally {
@@ -136,6 +152,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   // Initialize XMTP client
   const initClient = async () => {
     if (!walletClient || !address) {
+      console.log('Cannot initialize client: wallet not connected');
       setError(new Error('Wallet not connected'));
       return;
     }
@@ -143,35 +160,58 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       setError(null);
+      console.log('Initializing message client...');
 
       // Check if we already have a client before creating a new one
       if (client) {
+        console.log('Client already exists, using existing client');
         setIsLoading(false);
         return;
       }
 
+      console.log('Checking if user has a message identity...');
       // First check if the user already has an XMTP identity
-      const canMessage = await Client.canMessage(address as string, { env: 'production' });
-      
-      if (!canMessage) {
-        // User doesn't have an XMTP identity yet
-        console.log('User needs to create an XMTP identity');
-        setError(new Error('Message identity creation required. Please try again later after wallet connection is fully established.'));
+      try {
+        const canMessage = await Client.canMessage(address as string, { env: 'production' });
+        
+        if (!canMessage) {
+          // User doesn't have an XMTP identity yet
+          console.log('User needs to create a message identity');
+          setError(new Error('Message identity creation required. Please try again later after wallet connection is fully established.'));
+          setIsLoading(false);
+          return;
+        }
+        console.log('User has a message identity, proceeding with client creation');
+      } catch (e: any) {
+        console.error('Error checking message identity:', e);
+        setError(new Error(`Could not verify message identity: ${e.message || 'Unknown error'}`));
         setIsLoading(false);
         return;
       }
       
       // User already has an XMTP identity, we can create the client
       try {
-        // Cast the wallet client to any to bypass type checking
-        const xmtp = await Client.create(walletClient as any, { env: 'production' });
+        console.log('User has message identity, creating client...');
+        // Use our custom signer approach for consistency
+        const signer = {
+          getAddress: async () => address,
+          signMessage: async (message: string) => {
+            console.log('Requesting signature for message...');
+            return await walletClient.signMessage({ message });
+          }
+        };
+        
+        // Create the client with our custom signer
+        const xmtp = await Client.create(signer, { env: 'production' });
+        console.log('Message client created successfully');
         setClient(xmtp);
 
         // Load existing conversations
+        console.log('Loading conversations...');
         await loadConversations(xmtp);
       } catch (e: any) {
-        console.error('Error initializing XMTP client:', e);
-        setError(e);
+        console.error('Error initializing message client:', e);
+        setError(new Error(`Failed to initialize messaging: ${e.message || 'Unknown error'}`));
       }
     } finally {
       setIsLoading(false);
