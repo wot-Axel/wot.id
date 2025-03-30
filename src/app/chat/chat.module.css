@@ -99,6 +99,90 @@
   margin-bottom: 1.5rem;
 }
 
+/* Construction page styles */
+.constructionContainer {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.constructionIcon {
+  margin-bottom: 1.5rem;
+  color: var(--primary-color, #0070f3);
+}
+
+.constructionTitle {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.constructionMessage {
+  margin-bottom: 2rem;
+  color: #555;
+  line-height: 1.6;
+}
+
+.constructionFeatures {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+@media (max-width: 768px) {
+  .constructionFeatures {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+}
+
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  text-align: left;
+  max-width: 220px;
+}
+
+.featureIcon {
+  color: var(--primary-color, #0070f3);
+  margin-top: 0.25rem;
+}
+
+.featureText h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.featureText p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.homeButton {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.7rem 1.5rem;
+  background-color: var(--primary-color, #0070f3);
+  color: white;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.homeButton:hover {
+  background-color: var(--primary-hover-color, #0051b3);
+}
+
 .identityHelp li {
   margin-bottom: 0.75rem;
 }

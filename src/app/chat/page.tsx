@@ -1,179 +1,79 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { useAppKitAccount } from '@reown/appkit/react';
-import { useXmtp } from '@/context/XmtpContext';
-import { ConnectButton } from '@/components/ConnectButton';
-import ConversationList from '@/components/ConversationList';
-import ConversationView from '@/components/ConversationView';
-import NewConversationModal from '@/components/NewConversationModal';
+import React from 'react';
+import Link from 'next/link';
 import styles from './chat.module.css';
 
 export default function ChatPage() {
-  const { address } = useAccount();
-  const { isConnected } = useAppKitAccount();
-  const { client, isLoading, error, initClient, createIdentity, disconnect, conversations } = useXmtp();
-  const [creatingIdentity, setCreatingIdentity] = useState(false);
-  const [selectedConversation, setSelectedConversation] = useState<any>(null);
-  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
-
-  // Initialize the XMTP client when the chat page is loaded and the wallet is connected
-  // This is done explicitly here rather than automatically to prevent conflicts with wallet connection
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    if (isConnected && !client && !isLoading) {
-      // Add a small delay to ensure wallet connection is fully complete
-      timeoutId = setTimeout(() => {
-        initClient();
-      }, 1000);
-    }
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [isConnected, client, isLoading, initClient]);
-
-  if (!isConnected) {
-    return (
-      <div className="main-content">
-        <h1>Message</h1>
-        <p>Connect your wallet to start messaging</p>
-        <ConnectButton />
-      </div>
-    );
-  }
-  
-  if (isLoading) {
-    return (
-      <div className="main-content">
-        <h1>Message</h1>
-        <div className={styles.loadingContainer}>
-          <p>Loading messages...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="main-content">
-        <h1>Message</h1>
-        <div className={styles.errorContainer}>
-          <h2>Message Initialization Error</h2>
-          <p>{error.message}</p>
-          
-          {/* Always show the identity help section for any error */}
-          <div className={styles.identityHelp}>
-            <p>To use the messaging feature, you need to create an XMTP identity first.</p>
-            <p>This requires a one-time signature to create your secure messaging identity.</p>
-            
-            <div className={styles.buttonGroup}>
-              <button 
-                className="button-primary"
-                disabled={creatingIdentity}
-                onClick={async () => {
-                  setCreatingIdentity(true);
-                  try {
-                    console.log('Attempting to create message identity with wallet...');
-                    const success = await createIdentity(false);
-                    
-                    if (success) {
-                      console.log('Identity creation successful, client should be initialized');
-                      // No need to call initClient again as createIdentity already does this
-                      setCreatingIdentity(false);
-                    } else {
-                      console.log('Identity creation failed');
-                      setCreatingIdentity(false);
-                    }
-                  } catch (e) {
-                    console.error('Exception during identity creation:', e);
-                    setCreatingIdentity(false);
-                  }
-                }}
-              >
-                {creatingIdentity ? 'Creating Identity...' : 'Create Message Identity'}
-              </button>
-              
-              <button 
-                className="button-secondary"
-                disabled={creatingIdentity}
-                onClick={async () => {
-                  setCreatingIdentity(true);
-                  try {
-                    console.log('Creating XMTP identity with development key (no wallet signature)');
-                    const success = await createIdentity(true); // Use development key
-                    
-                    if (success) {
-                      console.log('Development identity creation successful');
-                      setCreatingIdentity(false);
-                    } else {
-                      console.log('Development identity creation failed');
-                      setCreatingIdentity(false);
-                    }
-                  } catch (e) {
-                    console.error('Exception during development identity creation:', e);
-                    setCreatingIdentity(false);
-                  }
-                }}
-              >
-                Use Development Key (No Wallet Signature)
-              </button>
-            </div>
-            
-            <p className={styles.identityNote}>
-              <strong>Note:</strong> When prompted to sign the message identity in your wallet, please approve it.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="main-content">
       <h1>Message</h1>
       
-      <div className={styles.chatContainer}>
-        <div className={styles.sidebar}>
-          <div className={styles.sidebarHeader}>
-            <h2>Conversations</h2>
-            <button 
-              className="button-primary"
-              onClick={() => setShowNewConversationModal(true)}
-            >
-              New Chat
-            </button>
-          </div>
-          
-          <ConversationList 
-            conversations={conversations}
-            selectedConversation={selectedConversation}
-            onSelectConversation={setSelectedConversation}
-          />
+      <div className={styles.constructionContainer}>
+        <div className={styles.constructionIcon}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="64" height="64">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline>
+            <polyline points="7.5 19.79 7.5 14.6 3 12"></polyline>
+            <polyline points="21 12 16.5 14.6 16.5 19.79"></polyline>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
         </div>
         
-        <div className={styles.chatMain}>
-          {selectedConversation ? (
-            <ConversationView conversation={selectedConversation} />
-          ) : (
-            <div className={styles.emptyState}>
-              <p>Select a conversation or start a new chat</p>
-            </div>
-          )}
+        <h2 className={styles.constructionTitle}>Messaging Coming Soon!</h2>
+        
+        <div className={styles.constructionMessage}>
+          <p>Our secure, wallet-based messaging functionality is currently under construction and will be available shortly.</p>
+          <p>Using the XMTP protocol, this feature will enable decentralized, end-to-end encrypted messaging between wallet addresses.</p>
+          <p>Please revisit regularly for updates on this exciting feature!</p>
         </div>
+        
+        <div className={styles.constructionFeatures}>
+          <div className={styles.feature}>
+            <div className={styles.featureIcon}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <div className={styles.featureText}>
+              <h3>Secure</h3>
+              <p>End-to-end encrypted messaging</p>
+            </div>
+          </div>
+          
+          <div className={styles.feature}>
+            <div className={styles.featureIcon}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+                <path d="M20 9v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9"></path>
+                <path d="M9 22V12h6v10M2 10.6L12 2l10 8.6"></path>
+              </svg>
+            </div>
+            <div className={styles.featureText}>
+              <h3>Decentralized</h3>
+              <p>No central server or authority</p>
+            </div>
+          </div>
+          
+          <div className={styles.feature}>
+            <div className={styles.featureIcon}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div className={styles.featureText}>
+              <h3>Coming Soon</h3>
+              <p>Check back for updates</p>
+            </div>
+          </div>
+        </div>
+        
+        <Link href="/" className={styles.homeButton}>
+          Return to Home
+        </Link>
       </div>
-      
-      {showNewConversationModal && (
-        <NewConversationModal 
-          onClose={() => setShowNewConversationModal(false)}
-          onConversationCreated={(conversation) => {
-            setSelectedConversation(conversation);
-            setShowNewConversationModal(false);
-          }}
-        />
-      )}
     </div>
   );
 }
