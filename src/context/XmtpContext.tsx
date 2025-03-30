@@ -6,14 +6,6 @@ import { useAccount, useWalletClient } from 'wagmi';
 import { Database } from '@tableland/sdk';
 import { checkChatTableExists, createChatTable, insertChatData, getChatData } from '@/utils/tablelandUtils';
 
-// Use a type assertion approach instead of extending Window interface
-type EthereumProvider = {
-  request: (args: {method: string; params?: any[]}) => Promise<any>;
-  isMetaMask?: boolean;
-  on?: (event: string, callback: (...args: any[]) => void) => void;
-  removeListener?: (event: string, callback: (...args: any[]) => void) => void;
-};
-
 interface XmtpContextType {
   client: Client | null;
   isLoading: boolean;
@@ -91,9 +83,9 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [db, address]);
 
-  // Create XMTP identity using a more direct approach with ethereum provider
+  // Create XMTP identity using wagmi's walletClient
   const createIdentity = async (): Promise<boolean> => {
-    if (!address) {
+    if (!walletClient || !address) {
       setError(new Error('Wallet not connected'));
       return false;
     }
@@ -104,54 +96,47 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('Starting message identity creation process...');
       console.log('Wallet address:', address);
+      console.log('Wallet client available:', !!walletClient);
       
-      // Access window ethereum provider directly
-      if (typeof window !== 'undefined' && window.ethereum) {
-        console.log('Using window.ethereum provider for identity creation');
+      try {
+        // Use wagmi's walletClient to create an XMTP client in dev environment for simpler testing
+        console.log('Creating XMTP client with wagmi walletClient...');
         
-        try {
-          // Create an ethers-compatible signer using window.ethereum
-          const provider = window.ethereum as EthereumProvider;
-          
-          // Basic ethereum provider compatible signer
-          const signer = {
-            getAddress: async () => address,
-            signMessage: async (message: string) => {
-              console.log('Requesting signature from ethereum provider...');
-              try {
-                // Use personal_sign for maximum wallet compatibility
-                return await provider.request({
-                  method: 'personal_sign',
-                  params: [message, address]
-                });
-              } catch (e: any) {
-                console.error('Error during personal_sign:', e);
-                throw new Error(`Wallet declined signature: ${e.message}`);
-              }
-            }
-          };
-          
-          console.log('Creating XMTP client with ethereum provider...');
-          // Use development mode to reduce complexity
-          const xmtp = await Client.create(signer, { env: 'dev' });
-          
-          console.log('Message client created successfully!');
-          setClient(xmtp);
-          setError(null);
-          
-          // Load conversations
-          console.log('Loading conversations...');
-          await loadConversations(xmtp);
-          
-          return true;
-        } catch (e: any) {
-          console.error('Error with ethereum provider:', e);
-          setError(new Error(`Wallet signing error: ${e.message || 'Unknown error'}`));
-          return false;
+        // Create a proper XMTP-compatible signer from wagmi's walletClient
+        const signer = {
+          getAddress: async () => address as string,
+          signMessage: async (message: Uint8Array | string) => {
+            console.log('Requesting signature from wallet...');
+            const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
+            const signature = await walletClient.signMessage({ message: messageString });
+            return signature;
+          }
+        };
+        
+        // Create the client using our custom signer
+        const xmtp = await Client.create(signer, { 
+          env: 'dev',  // Use development environment for simpler testing
+        });
+        
+        console.log('Message client created successfully!');
+        setClient(xmtp);
+        setError(null);
+        
+        // Load conversations
+        console.log('Loading conversations...');
+        await loadConversations(xmtp);
+        
+        return true;
+      } catch (e: any) {
+        console.error('Error creating XMTP client:', e);
+        
+        if (e.message?.includes('declined') || e.message?.includes('rejected')) {
+          setError(new Error('You declined the signature request. Please try again and approve the signature.'));
+        } else if (e.message?.includes('timeout')) {
+          setError(new Error('The signature request timed out. Please try again.'));
+        } else {
+          setError(new Error(`Failed to create message identity: ${e.message || 'Unknown error'}`));
         }
-      } else {
-        console.error('No ethereum provider found in window');
-        setError(new Error('Your browser wallet is not properly connected. Please refresh the page and try again.'));
         return false;
       }
     } catch (e: any) {
@@ -163,9 +148,9 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Initialize XMTP client with the same ethereum provider approach
+  // Initialize XMTP client with wagmi's walletClient
   const initClient = async () => {
-    if (!address) {
+    if (!walletClient || !address) {
       console.log('Cannot initialize client: wallet not connected');
       setError(new Error('Wallet not connected'));
       return;
@@ -215,27 +200,18 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       // User already has an XMTP identity, we can create the client
       try {
         console.log('User has message identity, creating client...');
-        // Use ethereum provider directly like in createIdentity
-        const provider = window.ethereum as EthereumProvider;
-        
-        // Basic ethereum provider compatible signer
+        // Create a proper XMTP-compatible signer from wagmi's walletClient
         const signer = {
-          getAddress: async () => address,
-          signMessage: async (message: string) => {
-            console.log('Requesting signature from ethereum provider...');
-            try {
-              return await provider.request({
-                method: 'personal_sign',
-                params: [message, address]
-              });
-            } catch (e: any) {
-              console.error('Error during personal_sign:', e);
-              throw new Error(`Wallet declined signature: ${e.message}`);
-            }
+          getAddress: async () => address as string,
+          signMessage: async (message: Uint8Array | string) => {
+            console.log('Requesting signature from wallet...');
+            const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
+            const signature = await walletClient.signMessage({ message: messageString });
+            return signature;
           }
         };
         
-        // Create the client with ethereum provider signer - use dev environment for simpler testing
+        // Create the client with our custom signer - use dev environment for simpler testing
         const xmtp = await Client.create(signer, { env: 'dev' });
         console.log('Message client created successfully');
         setClient(xmtp);
