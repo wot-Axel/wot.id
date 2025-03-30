@@ -72,7 +72,7 @@ body {
 }
 
 .main-footer {
-  max-width: 800px; /* Match the main-content max-width */
+  max-width: 1024px; /* Match the main-content max-width */
   margin: 0 auto;
   padding: 0 20px;
   width: 100%;
@@ -214,7 +214,7 @@ section {
 .pages h1, .pages h2, .pages h3 {
   text-align: center;
   width: 100%;
-  max-width: 800px;
+  max-width: 1024px;
   padding: 0 20px;
   margin: 20px auto;
   box-sizing: border-box;
@@ -398,8 +398,9 @@ label {
   color: #666;
 }
 /* Legal Page Styling */
+/* Common page container styles */
 .legal-page {
-  max-width: 800px;
+  max-width: 1024px;
   width: 100%;
   margin: 0 auto;
   padding: 20px;
@@ -475,6 +476,7 @@ label {
   .legal-page {
     padding: 15px;
     max-width: 100%;
+    width: 100%;
   }
   
   .page-title {
@@ -516,7 +518,7 @@ label {
 
 /* Make the legal-page class more generic for reuse */
 .legal-page, .about-page {
-  max-width: 800px;
+  max-width: 1024px;
   margin: 0 auto;
   padding: 20px;
   color: var(--foreground);
@@ -539,7 +541,7 @@ label {
 }
 
 .top-nav {
-  max-width: 800px; /* Match the section width */
+  max-width: 1024px; /* Match the section width */
   margin: 0 auto;
   padding: 15px 20px;
   width: 100%;
@@ -725,7 +727,7 @@ label {
 .main-content {
   padding: 20px 20px 0;
   min-height: calc(100vh - 64px - 150px); /* account for nav and footer */
-  max-width: 800px;
+  max-width: 1024px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -767,7 +769,7 @@ body {
 .main-content > div,
 .main-content > * {
   width: 100%;
-  max-width: 800px;
+  max-width: 1024px;
   margin-left: auto;
   margin-right: auto;
   box-sizing: border-box;
@@ -1058,7 +1060,7 @@ body {
   font-size: 0.9rem;
   color: #856404;
   text-align: center;
-  max-width: 800px;
+  max-width: 1024px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -1505,7 +1507,7 @@ body {
   background-color: #f8f8f8;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  max-width: 800px;
+  max-width: 1024px;
   width: calc(100% - 40px); /* Account for padding */
   box-sizing: border-box;
 }
