@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from 'next/headers';
 import './globals.css';
 import ContextProvider from '@/context';
+import { XmtpProvider } from '@/context/XmtpContext';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Footer } from '@/components/Footer';
 
@@ -26,11 +27,13 @@ export default async function RootLayout({
     <html lang="en">
       <body className={isLoggedIn ? 'logged-in' : ''}>
         <ContextProvider cookies={cookies}>
-          <TopNavigation />
-          <main className="main-content">
-            {children}
-          </main>
-          <Footer />
+          <XmtpProvider>
+            <TopNavigation />
+            <main className="main-content">
+              {children}
+            </main>
+            <Footer />
+          </XmtpProvider>
         </ContextProvider>
       </body>
     </html>

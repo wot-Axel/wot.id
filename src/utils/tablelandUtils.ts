@@ -18,6 +18,7 @@ let mockContactsDatabase: PrivateData[] = [];
 let mockAffiliationsDatabase: PrivateData[] = [];
 let mockCurrenciesDatabase: PrivateData[] = [];
 let mockDigitalAssetsDatabase: PrivateData[] = [];
+let mockChatDatabase: PrivateData[] = [];
 let mockPrivateTableCreated = false;
 let mockMedicalTableCreated = false;
 let mockAccountsTableCreated = false;
@@ -25,6 +26,7 @@ let mockContactsTableCreated = false;
 let mockAffiliationsTableCreated = false;
 let mockCurrenciesTableCreated = false;
 let mockDigitalAssetsTableCreated = false;
+let mockChatTableCreated = false;
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async () => {
@@ -527,6 +529,78 @@ export const clearDigitalAssetsData = async (db: Database, tableName: string) =>
     return true;
   } catch (error) {
     console.error('Error clearing digital assets data:', error);
+    throw error;
+  }
+};
+
+// Create a new chat table for the user
+export const createChatTable = async (db: Database, address: string) => {
+  try {
+    // For development, we'll simulate creating a table
+    mockChatTableCreated = true;
+    const tableName = `wot_chat_${address.substring(2, 10).toLowerCase()}`;
+    return tableName;
+  } catch (error) {
+    console.error('Error creating chat table:', error);
+    throw error;
+  }
+};
+
+// Insert data into chat table
+export const insertChatData = async (db: Database, tableName: string, key: string, value: string) => {
+  try {
+    // For development, we'll add to our mock chat database
+    const timestamp = new Date().toISOString();
+    const newId = mockChatDatabase.length > 0 ? Math.max(...mockChatDatabase.map(item => item.id)) + 1 : 1;
+    
+    const newItem: PrivateData = {
+      id: newId,
+      key,
+      value,
+      created_at: timestamp
+    };
+    
+    mockChatDatabase.unshift(newItem); // Add to beginning for reverse chronological order
+    return true;
+  } catch (error) {
+    console.error('Error inserting chat data:', error);
+    throw error;
+  }
+};
+
+// Get all chat data for a user
+export const getChatData = async (db: Database, tableName: string) => {
+  try {
+    // For development, return our mock chat database
+    return mockChatDatabase;
+  } catch (error) {
+    console.error('Error getting chat data:', error);
+    return [];
+  }
+};
+
+// Check if a chat table exists for a user
+export const checkChatTableExists = async (db: Database, address: string) => {
+  try {
+    // For development, check our mock flag
+    if (mockChatTableCreated) {
+      return `wot_chat_${address.substring(2, 10).toLowerCase()}`;
+    }
+    return '';
+  } catch (error) {
+    // Table doesn't exist
+    return '';
+  }
+};
+
+// Clear all chat data
+export const clearChatData = async (db: Database, tableName: string) => {
+  try {
+    // For development, clear our mock chat database
+    mockChatDatabase = [];
+    return true;
+  } catch (error) {
+    console.error('Error clearing chat data:', error);
     throw error;
   }
 };

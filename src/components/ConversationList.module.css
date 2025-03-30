@@ -1,0 +1,70 @@
+.conversationList {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.conversationItem {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #eaeaea;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.conversationItem:hover {
+  background-color: #f0f0f0;
+}
+
+.conversationItem.selected {
+  background-color: #f0f0f0;
+  border-left: 3px solid #000;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #000;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 12px;
+  font-weight: bold;
+}
+
+.conversationDetails {
+  flex: 1;
+  overflow: hidden;
+}
+
+.peerAddress {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.lastMessage {
+  color: #666;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emptyList {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #666;
+  text-align: center;
+  padding: 20px;
+}
+
+.hint {
+  font-size: 14px;
+  color: #999;
+  margin-top: 8px;
+}

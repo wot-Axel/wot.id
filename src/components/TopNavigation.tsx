@@ -50,6 +50,14 @@ export const TopNavigation = () => {
             >
               Get Trust
             </Link>
+            {isConnected && (
+              <Link 
+                href="/chat" 
+                className={`nav-link ${isActive('/chat') ? 'active' : ''}`}
+              >
+                Chat
+              </Link>
+            )}
           </nav>
           
           <div className="nav-right">
