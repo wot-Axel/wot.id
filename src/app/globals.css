@@ -400,24 +400,25 @@ label {
 /* Legal Page Styling */
 /* Common page container styles */
 .legal-page {
-  max-width: 1024px;
   width: 100%;
-  margin: 0 auto;
-  padding: 20px;
+  margin: 0;
+  padding: 0;
   color: var(--foreground);
   box-sizing: border-box;
 }
 
 .page-title {
   text-align: left;
-  margin-bottom: 40px;
+  margin: 0 auto 40px;
   font-size: 2.2rem;
   border-bottom: 2px solid #eaeaea;
-  padding-bottom: 15px;
+  padding: 20px 0 15px;
+  width: 100%;
+  max-width: 1024px;
 }
 
 .legal-section {
-  margin-bottom: 30px;
+  margin: 0 auto 30px;
   background-color: #f9f9f9;
   border-radius: 10px;
   overflow: hidden;
@@ -450,11 +451,9 @@ label {
 .legal-content {
   padding: 20px;
   width: 100%;
-  max-width: 1024px;
+  max-width: 100%;
   box-sizing: border-box;
   line-height: 1.6;
-  width: 100%;
-  box-sizing: border-box;
   overflow-wrap: break-word;
   word-wrap: break-word;
 }
@@ -729,7 +728,7 @@ label {
 
 /* Main content area styling */
 .main-content {
-  padding: 20px 20px 0;
+  padding: 0;
   min-height: calc(100vh - 64px - 150px); /* account for nav and footer */
   max-width: 1024px;
   margin: 0 auto;
