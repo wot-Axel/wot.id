@@ -45,9 +45,25 @@ const setupMockEthereumProvider = (walletClient: any, address: string) => {
       }
       
       if (method === 'personal_sign' || method === 'eth_sign') {
-        const message = params[0];
-        const signature = await walletClient.signMessage({ message });
-        return signature;
+        try {
+          const message = params[0];
+          console.log('Signing message in mock provider:', method);
+          console.log('Message (first 50 chars):', typeof message === 'string' ? message.substring(0, 50) : '(binary data)');
+          
+          const signature = await walletClient.signMessage({ message });
+          console.log('Raw signature received from wallet:', signature.substring(0, 10) + '...');
+          
+          // XMTP expects a hex string with a specific format
+          // The signature from walletClient might already be properly formatted, but let's ensure it
+          // is a properly formatted hex string with the '0x' prefix
+          const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
+          console.log('Formatted signature:', formattedSignature.substring(0, 10) + '...');
+          
+          return formattedSignature;
+        } catch (error) {
+          console.error('Error in mock provider while signing:', error);
+          throw error;
+        }
       }
       
       // Add other methods as needed
@@ -335,7 +351,13 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             console.log('Requesting signature from wallet...');
             const signature = await walletClient.signMessage({ message: messageString });
             console.log('Signature received:', signature.substring(0, 10) + '...');
-            return signature;
+            
+            // Ensure the signature is properly formatted for XMTP
+            // XMTP expects a hex string with a specific format
+            const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
+            console.log('Formatted signature for XMTP:', formattedSignature.substring(0, 10) + '...');
+            
+            return formattedSignature;
           } catch (signError: any) {
             console.error('Error during signMessage:', signError);
             throw new Error(`Signing failed: ${signError.message}`);
@@ -378,7 +400,11 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         console.log('Creating XMTP client with custom signer...');
         try {
           // Create the client with our custom signer - use dev environment for simpler testing
-          const xmtp = await xmtpModule.Client.create(signer, { env: 'dev' });
+          console.log('Creating XMTP client with options: env=dev and explicit content codecs');
+          const xmtp = await xmtpModule.Client.create(signer, { 
+            env: 'dev',
+            codecs: [xmtpModule.ContentTypeText] // Explicitly include text codec for better message handling
+          });
           console.log('Message client created successfully');
           setClient(xmtp);
 
