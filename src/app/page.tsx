@@ -31,9 +31,15 @@ export default function Home() {
       
       <div className="advice">
         <p>
-          <b>Built on the Ethereum Blockchain</b><br/>
-          This is an experimental project. Proceed with caution.
+          <b>Built on the Ethereum Blockchain</b>
         </p>
+        
+        <br/>
+        <br/>
+        
+        <div className="alert alert-warning">
+          <p>This is an experimental project. Proceed with caution.</p>
+        </div>
       </div>
     </div>
   );
