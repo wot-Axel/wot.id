@@ -1,13 +1,15 @@
+/* Container for the transaction content */
 .transactionContainer {
   display: flex;
+  flex-direction: row;
   gap: 2rem;
   margin-top: 1.5rem;
   width: 100%;
-  box-sizing: border-box;
-  align-self: center;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
+/* Individual sections (Send Assets and Transaction History) */
 .transactionSection {
   flex: 1;
   padding: 1.5rem;
@@ -15,25 +17,26 @@
   border-radius: 10px;
   background-color: white;
   box-sizing: border-box;
-  width: 100%;
 }
 
+/* Form container */
 .transactionForm {
   margin-top: 1.5rem;
-  width: 100%;
 }
 
+/* Form input groups */
 .formGroup {
   margin-bottom: 1.5rem;
-  width: 100%;
 }
 
+/* Form labels */
 .formGroup label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
 }
 
+/* Form inputs */
 .formControl {
   width: 100%;
   padding: 0.75rem;
@@ -43,18 +46,18 @@
   box-sizing: border-box;
 }
 
+/* Transaction history section */
 .transactionHistory {
   margin-top: 1.5rem;
-  width: 100%;
 }
 
+/* Empty state for transaction history */
 .emptyState {
   padding: 2rem;
   text-align: center;
   color: #666;
   background-color: #f9f9f9;
   border-radius: 8px;
-  width: 100%;
 }
 
 /* Mobile responsiveness */

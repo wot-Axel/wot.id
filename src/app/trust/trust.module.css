@@ -1,13 +1,13 @@
+/* Tabs container */
 .trustTabs {
   display: flex;
   margin-bottom: 2rem;
   border-bottom: 1px solid #eaeaea;
   width: 100%;
   box-sizing: border-box;
-  align-self: center;
-  max-width: 100%;
 }
 
+/* Individual tab buttons */
 .trustTab {
   padding: 0.75rem 1.5rem;
   background: none;
@@ -18,11 +18,13 @@
   color: #666;
 }
 
+/* Active tab styling */
 .trustTab.active {
   color: #0070f3;
   font-weight: 500;
 }
 
+/* Active tab indicator (blue line) */
 .trustTab.active::after {
   content: '';
   position: absolute;
@@ -33,37 +35,39 @@
   background-color: #0070f3;
 }
 
+/* Content area for the active tab */
 .trustContent {
   padding: 1rem 0;
-  width: 100%;
   box-sizing: border-box;
 }
 
+/* Trust sections */
 .giveTrustSection,
 .getTrustSection {
-  width: 100%;
   box-sizing: border-box;
 }
 
+/* Trust form container */
 .trustForm {
   max-width: 600px;
   margin-top: 1.5rem;
-  width: 100%;
   box-sizing: border-box;
 }
 
+/* Form input groups */
 .formGroup {
   margin-bottom: 1.5rem;
-  width: 100%;
   box-sizing: border-box;
 }
 
+/* Form labels */
 .formGroup label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
 }
 
+/* Form inputs */
 .formControl {
   width: 100%;
   padding: 0.75rem;
@@ -73,23 +77,23 @@
   box-sizing: border-box;
 }
 
+/* Empty state */
 .emptyState {
   padding: 2rem;
   text-align: center;
   color: #666;
   background-color: #f9f9f9;
   border-radius: 8px;
-  width: 100%;
   box-sizing: border-box;
 }
 
+/* Trust tips box */
 .trustTip {
   margin-top: 1.5rem;
   padding: 1rem;
   background-color: #f0f7ff;
   border-left: 4px solid #0070f3;
   border-radius: 4px;
-  width: 100%;
   box-sizing: border-box;
 }
 

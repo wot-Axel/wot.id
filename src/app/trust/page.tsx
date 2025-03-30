@@ -21,7 +21,7 @@ export default function TrustPage() {
   }
 
   return (
-    <div className="page-content">
+    <>
       <h1>Trust</h1>
       
       <div className={styles.trustTabs}>
@@ -95,6 +95,6 @@ export default function TrustPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
