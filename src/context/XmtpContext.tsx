@@ -148,7 +148,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       if (!canMessage) {
         // User doesn't have an XMTP identity yet
         console.log('User needs to create an XMTP identity');
-        setError(new Error('XMTP identity creation required. Please try again later after wallet connection is fully established.'));
+        setError(new Error('Message identity creation required. Please try again later after wallet connection is fully established.'));
         setIsLoading(false);
         return;
       }

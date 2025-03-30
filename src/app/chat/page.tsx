@@ -36,8 +36,8 @@ export default function ChatPage() {
   if (!isConnected) {
     return (
       <div className="main-content">
-        <h1>Chat</h1>
-        <p>Connect your wallet to start chatting</p>
+        <h1>Message</h1>
+        <p>Connect your wallet to start messaging</p>
         <ConnectButton />
       </div>
     );
@@ -46,9 +46,9 @@ export default function ChatPage() {
   if (isLoading) {
     return (
       <div className="main-content">
-        <h1>Chat</h1>
+        <h1>Message</h1>
         <div className={styles.loadingContainer}>
-          <p>Loading chat...</p>
+          <p>Loading messages...</p>
         </div>
       </div>
     );
@@ -57,13 +57,13 @@ export default function ChatPage() {
   if (error) {
     return (
       <div className="main-content">
-        <h1>Chat</h1>
+        <h1>Message</h1>
         <div className={styles.errorContainer}>
-          <h2>Chat Initialization Error</h2>
+          <h2>Message Initialization Error</h2>
           <p>{error.message}</p>
           {error.message.includes('XMTP identity creation') && (
             <div className={styles.identityHelp}>
-              <p>To use the chat feature, you need to create an XMTP identity first.</p>
+              <p>To use the messaging feature, you need to create an XMTP identity first.</p>
               <p>This requires a one-time signature to create your secure messaging identity.</p>
               
               <button 
@@ -102,7 +102,7 @@ export default function ChatPage() {
 
   return (
     <div className="main-content">
-      <h1>Chat</h1>
+      <h1>Message</h1>
       
       <div className={styles.chatContainer}>
         <div className={styles.sidebar}>
