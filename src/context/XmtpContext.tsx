@@ -22,9 +22,15 @@ const getXmtpClient = async () => {
 
 // Create a global utility to add a mock Ethereum provider to the window object
 // This is needed because XMTP internally checks for window.ethereum even when using a custom signer
-const setupMockEthereumProvider = (walletClient: any, address: string) => {
+const setupMockEthereumProvider = (walletClient: any, address: string | undefined) => {
   // Only run in browser
   if (typeof window === 'undefined') return;
+  
+  // Safety check - address should never be undefined when this function is called
+  if (!address) {
+    console.error('No address provided to setupMockEthereumProvider');
+    return;
+  }
   
   console.log('Setting up mock ethereum provider with address:', address);
   
@@ -187,22 +193,25 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     console.log('Address available:', !!address);
     console.log('Wallet client available:', !!walletClient);
     
-    if (!isConnected) {
-      console.error('AppKit reports wallet is not connected');
-      setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
-      return false;
-    }
-    
-    if (!address) {
-      console.error('No wallet address available');
-      setError(new Error('Wallet connected but address not available. Please refresh and try again.'));
-      return false;
-    }
-    
-    if (!walletClient) {
-      console.error('No wallet client available from wagmi');
-      setError(new Error('Wallet connected but signing capabilities not available. Please refresh and try again.'));
-      return false;
+    // For development key, we don't need a wallet connection
+    if (!useDevelopmentKey) {
+      if (!isConnected) {
+        console.error('AppKit reports wallet is not connected');
+        setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
+        return false;
+      }
+      
+      if (!address) {
+        console.error('No wallet address available');
+        setError(new Error('Wallet connected but address not available. Please refresh and try again.'));
+        return false;
+      }
+      
+      if (!walletClient) {
+        console.error('No wallet client available from wagmi');
+        setError(new Error('Wallet connected but signing capabilities not available. Please refresh and try again.'));
+        return false;
+      }
     }
 
     try {
@@ -210,7 +219,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       setError(null);
       
       console.log('Starting message identity creation process...');
-      console.log('Wallet address:', address);
+      console.log('Wallet address:', address || 'Not used (development mode)');
       console.log('Using development key?', useDevelopmentKey);
       
       try {
@@ -223,25 +232,37 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
           // Use development keys for testing - this bypasses the need for wallet signatures
           console.log('Using development key instead of wallet signature...');
           
-          // Generate random bytes for a development private key (don't use this in production!)
-          const getRandomBytesHex = (n: number) => {
-            return Array.from({ length: n }, () => 
-              Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
-            ).join('');
-          };
+          // For development, we'll use a static key so it's consistent between page reloads
+          // This ensures the identity persists in the browser's memory
+          // In production, you would NEVER use a hardcoded key
+          const DEV_PRIVATE_KEY = '0x1111111111111111111111111111111111111111111111111111111111111111';
+          console.log('Using development private key for consistent testing');
           
-          // Create a 32-byte private key
-          const privateKeyHex = `0x${getRandomBytesHex(32)}`;
-          console.log('Generated development private key (first 6 chars):', privateKeyHex.substring(0, 8) + '...');
-          
-          // Create a client with this key
-          xmtp = await xmtpModule.Client.createFromKeys(privateKeyHex, {
-            env: 'dev',
-            codecs: [xmtpModule.ContentTypeText]
-          });
-          console.log('Created XMTP client with development key');
+          try {
+            // First check if we can load an existing client with this key
+            console.log('Attempting to create XMTP client with development key...');
+            xmtp = await xmtpModule.Client.createFromKeys(DEV_PRIVATE_KEY, {
+              env: 'dev',
+              codecs: [xmtpModule.ContentTypeText]
+            });
+            console.log('Successfully created XMTP client with development key');
+            
+            // Store the client in localStorage to ensure it persists
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('xmtp_dev_client_created', 'true');
+              console.log('Saved development client state to localStorage');
+            }
+          } catch (devKeyError) {
+            console.error('Error creating client with development key:', devKeyError);
+            throw devKeyError;
+          }
         } else {
           // Standard flow with wallet signature
+          // We already verified walletClient and address exist above, but TypeScript needs reassurance
+          if (!walletClient || !address) {
+            throw new Error('Wallet client or address is undefined');
+          }
+          
           // Ensure we have a mock ethereum provider setup
           setupMockEthereumProvider(walletClient, address);
           
@@ -268,6 +289,10 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
                 console.log('Message to sign (first 50 chars):', messageString.substring(0, 50) + '...');
                 
                 console.log('Requesting signature from wallet...');
+                // TypeScript needs this check even though we've already verified walletClient exists
+                if (!walletClient) {
+                  throw new Error('Wallet client is undefined');
+                }
                 const signature = await walletClient.signMessage({ message: messageString });
                 console.log('Signature received:', signature.substring(0, 10) + '...');
                 
@@ -293,6 +318,14 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         }
         
         console.log('Message client created successfully!');
+        
+        // Verify the client was created properly
+        if (!xmtp) {
+          console.error('XMTP client was not created properly');
+          throw new Error('Failed to create XMTP client');
+        }
+        
+        console.log('Setting XMTP client in React state...');
         setClient(xmtp);
         setError(null);
         
@@ -558,10 +591,24 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   // Users will need to explicitly initialize the client when they navigate to the chat page
   // This prevents interference with the Reown modal's connection flow
 
+  // Check for development client in localStorage when component mounts
+  useEffect(() => {
+    // This effect runs once when the component mounts
+    if (typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true') {
+      console.log('Found development client in localStorage, attempting to initialize...');
+      // Try to create a client with the development key
+      createIdentity(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures this runs only once on mount
+
   // Clean up when wallet disconnects
   useEffect(() => {
     if (!isConnected && client) {
-      disconnect();
+      // Don't disconnect if we're using a development client
+      if (typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') !== 'true') {
+        disconnect();
+      }
     }
   }, [isConnected, client]);
 
