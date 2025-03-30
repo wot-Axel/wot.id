@@ -1,13 +1,17 @@
 'use client'
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { ConnectButton } from '@/components/ConnectButton';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
+import ScanButton from '@/components/ScanButton';
+import ScannerModal from '@/components/ScannerModal';
 import styles from './transact.module.css';
 
 export default function TransactPage() {
   const { isConnected, address } = useAppKitAccount();
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [recipientAddress, setRecipientAddress] = useState('');
 
   if (!isConnected) {
     return (
@@ -36,21 +40,32 @@ export default function TransactPage() {
         </div>
       </div>
       
-      {/* Send Assets Section */}
+      {/* Send Transaction Section */}
       <div className="legal-section">
-        <h2>Send Assets</h2>
+        <h2>Send Transaction</h2>
         <div className="legal-content">
           <p>Send currency or real-world assets to other users</p>
           
           <div className={styles.transactionForm}>
             <div className={styles.formGroup}>
               <label htmlFor="recipient">Recipient Address</label>
-              <input 
-                type="text" 
-                id="recipient" 
-                placeholder="0x..." 
-                className={styles.formControl}
-              />
+              <div className={styles.addressInputContainer}>
+                <input 
+                  type="text" 
+                  id="recipient" 
+                  placeholder="0x..." 
+                  className={styles.formControl}
+                  value={recipientAddress}
+                  onChange={(e) => setRecipientAddress(e.target.value)}
+                />
+                <button 
+                  className={styles.scanButton}
+                  onClick={() => setIsScannerOpen(true)}
+                  type="button"
+                >
+                  <span role="img" aria-label="scan">📷</span> Scan QR
+                </button>
+              </div>
             </div>
             
             <div className={styles.formGroup}>
@@ -88,6 +103,17 @@ export default function TransactPage() {
           </div>
         </div>
       </div>
+
+      {/* QR Code Scanner Modal */}
+      <ScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        scannerType="qrcode"
+        onScanSuccess={(data) => {
+          setIsScannerOpen(false);
+          setRecipientAddress(data);
+        }}
+      />
     </div>
   );
 }
