@@ -43,8 +43,6 @@ const MePage = () => {
           
           <DocumentsSection />
           
-          <RealWorldAssetsSection />
-          
           <TrustBalanceSection />
           
           {/* Private Data Section temporarily hidden
@@ -62,6 +60,8 @@ const MePage = () => {
           <CurrenciesSection />
           
           <DigitalAssetsSection />
+          
+          <RealWorldAssetsSection />
           
           <div className="legal-section">
             <h2>My Ethereum Account</h2>

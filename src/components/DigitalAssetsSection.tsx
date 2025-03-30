@@ -335,155 +335,128 @@ export const DigitalAssetsSection = () => {
                     <p>No digital assets added yet. Add some using the form below.</p>
                   )}
                   
-                  {/* Assets Grid */}
+                  {/* Assets Table */}
                   {assetsData.length > 0 && (
-                    <div className="assets-grid" style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-                      gap: '1rem',
-                      marginBottom: '1.5rem'
-                    }}>
-                      {assetsData.map((item) => {
-                        const asset = parseAssetData(item.value);
-                        
-                        return (
-                          <div 
-                            key={item.id} 
-                            className="asset-card" 
-                            style={{ 
-                              border: '1px solid #eaeaea',
-                              borderRadius: '8px',
-                              overflow: 'hidden',
-                              backgroundColor: selectedAsset === item.id.toString() ? '#f0f7ff' : 'white',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onClick={() => setSelectedAsset(selectedAsset === item.id.toString() ? null : item.id.toString())}
-                          >
-                            {/* Asset Image */}
-                            <div style={{ 
-                              height: '180px', 
-                              backgroundColor: '#f5f5f5',
-                              backgroundImage: asset.imageUrl ? `url(${asset.imageUrl})` : 'none',
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}>
-                              {!asset.imageUrl && (
-                                <div style={{ 
-                                  fontSize: '3rem', 
-                                  color: '#aaa',
-                                  textAlign: 'center'
-                                }}>
-                                  {asset.type === 'nft' ? '🖼️' : asset.type === 'gaming' ? '🎮' : '🏆'}
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Asset Info */}
-                            <div style={{ padding: '1rem' }}>
-                              <div style={{ 
-                                display: 'inline-block',
-                                padding: '0.25rem 0.5rem',
-                                backgroundColor: asset.type === 'nft' ? '#e3f2fd' : asset.type === 'gaming' ? '#e8f5e9' : '#fff3e0',
-                                color: asset.type === 'nft' ? '#1565c0' : asset.type === 'gaming' ? '#2e7d32' : '#e65100',
-                                borderRadius: '4px',
-                                fontSize: '0.75rem',
-                                fontWeight: 'bold',
-                                marginBottom: '0.5rem'
-                              }}>
-                                {asset.type === 'nft' ? 'NFT' : asset.type === 'gaming' ? 'GAMING' : 'OTHER'}
+                    <div className="table-container">
+                      <table className="data-table assets-table">
+                        <thead>
+                          <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Blockchain</th>
+                            <th>Identifier</th>
+                            <th>Acquired Date</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {assetsData.map((item) => {
+                            const asset = parseAssetData(item.value);
+                            return (
+                              <tr 
+                                key={item.id}
+                                className={selectedAsset === item.id.toString() ? 'selected-row' : ''}
+                              >
+                                <td>
+                                  <span className={`asset-type-badge ${asset.type}`}>
+                                    {asset.type === 'nft' ? '🖼️ NFT' : asset.type === 'gaming' ? '🎮 GAMING' : '🏆 OTHER'}
+                                  </span>
+                                </td>
+                                <td>{asset.name}</td>
+                                <td>{asset.platform}</td>
+                                <td>
+                                  <span className="identifier" title={asset.identifier}>
+                                    {asset.identifier.length > 10 ? `${asset.identifier.substring(0, 6)}...${asset.identifier.substring(asset.identifier.length - 4)}` : asset.identifier}
+                                  </span>
+                                </td>
+                                <td>{asset.acquiredDate || 'N/A'}</td>
+                                <td>
+                                  <button 
+                                    className="table-action-button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedAsset(selectedAsset === item.id.toString() ? null : item.id.toString());
+                                    }}
+                                  >
+                                    {selectedAsset === item.id.toString() ? 'Hide Details' : 'View Details'}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                      })}
+                        </tbody>
+                      </table>
+                      
+                      {/* Selected Asset Details Panel */}
+                      {selectedAsset && assetsData.map(item => {
+                        if (item.id.toString() === selectedAsset) {
+                          const asset = parseAssetData(item.value);
+                          return (
+                            <div key={`details-${item.id}`} className="asset-details-panel">
+                              <div className="asset-details-header">
+                                <h3>Asset Details</h3>
+                                <button 
+                                  className="close-details-button"
+                                  onClick={() => setSelectedAsset(null)}
+                                >
+                                  ×
+                                </button>
                               </div>
                               
-                              <h3 style={{ 
-                                margin: '0.5rem 0', 
-                                fontSize: '1.1rem',
-                                fontWeight: 'bold',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                              }}>
-                                {asset.name}
-                              </h3>
-                              
-                              <p style={{ 
-                                fontSize: '0.85rem',
-                                color: '#666',
-                                margin: '0.25rem 0'
-                              }}>
-                                <strong>Platform:</strong> {asset.platform}
-                              </p>
-                              
-                              {/* Expanded Details */}
-                              {selectedAsset === item.id.toString() && (
-                                <div style={{ 
-                                  marginTop: '1rem',
-                                  fontSize: '0.85rem'
-                                }}>
-                                  <p style={{ margin: '0.5rem 0' }}>
-                                    <strong>Identifier:</strong> 
-                                    <span style={{ 
-                                      display: 'block',
-                                      wordBreak: 'break-all',
-                                      backgroundColor: '#f5f5f5',
-                                      padding: '0.25rem 0.5rem',
-                                      borderRadius: '4px',
-                                      marginTop: '0.25rem',
-                                      fontSize: '0.8rem'
-                                    }}>
-                                      {asset.identifier}
-                                    </span>
-                                  </p>
-                                  
-                                  {asset.description && (
-                                    <p style={{ margin: '0.5rem 0' }}>
-                                      <strong>Description:</strong> {asset.description}
-                                    </p>
-                                  )}
-                                  
-                                  {asset.acquiredDate && (
-                                    <p style={{ margin: '0.5rem 0' }}>
-                                      <strong>Acquired:</strong> {new Date(asset.acquiredDate).toLocaleDateString()}
-                                    </p>
-                                  )}
-                                  
-                                  {asset.attributes && Object.keys(asset.attributes).length > 0 && (
-                                    <div style={{ margin: '0.5rem 0' }}>
-                                      <strong>Attributes:</strong>
-                                      <div style={{ 
-                                        display: 'flex', 
-                                        flexWrap: 'wrap', 
-                                        gap: '0.5rem',
-                                        marginTop: '0.25rem'
-                                      }}>
-                                        {Object.entries(asset.attributes).map(([key, value]) => (
-                                          <div key={key} style={{ 
-                                            backgroundColor: '#f0f0f0',
-                                            padding: '0.25rem 0.5rem',
-                                            borderRadius: '4px',
-                                            fontSize: '0.75rem'
-                                          }}>
-                                            <strong>{key}:</strong> {value}
-                                          </div>
-                                        ))}
-                                      </div>
+                              <div className="asset-details-content">
+                                <div className="asset-details-main">
+                                  {asset.imageUrl && (
+                                    <div className="asset-image">
+                                      <img src={asset.imageUrl} alt={asset.name} />
                                     </div>
                                   )}
                                   
-                                  <p style={{ 
-                                    fontSize: '0.8rem', 
-                                    color: '#666',
-                                    marginTop: '0.75rem'
-                                  }}>
-                                    Added: {new Date(item.created_at).toLocaleString()}
-                                  </p>
+                                  <div className="asset-info">
+                                    <div className="asset-name-type">
+                                      <span className={`asset-type-badge ${asset.type}`}>
+                                        {asset.type === 'nft' ? '🖼️ NFT' : asset.type === 'gaming' ? '🎮 GAMING' : '🏆 OTHER'}
+                                      </span>
+                                      <h4>{asset.name}</h4>
+                                    </div>
+                                    
+                                    <div className="asset-metadata">
+                                      <p><strong>Platform:</strong> {asset.platform}</p>
+                                      <p>
+                                        <strong>Identifier:</strong>
+                                        <span className="identifier-full">{asset.identifier}</span>
+                                      </p>
+                                      {asset.description && (
+                                        <p><strong>Description:</strong> {asset.description}</p>
+                                      )}
+                                      {asset.acquiredDate && (
+                                        <p><strong>Acquired:</strong> {new Date(asset.acquiredDate).toLocaleDateString()}</p>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
+                                
+                                {asset.attributes && Object.keys(asset.attributes).length > 0 && (
+                                  <div className="asset-attributes">
+                                    <h4>Attributes</h4>
+                                    <div className="attributes-grid">
+                                      {Object.entries(asset.attributes).map(([key, value]) => (
+                                        <div key={key} className="attribute-item">
+                                          <span className="attribute-key">{key}</span>
+                                          <span className="attribute-value">{value}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                <p className="asset-timestamp">
+                                  Added: {new Date(item.created_at).toLocaleString()}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        );
+                          );
+                        }
+                        return null;
                       })}
                     </div>
                   )}
