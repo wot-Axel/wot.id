@@ -15,10 +15,21 @@ export default function ChatPage() {
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
+  // Initialize the XMTP client when the chat page is loaded and the wallet is connected
+  // This is done explicitly here rather than automatically to prevent conflicts with wallet connection
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     if (isConnected && !client && !isLoading) {
-      initClient();
+      // Add a small delay to ensure wallet connection is fully complete
+      timeoutId = setTimeout(() => {
+        initClient();
+      }, 1000);
     }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [isConnected, client, isLoading, initClient]);
 
   if (!isConnected) {

@@ -93,15 +93,27 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
 
-      // Create a new XMTP client with the wallet
-      const xmtp = await Client.create(walletClient, { env: 'production' });
-      setClient(xmtp);
+      // Check if we already have a client before creating a new one
+      if (client) {
+        setIsLoading(false);
+        return;
+      }
 
-      // Load existing conversations
-      await loadConversations(xmtp);
-    } catch (e: any) {
-      console.error('Error initializing XMTP client:', e);
-      setError(e);
+      // Create a new XMTP client with the wallet
+      // Use a try-catch to prevent blocking the wallet connection flow
+      try {
+        // Cast the wallet client to any to bypass type checking
+        // This is necessary because the XMTP SDK has stricter type requirements
+        // than what wagmi's useWalletClient provides
+        const xmtp = await Client.create(walletClient as any, { env: 'production' });
+        setClient(xmtp);
+
+        // Load existing conversations
+        await loadConversations(xmtp);
+      } catch (e: any) {
+        console.error('Error initializing XMTP client:', e);
+        setError(e);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -191,12 +203,9 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Auto-initialize client when wallet connects
-  useEffect(() => {
-    if (isConnected && walletClient && !client && !isLoading) {
-      initClient();
-    }
-  }, [isConnected, walletClient, client, isLoading]);
+  // We're not auto-initializing the client to prevent conflicts with wallet connection
+  // Users will need to explicitly initialize the client when they navigate to the chat page
+  // This prevents interference with the Reown modal's connection flow
 
   // Clean up when wallet disconnects
   useEffect(() => {
