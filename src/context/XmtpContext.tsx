@@ -102,9 +102,20 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       // Create a new XMTP client with the wallet
       // Use a try-catch to prevent blocking the wallet connection flow
       try {
+        // First check if the user already has an XMTP identity
+        const canMessage = await Client.canMessage(address as string, { env: 'production' });
+        
+        if (!canMessage) {
+          // User doesn't have an XMTP identity yet, we'll need to create one
+          // This will trigger a signature request
+          console.log('User needs to create an XMTP identity');
+          setError(new Error('XMTP identity creation required. Please try again later after wallet connection is fully established.'));
+          setIsLoading(false);
+          return;
+        }
+        
+        // User already has an XMTP identity, we can create the client
         // Cast the wallet client to any to bypass type checking
-        // This is necessary because the XMTP SDK has stricter type requirements
-        // than what wagmi's useWalletClient provides
         const xmtp = await Client.create(walletClient as any, { env: 'production' });
         setClient(xmtp);
 

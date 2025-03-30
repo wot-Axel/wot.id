@@ -11,7 +11,7 @@ import styles from './chat.module.css';
 
 export default function ChatPage() {
   const { address, isConnected } = useAccount();
-  const { client, isLoading, initClient, conversations } = useXmtp();
+  const { client, isLoading, error, initClient, disconnect, conversations } = useXmtp();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
@@ -38,6 +38,54 @@ export default function ChatPage() {
         <h1>Chat</h1>
         <p>Connect your wallet to start chatting</p>
         <ConnectButton />
+      </div>
+    );
+  }
+  
+  if (isLoading) {
+    return (
+      <div className="main-content">
+        <h1>Chat</h1>
+        <div className={styles.loadingContainer}>
+          <p>Loading chat...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="main-content">
+        <h1>Chat</h1>
+        <div className={styles.errorContainer}>
+          <h2>Chat Initialization Error</h2>
+          <p>{error.message}</p>
+          {error.message.includes('XMTP identity creation') && (
+            <div className={styles.identityHelp}>
+              <p>To use the chat feature, you need to create an XMTP identity first.</p>
+              <p>Please follow these steps:</p>
+              <ol>
+                <li>Disconnect your wallet (click your address in the top right)</li>
+                <li>Reconnect your wallet</li>
+                <li>When prompted to sign for XMTP identity creation, approve the signature</li>
+                <li>Return to the chat page</li>
+              </ol>
+              <button 
+                className="button-primary"
+                onClick={() => {
+                  if (client) {
+                    disconnect();
+                  }
+                  setTimeout(() => {
+                    initClient();
+                  }, 1000);
+                }}
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
