@@ -1,11 +1,24 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Client } from '@xmtp/xmtp-js';
+import React, { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react';
+// Import Client type only for type checking, not the actual implementation
+import type { Client } from '@xmtp/xmtp-js';
 import { useAccount, useWalletClient } from 'wagmi';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { Database } from '@tableland/sdk';
 import { checkChatTableExists, createChatTable, insertChatData, getChatData } from '@/utils/tablelandUtils';
+
+// Use dynamic import to prevent server-side rendering of XMTP client
+// which uses WebAssembly and can cause issues on the server
+let XmtpClientModule: any = null;
+
+// Dynamic import function that will be called only on the client side
+const getXmtpClient = async () => {
+  if (!XmtpClientModule) {
+    XmtpClientModule = await import('@xmtp/xmtp-js');
+  }
+  return XmtpClientModule;
+};
 
 interface XmtpContextType {
   client: Client | null;
@@ -153,8 +166,11 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         };
         
         console.log('Creating XMTP client with custom signer...');
+        // Dynamically import the XMTP Client
+        const xmtpModule = await getXmtpClient();
+        
         // Create the client using our custom signer
-        const xmtp = await Client.create(signer, { 
+        const xmtp = await xmtpModule.Client.create(signer, { 
           env: 'dev',  // Use development environment for simpler testing
         });
         
@@ -228,59 +244,83 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
-      // Use window.ethereum directly like in createIdentity
-      if (typeof window === 'undefined' || !window.ethereum) {
-        console.error('No ethereum provider found');
-        setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
-        setIsLoading(false);
-        return;
-      }
+      // Create our custom signer for all XMTP interactions
+      console.log('Creating custom signer for XMTP...');
+      const signer = {
+        getAddress: async () => {
+          console.log('Signer.getAddress called, returning:', address);
+          return address as string;
+        },
+        signMessage: async (message: Uint8Array | string) => {
+          console.log('Signer.signMessage called');
+          console.log('Message type:', typeof message);
+          
+          try {
+            const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
+            console.log('Message to sign (first 50 chars):', messageString.substring(0, 50) + '...');
+            
+            console.log('Requesting signature from wallet...');
+            const signature = await walletClient.signMessage({ message: messageString });
+            console.log('Signature received:', signature.substring(0, 10) + '...');
+            return signature;
+          } catch (signError: any) {
+            console.error('Error during signMessage:', signError);
+            throw new Error(`Signing failed: ${signError.message}`);
+          }
+        }
+      };
       
       try {
-        // Check if this address can message using dev environment for simpler testing
-        console.log('Checking if user can message...');
-        const canMessage = await Client.canMessage(address, { env: 'dev' });
+        // Dynamically import the XMTP Client
+        const xmtpModule = await getXmtpClient();
         
-        if (!canMessage) {
-          // User doesn't have a message identity, they need to create one first
-          console.log('User needs to create a message identity');
-          setError(new Error('Message identity creation required. Please click the button below to create your message identity.'));
-          setIsLoading(false);
-          return;
+        // Check if this address can message using our custom signer
+        console.log('Checking if user can message...');
+        try {
+          // Try to use canMessage with our custom signer (wrapped in try/catch for better error handling)
+          const canMessage = await xmtpModule.Client.canMessage(address, { env: 'dev' });
+          
+          if (!canMessage) {
+            // User doesn't have a message identity, they need to create one first
+            console.log('User needs to create a message identity');
+            setError(new Error('Message identity creation required. Please click the button below to create your message identity.'));
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log('User has a message identity, proceeding with client creation');
+        } catch (e: any) {
+          console.log('Error checking if user can message:', e);
+          console.log('This is expected if user has no identity yet, proceeding to create client anyway');
+          // We'll continue and let Client.create handle any issues
         }
         
-        console.log('User has a message identity, proceeding with client creation');
-      } catch (e: any) {
-        console.error('Error checking message identity:', e);
-        setError(new Error(`Could not verify message identity: ${e.message || 'Unknown error'}`));
-        setIsLoading(false);
-        return;
-      }
-      
-      // User already has an XMTP identity, we can create the client
-      try {
-        console.log('User has message identity, creating client...');
-        // Create a proper XMTP-compatible signer from wagmi's walletClient
-        const signer = {
-          getAddress: async () => address as string,
-          signMessage: async (message: Uint8Array | string) => {
-            console.log('Requesting signature from wallet...');
-            const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
-            const signature = await walletClient.signMessage({ message: messageString });
-            return signature;
-          }
-        };
-        
-        // Create the client with our custom signer - use dev environment for simpler testing
-        const xmtp = await Client.create(signer, { env: 'dev' });
-        console.log('Message client created successfully');
-        setClient(xmtp);
+        // User already has an XMTP identity or we're proceeding anyway with our custom signer
+        console.log('Creating XMTP client with custom signer...');
+        try {
+          // Create the client with our custom signer - use dev environment for simpler testing
+          const xmtp = await xmtpModule.Client.create(signer, { env: 'dev' });
+          console.log('Message client created successfully');
+          setClient(xmtp);
 
-        // Load existing conversations
-        console.log('Loading conversations...');
-        await loadConversations(xmtp);
+          // Load existing conversations
+          console.log('Loading conversations...');
+          await loadConversations(xmtp);
+        } catch (e: any) {
+          console.error('Error creating XMTP client:', e);
+          
+          if (e.message?.includes('declined') || e.message?.includes('rejected')) {
+            setError(new Error('You declined the signature request. Please try again and approve the signature.'));
+          } else if (e.message?.includes('timeout')) {
+            setError(new Error('The signature request timed out. Please try again.'));
+          } else if (e.message?.includes('not a function')) {
+            setError(new Error('Your wallet appears to be incompatible with this messaging system. Please try a different wallet.'));
+          } else {
+            setError(new Error(`Failed to create message client: ${e.message || 'Unknown error'}`));
+          }
+        }
       } catch (e: any) {
-        console.error('Error initializing message client:', e);
+        console.error('Unexpected error initializing message client:', e);
         setError(new Error(`Failed to initialize messaging: ${e.message || 'Unknown error'}`));
       }
     } finally {
