@@ -14,9 +14,10 @@ export const networks = [mainnet, base, optimism] as [AppKitNetwork, ...AppKitNe
 
 //Set up the Wagmi Adapter (Config)
 export const wagmiAdapter = new WagmiAdapter({
+  // Use type assertion to fix the storage type error
   storage: createStorage({
     storage: cookieStorage
-  }),
+  }) as any,
   ssr: true,
   projectId,
   networks
