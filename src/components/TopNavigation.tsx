@@ -38,25 +38,27 @@ export const TopNavigation = () => {
           </div>
           
           <nav className="nav-links">
-            <Link 
-              href="/write" 
-              className={`nav-link ${isActive('/write') ? 'active' : ''}`}
-            >
-              Give Trust
-            </Link>
-            <Link 
-              href="/read" 
-              className={`nav-link ${isActive('/read') ? 'active' : ''}`}
-            >
-              Get Trust
-            </Link>
             {isConnected && (
-              <Link 
-                href="/chat" 
-                className={`nav-link ${isActive('/chat') ? 'active' : ''}`}
-              >
-                Chat
-              </Link>
+              <>
+                <Link 
+                  href="/chat" 
+                  className={`nav-link ${isActive('/chat') ? 'active' : ''}`}
+                >
+                  Message
+                </Link>
+                <Link 
+                  href="/transact" 
+                  className={`nav-link ${isActive('/transact') ? 'active' : ''}`}
+                >
+                  Transact
+                </Link>
+                <Link 
+                  href="/trust" 
+                  className={`nav-link ${isActive('/trust') || isActive('/write') || isActive('/read') ? 'active' : ''}`}
+                >
+                  Trust
+                </Link>
+              </>
             )}
           </nav>
           
