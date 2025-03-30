@@ -69,31 +69,58 @@ export default function ChatPage() {
             <p>To use the messaging feature, you need to create an XMTP identity first.</p>
             <p>This requires a one-time signature to create your secure messaging identity.</p>
             
-            <button 
-              className="button-primary"
-              disabled={creatingIdentity}
-              onClick={async () => {
-                setCreatingIdentity(true);
-                try {
-                  console.log('Attempting to create message identity...');
-                  const success = await createIdentity();
-                  
-                  if (success) {
-                    console.log('Identity creation successful, client should be initialized');
-                    // No need to call initClient again as createIdentity already does this
-                    setCreatingIdentity(false);
-                  } else {
-                    console.log('Identity creation failed');
+            <div className={styles.buttonGroup}>
+              <button 
+                className="button-primary"
+                disabled={creatingIdentity}
+                onClick={async () => {
+                  setCreatingIdentity(true);
+                  try {
+                    console.log('Attempting to create message identity with wallet...');
+                    const success = await createIdentity(false);
+                    
+                    if (success) {
+                      console.log('Identity creation successful, client should be initialized');
+                      // No need to call initClient again as createIdentity already does this
+                      setCreatingIdentity(false);
+                    } else {
+                      console.log('Identity creation failed');
+                      setCreatingIdentity(false);
+                    }
+                  } catch (e) {
+                    console.error('Exception during identity creation:', e);
                     setCreatingIdentity(false);
                   }
-                } catch (e) {
-                  console.error('Exception during identity creation:', e);
-                  setCreatingIdentity(false);
-                }
-              }}
-            >
-              {creatingIdentity ? 'Creating Identity...' : 'Create Message Identity'}
-            </button>
+                }}
+              >
+                {creatingIdentity ? 'Creating Identity...' : 'Create Message Identity'}
+              </button>
+              
+              <button 
+                className="button-secondary"
+                disabled={creatingIdentity}
+                onClick={async () => {
+                  setCreatingIdentity(true);
+                  try {
+                    console.log('Creating XMTP identity with development key (no wallet signature)');
+                    const success = await createIdentity(true); // Use development key
+                    
+                    if (success) {
+                      console.log('Development identity creation successful');
+                      setCreatingIdentity(false);
+                    } else {
+                      console.log('Development identity creation failed');
+                      setCreatingIdentity(false);
+                    }
+                  } catch (e) {
+                    console.error('Exception during development identity creation:', e);
+                    setCreatingIdentity(false);
+                  }
+                }}
+              >
+                Use Development Key (No Wallet Signature)
+              </button>
+            </div>
             
             <p className={styles.identityNote}>
               <strong>Note:</strong> When prompted to sign the message identity in your wallet, please approve it.

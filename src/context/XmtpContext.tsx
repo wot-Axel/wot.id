@@ -104,7 +104,7 @@ interface XmtpContextType {
   conversations: any[];
   loadingConversations: boolean;
   initClient: () => Promise<void>;
-  createIdentity: () => Promise<boolean>;
+  createIdentity: (useDevelopmentKey?: boolean) => Promise<boolean>;
   disconnect: () => void;
   sendMessage: (peerAddress: string, content: string) => Promise<void>;
   createNewConversation: (peerAddress: string) => Promise<void>;
@@ -179,7 +179,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   }, [db, address]);
 
   // Create XMTP identity with more detailed logging and error handling
-  const createIdentity = async (): Promise<boolean> => {
+  // Added option to use a development key for testing
+  const createIdentity = async (useDevelopmentKey: boolean = false): Promise<boolean> => {
     console.log('------- CREATE IDENTITY DEBUGGING -------');
     console.log('Checking wallet connection status...');
     console.log('AppKit isConnected:', isConnected);
@@ -210,59 +211,86 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('Starting message identity creation process...');
       console.log('Wallet address:', address);
+      console.log('Using development key?', useDevelopmentKey);
       
       try {
-        // Ensure we have a mock ethereum provider setup
-        setupMockEthereumProvider(walletClient, address);
-        
-        // Debug walletClient capabilities
-        console.log('WalletClient details:');
-        console.log('- account:', walletClient.account);
-        console.log('- chain:', walletClient.chain);
-        console.log('- transport type:', walletClient.transport.type);
-        
-        console.log('Creating custom signer from walletClient...');
-        
-        // Create a proper XMTP-compatible signer from wagmi's walletClient
-        const signer = {
-          getAddress: async () => {
-            console.log('Signer.getAddress called, returning:', address);
-            return address as string;
-          },
-          signMessage: async (message: Uint8Array | string) => {
-            console.log('Signer.signMessage called');
-            console.log('Message type:', typeof message);
-            
-            try {
-              const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
-              console.log('Message to sign (first 50 chars):', messageString.substring(0, 50) + '...');
-              
-              console.log('Requesting signature from wallet...');
-              const signature = await walletClient.signMessage({ message: messageString });
-              console.log('Signature received:', signature.substring(0, 10) + '...');
-              
-              // Ensure the signature is properly formatted for XMTP
-              const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
-              console.log('Formatted signature for XMTP:', formattedSignature.substring(0, 10) + '...');
-              
-              return formattedSignature;
-            } catch (signError: any) {
-              console.error('Error during signMessage:', signError);
-              throw new Error(`Signing failed: ${signError.message}`);
-            }
-          }
-        };
-        
-        console.log('Creating XMTP client with custom signer...');
         // Dynamically import the XMTP Client
         const xmtpModule = await getXmtpClient();
         
-        // Create the client using our custom signer
-        console.log('Creating client with options: env=dev and explicit codec configuration');
-        const xmtp = await xmtpModule.Client.create(signer, { 
-          env: 'dev',  // Use development environment for simpler testing
-          codecs: [xmtpModule.ContentTypeText] // Explicitly include text codec for better message handling
-        });
+        let xmtp;
+        
+        if (useDevelopmentKey) {
+          // Use development keys for testing - this bypasses the need for wallet signatures
+          console.log('Using development key instead of wallet signature...');
+          
+          // Generate random bytes for a development private key (don't use this in production!)
+          const getRandomBytesHex = (n: number) => {
+            return Array.from({ length: n }, () => 
+              Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
+            ).join('');
+          };
+          
+          // Create a 32-byte private key
+          const privateKeyHex = `0x${getRandomBytesHex(32)}`;
+          console.log('Generated development private key (first 6 chars):', privateKeyHex.substring(0, 8) + '...');
+          
+          // Create a client with this key
+          xmtp = await xmtpModule.Client.createFromKeys(privateKeyHex, {
+            env: 'dev',
+            codecs: [xmtpModule.ContentTypeText]
+          });
+          console.log('Created XMTP client with development key');
+        } else {
+          // Standard flow with wallet signature
+          // Ensure we have a mock ethereum provider setup
+          setupMockEthereumProvider(walletClient, address);
+          
+          // Debug walletClient capabilities
+          console.log('WalletClient details:');
+          console.log('- account:', walletClient.account);
+          console.log('- chain:', walletClient.chain);
+          console.log('- transport type:', walletClient.transport.type);
+          
+          console.log('Creating custom signer from walletClient...');
+          
+          // Create a proper XMTP-compatible signer from wagmi's walletClient
+          const signer = {
+            getAddress: async () => {
+              console.log('Signer.getAddress called, returning:', address);
+              return address as string;
+            },
+            signMessage: async (message: Uint8Array | string) => {
+              console.log('Signer.signMessage called');
+              console.log('Message type:', typeof message);
+              
+              try {
+                const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
+                console.log('Message to sign (first 50 chars):', messageString.substring(0, 50) + '...');
+                
+                console.log('Requesting signature from wallet...');
+                const signature = await walletClient.signMessage({ message: messageString });
+                console.log('Signature received:', signature.substring(0, 10) + '...');
+                
+                // Ensure the signature is properly formatted for XMTP
+                const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
+                console.log('Formatted signature for XMTP:', formattedSignature.substring(0, 10) + '...');
+                
+                return formattedSignature;
+              } catch (signError: any) {
+                console.error('Error during signMessage:', signError);
+                throw new Error(`Signing failed: ${signError.message}`);
+              }
+            }
+          };
+          
+          console.log('Creating XMTP client with custom signer...');
+          // Create the client using our custom signer
+          console.log('Creating client with options: env=dev and explicit codec configuration');
+          xmtp = await xmtpModule.Client.create(signer, { 
+            env: 'dev',  // Use development environment for simpler testing
+            codecs: [xmtpModule.ContentTypeText] // Explicitly include text codec for better message handling
+          });
+        }
         
         console.log('Message client created successfully!');
         setClient(xmtp);
