@@ -11,6 +11,12 @@
   margin-top: 1.5rem;
 }
 
+/* Space between button and form */
+.legal-content .button-primary {
+  margin-bottom: 1.5rem;
+  margin-top: 1rem;
+}
+
 /* Form input groups */
 .formGroup {
   margin-bottom: 1.5rem;

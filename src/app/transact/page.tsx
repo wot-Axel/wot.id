@@ -26,15 +26,15 @@ export default function TransactPage() {
   return (
     <div className="legal-page">
       
-      {/* Receive Transactions Section */}
+      {/* Receive Transaction Section */}
       <div className="legal-section">
-        <h2>Receive Transactions</h2>
+        <h2>Receive Transaction</h2>
         <div className="legal-content">
           <div className={styles.qrCodeContainer}>
             <QRCodeDisplay
               data={address || ''}
               title=""
-              description="This is my address on the Ethereum Blockchain where I can receive transactions"
+              description="This is my address on the Ethereum Blockchain where I can receive transactions. I can also share this address in string format"
             />
           </div>
         </div>
@@ -44,11 +44,19 @@ export default function TransactPage() {
       <div className="legal-section">
         <h2>Send Transaction</h2>
         <div className="legal-content">
-          <p>Send currency or real-world assets to other users</p>
+          <p>Send currency or real-world assets to this address</p>
+          
+          <button 
+            className="button-primary"
+            onClick={() => setIsScannerOpen(true)}
+            type="button"
+          >
+            <span role="img" aria-label="scan">📷</span> Scan QR Code
+          </button>
           
           <div className={styles.transactionForm}>
             <div className={styles.formGroup}>
-              <label htmlFor="recipient">Recipient Address</label>
+              <label htmlFor="recipient">Or enter Recipient Address</label>
               <div className={styles.addressInputContainer}>
                 <input 
                   type="text" 
@@ -58,13 +66,7 @@ export default function TransactPage() {
                   value={recipientAddress}
                   onChange={(e) => setRecipientAddress(e.target.value)}
                 />
-                <button 
-                  className={styles.scanButton}
-                  onClick={() => setIsScannerOpen(true)}
-                  type="button"
-                >
-                  <span role="img" aria-label="scan">📷</span> Scan QR
-                </button>
+
               </div>
             </div>
             
