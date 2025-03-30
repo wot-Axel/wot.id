@@ -3,12 +3,14 @@
 import React, { useState } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { ConnectButton } from '@/components/ConnectButton';
-import Link from 'next/link';
+import QRCodeDisplay from '@/components/QRCodeDisplay';
+import ScannerModal from '@/components/ScannerModal';
 import styles from './trust.module.css';
 
 export default function TrustPage() {
-  const { isConnected } = useAppKitAccount();
-  const [activeTab, setActiveTab] = useState('give'); // 'give' or 'get'
+  const { isConnected, address } = useAppKitAccount();
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [recipientAddress, setRecipientAddress] = useState('');
 
   if (!isConnected) {
     return (
@@ -22,81 +24,97 @@ export default function TrustPage() {
 
   return (
     <div className="legal-page">
-      <h1>Trust</h1>
       
-      <div className={styles.trustTabs}>
-        <button 
-          className={`${styles.trustTab} ${activeTab === 'give' ? styles.active : ''}`}
-          onClick={() => setActiveTab('give')}
-        >
-          Give Trust
-        </button>
-        <button 
-          className={`${styles.trustTab} ${activeTab === 'get' ? styles.active : ''}`}
-          onClick={() => setActiveTab('get')}
-        >
-          Get Trust
-        </button>
+      {/* Receive Trust Section */}
+      <div className="legal-section">
+        <h2>Receive Trust</h2>
+        <div className="legal-content">
+          <div className={styles.qrCodeContainer}>
+            <QRCodeDisplay
+              data={address || ''}
+              title=""
+              description="This is my address on the Ethereum Blockchain where I can receive trust. I can also share this address in string format"
+            />
+          </div>
+        </div>
       </div>
       
-      <div className={styles.trustContent}>
-        {activeTab === 'give' ? (
-          <div className={styles.giveTrustSection}>
-            <h2>Give Trust to Others</h2>
-            <p>Provide attestations and build trust in the network</p>
-            
-            <div className={styles.trustForm}>
-              <div className={styles.formGroup}>
-                <label htmlFor="recipient">Recipient Address</label>
+      {/* Send Trust Section */}
+      <div className="legal-section">
+        <h2>Send Trust</h2>
+        <div className="legal-content">
+          <p>Send trust attestations to this address</p>
+          
+          <button 
+            className="button-primary"
+            onClick={() => setIsScannerOpen(true)}
+            type="button"
+          >
+            <span role="img" aria-label="scan">📷</span> Scan QR Code
+          </button>
+          
+          <div className={styles.trustForm}>
+            <div className={styles.formGroup}>
+              <label htmlFor="recipient">Or enter Recipient Address</label>
+              <div className={styles.addressInputContainer}>
                 <input 
                   type="text" 
                   id="recipient" 
                   placeholder="0x..." 
                   className={styles.formControl}
+                  value={recipientAddress}
+                  onChange={(e) => setRecipientAddress(e.target.value)}
                 />
-              </div>
-              
-              <div className={styles.formGroup}>
-                <label htmlFor="trust-type">Trust Type</label>
-                <select id="trust-type" className={styles.formControl}>
-                  <option value="identity">Identity Verification</option>
-                  <option value="skills">Skills & Expertise</option>
-                  <option value="reputation">General Reputation</option>
-                </select>
-              </div>
-              
-              <div className={styles.formGroup}>
-                <label htmlFor="trust-details">Details</label>
-                <textarea 
-                  id="trust-details" 
-                  placeholder="Describe the basis for your trust..." 
-                  className={styles.formControl}
-                  rows={4}
-                />
-              </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                <button className="button-primary">
-                  Give Trust
-                </button>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className={styles.getTrustSection}>
-            <h2>Trust Received</h2>
-            <p>View attestations others have given you</p>
             
-            <div className={styles.trustReceived}>
-              <p className={styles.emptyState}>No trust attestations received yet</p>
-              
-              <p className={styles.trustTip}>
-                Share your profile with others to receive trust attestations.
-              </p>
+            <div className={styles.formGroup}>
+              <label htmlFor="trust-type">Trust Type</label>
+              <select id="trust-type" className={styles.formControl}>
+                <option value="identity">Identity Verification</option>
+                <option value="skills">Skills & Expertise</option>
+                <option value="reputation">General Reputation</option>
+              </select>
             </div>
+            
+            <div className={styles.formGroup}>
+              <label htmlFor="trust-details">Details</label>
+              <textarea 
+                id="trust-details" 
+                placeholder="Describe the basis for your trust..." 
+                className={styles.formControl}
+                rows={4}
+              />
+            </div>
+            
+            <button className="button-primary">
+              Send Trust
+            </button>
           </div>
-        )}
+        </div>
       </div>
+      
+      {/* Trust History Section */}
+      <div className="legal-section">
+        <h2>Trust History</h2>
+        <div className="legal-content">
+          <p>View your trust relationships</p>
+          <div className={styles.trustHistory}>
+            <p className={styles.emptyState}>No trust relationships yet</p>
+          </div>
+        </div>
+      </div>
+
+      {/* QR Code Scanner Modal */}
+      <ScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        scannerType="qrcode"
+        onScanSuccess={(data) => {
+          setIsScannerOpen(false);
+          setRecipientAddress(data);
+        }}
+      />
     </div>
   );
 }

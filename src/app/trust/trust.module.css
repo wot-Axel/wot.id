@@ -1,61 +1,20 @@
-/* Tabs container */
-.trustTabs {
+/* QR Code container */
+.qrCodeContainer {
+  width: 100%;
   display: flex;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #eaeaea;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Individual tab buttons */
-.trustTab {
-  padding: 0.75rem 1.5rem;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  position: relative;
-  color: #666;
-}
-
-/* Active tab styling */
-.trustTab.active {
-  color: #0070f3;
-  font-weight: 500;
-}
-
-/* Active tab indicator (blue line) */
-.trustTab.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: #0070f3;
-}
-
-/* Content area for the active tab */
-.trustContent {
+  justify-content: center;
   padding: 1rem 0;
-  box-sizing: border-box;
-}
-
-/* Trust sections */
-.giveTrustSection,
-.getTrustSection {
-  box-sizing: border-box;
 }
 
 /* Trust form container */
 .trustForm {
-  max-width: 600px;
   margin-top: 1.5rem;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: left;
+}
+
+/* Space between button and form */
+.legal-content .button-primary {
+  margin-bottom: 1.5rem;
+  margin-top: 1rem;
 }
 
 /* Form input groups */
@@ -89,26 +48,26 @@
   color: #666;
   background-color: #f9f9f9;
   border-radius: 8px;
-  box-sizing: border-box;
 }
 
-/* Trust tips box */
-.trustTip {
+/* Trust history section */
+.trustHistory {
   margin-top: 1.5rem;
-  padding: 1rem;
-  background-color: #f0f7ff;
-  border-left: 4px solid #0070f3;
-  border-radius: 4px;
-  box-sizing: border-box;
+}
+
+/* Address input container with scan button */
+.addressInputContainer {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.addressInputContainer .formControl {
+  flex: 1;
 }
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .trustTabs {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-  
   .trustForm {
     max-width: 100%;
   }
