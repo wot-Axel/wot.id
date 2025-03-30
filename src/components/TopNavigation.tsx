@@ -38,39 +38,50 @@ export const TopNavigation = () => {
           </div>
           
           <nav className="nav-links">
-            {isConnected && (
-              <>
-                <Link 
-                  href="/chat" 
-                  className={`nav-link ${isActive('/chat') ? 'active' : ''}`}
-                >
-                  Message
-                </Link>
-                <Link 
-                  href="/transact" 
-                  className={`nav-link ${isActive('/transact') ? 'active' : ''}`}
-                >
-                  Transact
-                </Link>
-                <Link 
-                  href="/trust" 
-                  className={`nav-link ${isActive('/trust') || isActive('/write') || isActive('/read') ? 'active' : ''}`}
-                >
-                  Trust
-                </Link>
-              </>
-            )}
+            {/* Always show links, but handle click differently when not logged in */}
+            <Link 
+              href={isConnected ? "/chat" : "/#"} 
+              className={`nav-link ${isActive('/chat') ? 'active' : ''}`}
+              onClick={!isConnected ? (e) => {
+                e.preventDefault();
+                open();
+              } : undefined}
+            >
+              Message
+            </Link>
+            <Link 
+              href={isConnected ? "/transact" : "/#"} 
+              className={`nav-link ${isActive('/transact') ? 'active' : ''}`}
+              onClick={!isConnected ? (e) => {
+                e.preventDefault();
+                open();
+              } : undefined}
+            >
+              Transact
+            </Link>
+            <Link 
+              href={isConnected ? "/trust" : "/#"} 
+              className={`nav-link ${isActive('/trust') || isActive('/write') || isActive('/read') ? 'active' : ''}`}
+              onClick={!isConnected ? (e) => {
+                e.preventDefault();
+                open();
+              } : undefined}
+            >
+              Trust
+            </Link>
           </nav>
           
           <div className="nav-right">
-            {isConnected && (
-              <Link 
-                href="/me" 
-                className={`nav-link ${isActive('/me') ? 'active' : ''}`}
-              >
-                Me
-              </Link>
-            )}
+            <Link 
+              href={isConnected ? "/me" : "/#"} 
+              className={`nav-link ${isActive('/me') ? 'active' : ''}`}
+              onClick={!isConnected ? (e) => {
+                e.preventDefault();
+                open();
+              } : undefined}
+            >
+              Me
+            </Link>
             
             {!isConnected && (
               <div className="connect-wrapper">
