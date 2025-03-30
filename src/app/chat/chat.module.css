@@ -171,16 +171,18 @@
   display: inline-block;
   margin-top: 1.5rem;
   padding: 0.7rem 1.5rem;
-  background-color: var(--primary-color, #0070f3);
-  color: white;
+  background-color: #d7e9ff;
+  color: #3273dc;
+  border: 1px solid #b8d4f9;
   border-radius: 5px;
   text-decoration: none;
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .homeButton:hover {
-  background-color: var(--primary-hover-color, #0051b3);
+  background-color: #c5e0ff;
+  color: #2160c4;
 }
 
 .identityHelp li {
