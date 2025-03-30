@@ -13,6 +13,7 @@ interface XmtpContextType {
   conversations: any[];
   loadingConversations: boolean;
   initClient: () => Promise<void>;
+  createIdentity: () => Promise<boolean>;
   disconnect: () => void;
   sendMessage: (peerAddress: string, content: string) => Promise<void>;
   createNewConversation: (peerAddress: string) => Promise<void>;
@@ -82,6 +83,48 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [db, address]);
 
+  // Check if user has an XMTP identity and create one if needed
+  const createIdentity = async (): Promise<boolean> => {
+    if (!walletClient || !address) {
+      setError(new Error('Wallet not connected'));
+      return false;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Check if the user already has an XMTP identity
+      const canMessage = await Client.canMessage(address as string, { env: 'production' });
+      
+      if (canMessage) {
+        // User already has an identity
+        console.log('User already has an XMTP identity');
+        setIsLoading(false);
+        return true;
+      }
+      
+      // User doesn't have an identity, create one
+      console.log('Creating new XMTP identity...');
+      try {
+        // This will trigger the signature request
+        await Client.create(walletClient as any, { env: 'production' });
+        console.log('XMTP identity created successfully');
+        return true;
+      } catch (e) {
+        console.error('Error creating XMTP identity:', e);
+        setError(new Error('Failed to create XMTP identity. Please try again.'));
+        return false;
+      }
+    } catch (e) {
+      console.error('Error checking XMTP identity:', e);
+      setError(new Error('Error checking XMTP identity status.'));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Initialize XMTP client
   const initClient = async () => {
     if (!walletClient || !address) {
@@ -99,22 +142,19 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Create a new XMTP client with the wallet
-      // Use a try-catch to prevent blocking the wallet connection flow
+      // First check if the user already has an XMTP identity
+      const canMessage = await Client.canMessage(address as string, { env: 'production' });
+      
+      if (!canMessage) {
+        // User doesn't have an XMTP identity yet
+        console.log('User needs to create an XMTP identity');
+        setError(new Error('XMTP identity creation required. Please try again later after wallet connection is fully established.'));
+        setIsLoading(false);
+        return;
+      }
+      
+      // User already has an XMTP identity, we can create the client
       try {
-        // First check if the user already has an XMTP identity
-        const canMessage = await Client.canMessage(address as string, { env: 'production' });
-        
-        if (!canMessage) {
-          // User doesn't have an XMTP identity yet, we'll need to create one
-          // This will trigger a signature request
-          console.log('User needs to create an XMTP identity');
-          setError(new Error('XMTP identity creation required. Please try again later after wallet connection is fully established.'));
-          setIsLoading(false);
-          return;
-        }
-        
-        // User already has an XMTP identity, we can create the client
         // Cast the wallet client to any to bypass type checking
         const xmtp = await Client.create(walletClient as any, { env: 'production' });
         setClient(xmtp);
@@ -232,6 +272,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     conversations,
     loadingConversations,
     initClient,
+    createIdentity,
     disconnect,
     sendMessage,
     createNewConversation

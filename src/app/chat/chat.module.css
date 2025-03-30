@@ -102,3 +102,12 @@
 .identityHelp li {
   margin-bottom: 0.75rem;
 }
+
+.identityNote {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #f0f7ff;
+  border-left: 4px solid #0070f3;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}

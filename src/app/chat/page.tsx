@@ -11,7 +11,8 @@ import styles from './chat.module.css';
 
 export default function ChatPage() {
   const { address, isConnected } = useAccount();
-  const { client, isLoading, error, initClient, disconnect, conversations } = useXmtp();
+  const { client, isLoading, error, initClient, createIdentity, disconnect, conversations } = useXmtp();
+  const [creatingIdentity, setCreatingIdentity] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
@@ -63,26 +64,35 @@ export default function ChatPage() {
           {error.message.includes('XMTP identity creation') && (
             <div className={styles.identityHelp}>
               <p>To use the chat feature, you need to create an XMTP identity first.</p>
-              <p>Please follow these steps:</p>
-              <ol>
-                <li>Disconnect your wallet (click your address in the top right)</li>
-                <li>Reconnect your wallet</li>
-                <li>When prompted to sign for XMTP identity creation, approve the signature</li>
-                <li>Return to the chat page</li>
-              </ol>
+              <p>This requires a one-time signature to create your secure messaging identity.</p>
+              
               <button 
                 className="button-primary"
-                onClick={() => {
-                  if (client) {
-                    disconnect();
+                disabled={creatingIdentity}
+                onClick={async () => {
+                  setCreatingIdentity(true);
+                  try {
+                    const success = await createIdentity();
+                    if (success) {
+                      // If identity creation was successful, initialize the client
+                      setTimeout(() => {
+                        initClient();
+                        setCreatingIdentity(false);
+                      }, 1000);
+                    } else {
+                      setCreatingIdentity(false);
+                    }
+                  } catch (e) {
+                    setCreatingIdentity(false);
                   }
-                  setTimeout(() => {
-                    initClient();
-                  }, 1000);
                 }}
               >
-                Try Again
+                {creatingIdentity ? 'Creating Identity...' : 'Create XMTP Identity'}
               </button>
+              
+              <p className={styles.identityNote}>
+                <strong>Note:</strong> When prompted to sign the XMTP identity message in your wallet, please approve it.
+              </p>
             </div>
           )}
         </div>
