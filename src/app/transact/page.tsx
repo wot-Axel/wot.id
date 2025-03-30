@@ -21,7 +21,6 @@ export default function TransactPage() {
 
   return (
     <div className="legal-page">
-      <h1 className="page-title">Transact</h1>
       
       {/* Receive Transactions Section */}
       <div className="legal-section">

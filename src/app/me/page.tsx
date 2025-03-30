@@ -73,15 +73,13 @@ const MePage = () => {
             </div>
           </div>
           
-          <div className="legal-section disconnect-section">
-            <div className="legal-content" style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
-              <button 
-                onClick={() => disconnect()}
-                className="logged-in-button"
-              >
-                Disconnect
-              </button>
-            </div>
+          <div className="disconnect-container">
+            <button 
+              onClick={() => disconnect()}
+              className="disconnect-button"
+            >
+              Disconnect
+            </button>
           </div>
         </>
       )}

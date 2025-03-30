@@ -428,14 +428,30 @@ label {
   box-sizing: border-box;
 }
 
-/* Reduce spacing for the disconnect section */
-.disconnect-section {
-  margin-bottom: 10px;
+/* Disconnect button styling */
+.disconnect-container {
+  width: 100%;
+  max-width: 1024px;
+  display: flex;
+  justify-content: center;
+  margin: 40px auto 40px;
 }
 
-.disconnect-section .logged-in-button {
-  margin-top: 5px;
-  margin-bottom: 5px;
+.disconnect-button {
+  background-color: transparent;
+  color: #666;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.disconnect-button:hover {
+  background-color: #f1f1f1;
+  color: #333;
 }
 
 .legal-section h2 {
@@ -984,7 +1000,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin: 15px auto;
+  margin: 20px auto;
   display: block;
 }
 
