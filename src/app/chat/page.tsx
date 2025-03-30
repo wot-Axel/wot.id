@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { useXmtp } from '@/context/XmtpContext';
 import { ConnectButton } from '@/components/ConnectButton';
 import ConversationList from '@/components/ConversationList';
@@ -10,7 +11,8 @@ import NewConversationModal from '@/components/NewConversationModal';
 import styles from './chat.module.css';
 
 export default function ChatPage() {
-  const { address, isConnected } = useAccount();
+  const { address } = useAccount();
+  const { isConnected } = useAppKitAccount();
   const { client, isLoading, error, initClient, createIdentity, disconnect, conversations } = useXmtp();
   const [creatingIdentity, setCreatingIdentity] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);

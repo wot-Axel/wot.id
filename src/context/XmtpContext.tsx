@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Client } from '@xmtp/xmtp-js';
 import { useAccount, useWalletClient } from 'wagmi';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { Database } from '@tableland/sdk';
 import { checkChatTableExists, createChatTable, insertChatData, getChatData } from '@/utils/tablelandUtils';
 
@@ -30,7 +31,8 @@ export const useXmtp = () => {
 };
 
 export const XmtpProvider = ({ children }: { children: ReactNode }) => {
-  const { address, isConnected } = useAccount();
+  const { address } = useAccount();
+  const { isConnected } = useAppKitAccount();
   const { data: walletClient } = useWalletClient();
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -83,10 +85,29 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [db, address]);
 
-  // Create XMTP identity using wagmi's walletClient
+  // Create XMTP identity with more detailed logging and error handling
   const createIdentity = async (): Promise<boolean> => {
-    if (!walletClient || !address) {
-      setError(new Error('Wallet not connected'));
+    console.log('------- CREATE IDENTITY DEBUGGING -------');
+    console.log('Checking wallet connection status...');
+    console.log('AppKit isConnected:', isConnected);
+    console.log('Address available:', !!address);
+    console.log('Wallet client available:', !!walletClient);
+    
+    if (!isConnected) {
+      console.error('AppKit reports wallet is not connected');
+      setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
+      return false;
+    }
+    
+    if (!address) {
+      console.error('No wallet address available');
+      setError(new Error('Wallet connected but address not available. Please refresh and try again.'));
+      return false;
+    }
+    
+    if (!walletClient) {
+      console.error('No wallet client available from wagmi');
+      setError(new Error('Wallet connected but signing capabilities not available. Please refresh and try again.'));
       return false;
     }
 
@@ -96,23 +117,42 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('Starting message identity creation process...');
       console.log('Wallet address:', address);
-      console.log('Wallet client available:', !!walletClient);
       
       try {
-        // Use wagmi's walletClient to create an XMTP client in dev environment for simpler testing
-        console.log('Creating XMTP client with wagmi walletClient...');
+        // Debug walletClient capabilities
+        console.log('WalletClient details:');
+        console.log('- account:', walletClient.account);
+        console.log('- chain:', walletClient.chain);
+        console.log('- transport type:', walletClient.transport.type);
+        
+        console.log('Creating custom signer from walletClient...');
         
         // Create a proper XMTP-compatible signer from wagmi's walletClient
         const signer = {
-          getAddress: async () => address as string,
+          getAddress: async () => {
+            console.log('Signer.getAddress called, returning:', address);
+            return address as string;
+          },
           signMessage: async (message: Uint8Array | string) => {
-            console.log('Requesting signature from wallet...');
-            const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
-            const signature = await walletClient.signMessage({ message: messageString });
-            return signature;
+            console.log('Signer.signMessage called');
+            console.log('Message type:', typeof message);
+            
+            try {
+              const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
+              console.log('Message to sign (first 50 chars):', messageString.substring(0, 50) + '...');
+              
+              console.log('Requesting signature from wallet...');
+              const signature = await walletClient.signMessage({ message: messageString });
+              console.log('Signature received:', signature.substring(0, 10) + '...');
+              return signature;
+            } catch (signError: any) {
+              console.error('Error during signMessage:', signError);
+              throw new Error(`Signing failed: ${signError.message}`);
+            }
           }
         };
         
+        console.log('Creating XMTP client with custom signer...');
         // Create the client using our custom signer
         const xmtp = await Client.create(signer, { 
           env: 'dev',  // Use development environment for simpler testing
@@ -134,6 +174,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
           setError(new Error('You declined the signature request. Please try again and approve the signature.'));
         } else if (e.message?.includes('timeout')) {
           setError(new Error('The signature request timed out. Please try again.'));
+        } else if (e.message?.includes('not a function')) {
+          setError(new Error('Your wallet appears to be incompatible with this messaging system. Please try a different wallet.'));
         } else {
           setError(new Error(`Failed to create message identity: ${e.message || 'Unknown error'}`));
         }
@@ -148,11 +190,29 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Initialize XMTP client with wagmi's walletClient
+  // Initialize XMTP client with improved debugging and error handling
   const initClient = async () => {
-    if (!walletClient || !address) {
-      console.log('Cannot initialize client: wallet not connected');
-      setError(new Error('Wallet not connected'));
+    console.log('------- INIT CLIENT DEBUGGING -------');
+    console.log('Checking wallet connection status...');
+    console.log('AppKit isConnected:', isConnected);
+    console.log('Address available:', !!address);
+    console.log('Wallet client available:', !!walletClient);
+    
+    if (!isConnected) {
+      console.error('AppKit reports wallet is not connected');
+      setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
+      return;
+    }
+    
+    if (!address) {
+      console.error('No wallet address available');
+      setError(new Error('Wallet connected but address not available. Please refresh and try again.'));
+      return;
+    }
+    
+    if (!walletClient) {
+      console.error('No wallet client available from wagmi');
+      setError(new Error('Wallet connected but signing capabilities not available. Please refresh and try again.'));
       return;
     }
 
