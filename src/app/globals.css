@@ -428,30 +428,13 @@ label {
   box-sizing: border-box;
 }
 
-/* Disconnect button styling */
+/* Disconnect container spacing */
 .disconnect-container {
   width: 100%;
   max-width: 1024px;
   display: flex;
   justify-content: center;
   margin: 40px auto 40px;
-}
-
-.disconnect-button {
-  background-color: transparent;
-  color: #666;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 8px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.disconnect-button:hover {
-  background-color: #f1f1f1;
-  color: #333;
 }
 
 .legal-section h2 {

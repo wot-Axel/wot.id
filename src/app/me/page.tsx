@@ -76,7 +76,7 @@ const MePage = () => {
           <div className="disconnect-container">
             <button 
               onClick={() => disconnect()}
-              className="disconnect-button"
+              className="button-primary"
             >
               Disconnect
             </button>
