@@ -12,16 +12,23 @@ export const metadata: Metadata = {
   viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+// Get server-side data
+async function getServerData() {
   const headersData = await headers();
   const cookies = headersData.get('cookie');
   
   // Check if user is logged in based on cookies
   const isLoggedIn = cookies?.includes('appkit.auth.token=');
+  
+  return { cookies, isLoggedIn };
+}
+
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const { cookies, isLoggedIn } = await getServerData();
 
   return (
     <html lang="en">
@@ -29,11 +36,9 @@ export default async function RootLayout({
         <ContextProvider cookies={cookies}>
           <XmtpProvider>
             <TopNavigation />
-            <div className="content-wrapper">
-              <main className="main-content">
-                {children}
-              </main>
-            </div>
+            <main className="main-content">
+              {children}
+            </main>
             <Footer />
           </XmtpProvider>
         </ContextProvider>
