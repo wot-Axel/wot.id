@@ -19,7 +19,7 @@ export default function TransactPage() {
   }
 
   return (
-    <>
+    <div className="legal-page">
       <h1>Transact</h1>
       
       <div className={styles.transactionContainer}>
@@ -71,6 +71,6 @@ export default function TransactPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

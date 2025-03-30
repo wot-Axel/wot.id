@@ -6,7 +6,7 @@ import styles from './chat.module.css';
 
 export default function ChatPage() {
   return (
-    <div className="main-content">
+    <div className="legal-page">
       <h1>Message</h1>
       
       <div className={styles.constructionContainer}>
