@@ -3,10 +3,11 @@
 import React from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { ConnectButton } from '@/components/ConnectButton';
+import QRCodeDisplay from '@/components/QRCodeDisplay';
 import styles from './transact.module.css';
 
 export default function TransactPage() {
-  const { isConnected } = useAppKitAccount();
+  const { isConnected, address } = useAppKitAccount();
 
   if (!isConnected) {
     return (
@@ -20,7 +21,13 @@ export default function TransactPage() {
 
   return (
     <div className="legal-page">
-      <h1>Transact</h1>
+      <div className={styles.qrCodeSection}>
+        <QRCodeDisplay
+          data={address || ''}
+          title="My Ethereum Address"
+          description="This is my address on the Ethereum Blockchain where I can receive transactions"
+        />
+      </div>
       
       <div className={styles.transactionContainer}>
         <div className={styles.transactionSection}>

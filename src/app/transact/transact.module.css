@@ -1,3 +1,15 @@
+/* QR Code section */
+.qrCodeSection {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
 /* Container for the transaction content */
 .transactionContainer {
   display: flex;
