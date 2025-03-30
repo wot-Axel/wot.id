@@ -12,7 +12,7 @@ export default function TrustPage() {
 
   if (!isConnected) {
     return (
-      <div className="main-content">
+      <div className="page-content">
         <h1>Trust</h1>
         <p>Connect your wallet to manage trust relationships</p>
         <ConnectButton />
@@ -21,7 +21,7 @@ export default function TrustPage() {
   }
 
   return (
-    <div className="main-content">
+    <div className="page-content">
       <h1>Trust</h1>
       
       <div className={styles.trustTabs}>

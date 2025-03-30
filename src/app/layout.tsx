@@ -29,9 +29,11 @@ export default async function RootLayout({
         <ContextProvider cookies={cookies}>
           <XmtpProvider>
             <TopNavigation />
-            <main className="main-content">
-              {children}
-            </main>
+            <div className="content-wrapper">
+              <main className="main-content">
+                {children}
+              </main>
+            </div>
             <Footer />
           </XmtpProvider>
         </ContextProvider>

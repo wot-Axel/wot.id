@@ -4,6 +4,8 @@
   margin-top: 1.5rem;
   width: 100%;
   box-sizing: border-box;
+  align-self: center;
+  max-width: 100%;
 }
 
 .transactionSection {

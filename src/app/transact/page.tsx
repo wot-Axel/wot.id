@@ -10,7 +10,7 @@ export default function TransactPage() {
 
   if (!isConnected) {
     return (
-      <div className="main-content">
+      <div className="page-content">
         <h1>Transact</h1>
         <p>Connect your wallet to send and receive assets</p>
         <ConnectButton />
@@ -19,7 +19,7 @@ export default function TransactPage() {
   }
 
   return (
-    <div className="main-content">
+    <div className="page-content">
       <h1>Transact</h1>
       
       <div className={styles.transactionContainer}>

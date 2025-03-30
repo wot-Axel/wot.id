@@ -4,6 +4,8 @@
   border-bottom: 1px solid #eaeaea;
   width: 100%;
   box-sizing: border-box;
+  align-self: center;
+  max-width: 100%;
 }
 
 .trustTab {
