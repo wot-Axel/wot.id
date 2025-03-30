@@ -73,17 +73,19 @@ export default function ChatPage() {
               onClick={async () => {
                 setCreatingIdentity(true);
                 try {
+                  console.log('Attempting to create message identity...');
                   const success = await createIdentity();
+                  
                   if (success) {
-                    // If identity creation was successful, initialize the client
-                    setTimeout(() => {
-                      initClient();
-                      setCreatingIdentity(false);
-                    }, 1000);
+                    console.log('Identity creation successful, client should be initialized');
+                    // No need to call initClient again as createIdentity already does this
+                    setCreatingIdentity(false);
                   } else {
+                    console.log('Identity creation failed');
                     setCreatingIdentity(false);
                   }
                 } catch (e) {
+                  console.error('Exception during identity creation:', e);
                   setCreatingIdentity(false);
                 }
               }}

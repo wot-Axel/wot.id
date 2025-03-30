@@ -94,31 +94,39 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
       
-      // Check if the user already has an XMTP identity
-      const canMessage = await Client.canMessage(address as string, { env: 'production' });
+      console.log('Starting XMTP identity creation process...');
+      console.log('Wallet address:', address);
       
-      if (canMessage) {
-        // User already has an identity
-        console.log('User already has an XMTP identity');
-        setIsLoading(false);
-        return true;
-      }
-      
-      // User doesn't have an identity, create one
-      console.log('Creating new XMTP identity...');
+      // Force a new client creation which will create the identity if it doesn't exist
       try {
         // This will trigger the signature request
-        await Client.create(walletClient as any, { env: 'production' });
-        console.log('XMTP identity created successfully');
+        console.log('Attempting to create XMTP client...');
+        // Create the XMTP client with minimal options to avoid TypeScript errors
+        // This will create the identity if it doesn't exist
+        const xmtp = await Client.create(walletClient as any, { 
+          env: 'production'
+        });
+        
+        console.log('XMTP client created successfully');
+        setClient(xmtp);
+        
+        // Load existing conversations
+        await loadConversations(xmtp);
+        
         return true;
-      } catch (e) {
+      } catch (e: any) {
         console.error('Error creating XMTP identity:', e);
-        setError(new Error('Failed to create XMTP identity. Please try again.'));
+        // Provide more specific error message
+        if (e.message?.includes('User declined to sign')) {
+          setError(new Error('You declined the signature request. Please try again and approve the signature.'));
+        } else {
+          setError(new Error(`Failed to create message identity: ${e.message || 'Unknown error'}`));
+        }
         return false;
       }
-    } catch (e) {
-      console.error('Error checking XMTP identity:', e);
-      setError(new Error('Error checking XMTP identity status.'));
+    } catch (e: any) {
+      console.error('Error in identity creation process:', e);
+      setError(new Error(`Error creating message identity: ${e.message || 'Unknown error'}`));
       return false;
     } finally {
       setIsLoading(false);
