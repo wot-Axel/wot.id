@@ -240,7 +240,12 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
               console.log('Requesting signature from wallet...');
               const signature = await walletClient.signMessage({ message: messageString });
               console.log('Signature received:', signature.substring(0, 10) + '...');
-              return signature;
+              
+              // Ensure the signature is properly formatted for XMTP
+              const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
+              console.log('Formatted signature for XMTP:', formattedSignature.substring(0, 10) + '...');
+              
+              return formattedSignature;
             } catch (signError: any) {
               console.error('Error during signMessage:', signError);
               throw new Error(`Signing failed: ${signError.message}`);
@@ -253,8 +258,10 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         const xmtpModule = await getXmtpClient();
         
         // Create the client using our custom signer
+        console.log('Creating client with options: env=dev and explicit codec configuration');
         const xmtp = await xmtpModule.Client.create(signer, { 
           env: 'dev',  // Use development environment for simpler testing
+          codecs: [xmtpModule.ContentTypeText] // Explicitly include text codec for better message handling
         });
         
         console.log('Message client created successfully!');
