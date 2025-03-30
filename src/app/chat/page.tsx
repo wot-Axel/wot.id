@@ -61,40 +61,40 @@ export default function ChatPage() {
         <div className={styles.errorContainer}>
           <h2>Message Initialization Error</h2>
           <p>{error.message}</p>
-          {error.message.includes('Message identity creation') && (
-            <div className={styles.identityHelp}>
-              <p>To use the messaging feature, you need to create an XMTP identity first.</p>
-              <p>This requires a one-time signature to create your secure messaging identity.</p>
-              
-              <button 
-                className="button-primary"
-                disabled={creatingIdentity}
-                onClick={async () => {
-                  setCreatingIdentity(true);
-                  try {
-                    const success = await createIdentity();
-                    if (success) {
-                      // If identity creation was successful, initialize the client
-                      setTimeout(() => {
-                        initClient();
-                        setCreatingIdentity(false);
-                      }, 1000);
-                    } else {
+          
+          {/* Always show the identity help section for any error */}
+          <div className={styles.identityHelp}>
+            <p>To use the messaging feature, you need to create an XMTP identity first.</p>
+            <p>This requires a one-time signature to create your secure messaging identity.</p>
+            
+            <button 
+              className="button-primary"
+              disabled={creatingIdentity}
+              onClick={async () => {
+                setCreatingIdentity(true);
+                try {
+                  const success = await createIdentity();
+                  if (success) {
+                    // If identity creation was successful, initialize the client
+                    setTimeout(() => {
+                      initClient();
                       setCreatingIdentity(false);
-                    }
-                  } catch (e) {
+                    }, 1000);
+                  } else {
                     setCreatingIdentity(false);
                   }
-                }}
-              >
-                {creatingIdentity ? 'Creating Identity...' : 'Create XMTP Identity'}
-              </button>
-              
-              <p className={styles.identityNote}>
-                <strong>Note:</strong> When prompted to sign the XMTP identity message in your wallet, please approve it.
-              </p>
-            </div>
-          )}
+                } catch (e) {
+                  setCreatingIdentity(false);
+                }
+              }}
+            >
+              {creatingIdentity ? 'Creating Identity...' : 'Create Message Identity'}
+            </button>
+            
+            <p className={styles.identityNote}>
+              <strong>Note:</strong> When prompted to sign the message identity in your wallet, please approve it.
+            </p>
+          </div>
         </div>
       </div>
     );
