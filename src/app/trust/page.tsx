@@ -75,9 +75,11 @@ export default function TrustPage() {
                 />
               </div>
               
-              <button className="button-primary">
-                Give Trust
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <button className="button-primary">
+                  Give Trust
+                </button>
+              </div>
             </div>
           </div>
         ) : (

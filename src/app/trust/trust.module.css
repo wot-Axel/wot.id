@@ -52,12 +52,17 @@
   max-width: 600px;
   margin-top: 1.5rem;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: left;
 }
 
 /* Form input groups */
 .formGroup {
   margin-bottom: 1.5rem;
   box-sizing: border-box;
+  width: 100%;
 }
 
 /* Form labels */
