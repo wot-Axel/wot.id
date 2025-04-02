@@ -45,7 +45,13 @@ export default function ChatPage() {
   const handleCreateIdentity = async () => {
     try {
       setInitializingClient(true);
-      await createIdentity();
+      // Use development mode for easier testing
+      const success = await createIdentity(true);
+      if (success) {
+        console.log('Successfully created identity in development mode');
+      } else {
+        console.error('Failed to create identity in development mode');
+      }
     } catch (e) {
       console.error('Error creating identity:', e);
     } finally {
@@ -72,15 +78,20 @@ export default function ChatPage() {
         <h1>Chat</h1>
         <div className={styles.identityPrompt}>
           <p>To use the chat functionality, you need to create a messaging identity.</p>
-          <p>This requires a one-time signature from your wallet.</p>
+          <p>For this demo, we'll use a development identity that doesn't require a wallet signature.</p>
           {error && <div className={styles.error}>{error.message}</div>}
           <button 
             className="button-primary" 
             onClick={handleCreateIdentity}
             disabled={initializingClient}
           >
-            {initializingClient ? 'Creating Identity...' : 'Create Messaging Identity'}
+            {initializingClient ? 'Creating Identity...' : 'Create Development Identity'}
           </button>
+          
+          <div className={styles.identityNote}>
+            <p><strong>Note:</strong> This is using XMTP's development network for demonstration purposes. 
+            In a production environment, this would use your actual wallet signature.</p>
+          </div>
         </div>
       </div>
     );

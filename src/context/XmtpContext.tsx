@@ -188,6 +188,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     console.log('AppKit isConnected:', isConnected);
     console.log('Address available:', !!address);
     console.log('Wallet client available:', !!walletClient);
+    console.log('Using development mode:', useDevelopmentKey);
     
     // For development key, we don't need a wallet connection
     if (!useDevelopmentKey) {
@@ -237,6 +238,13 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
           try {
             // First check if we can load an existing client with this key
             console.log('Attempting to create XMTP client with development key...');
+            
+            // Force a new client creation each time in development mode to avoid stale clients
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('xmtp_dev_client_created');
+              console.log('Cleared previous development client state');
+            }
+            
             xmtp = await xmtpModule.Client.createFromKeys(DEV_PRIVATE_KEY, {
               env: 'dev',
               codecs: [xmtpModule.ContentTypeText]
