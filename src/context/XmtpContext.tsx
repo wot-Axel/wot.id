@@ -5,8 +5,10 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, Suspe
 import type { Client } from '@xmtp/xmtp-js';
 import { useAccount, useWalletClient } from 'wagmi';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { Database } from '@tableland/sdk';
-import { checkChatTableExists, createChatTable, insertChatData, getChatData } from '@/utils/tablelandUtils';
+// Phase 1: Removed Tableland dependencies for initial implementation
+// Will be re-added in Phase 2
+// import { Database } from '@tableland/sdk';
+// import { checkChatTableExists, createChatTable, insertChatData, getChatData } from '@/utils/tablelandUtils';
 
 // Use dynamic import to prevent server-side rendering of XMTP client
 // which uses WebAssembly and can cause issues on the server
@@ -113,7 +115,7 @@ interface XmtpContextType {
   createIdentity: (useDevelopmentKey?: boolean) => Promise<boolean>;
   disconnect: () => void;
   sendMessage: (peerAddress: string, content: string) => Promise<void>;
-  createNewConversation: (peerAddress: string) => Promise<void>;
+  createNewConversation: (peerAddress: string) => Promise<any>; // Updated to return the conversation
 }
 
 const XmtpContext = createContext<XmtpContextType | undefined>(undefined);
@@ -135,30 +137,23 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<Error | null>(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [loadingConversations, setLoadingConversations] = useState<boolean>(false);
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
+  // Phase 1: Removed Tableland state for initial implementation
+  // Will be re-added in Phase 2
+  // const [db, setDb] = useState<Database | null>(null);
+  // const [tableName, setTableName] = useState<string>('');
 
-  // Initialize Tableland database and setup mock ethereum provider
+  // Phase 1: Setup mock ethereum provider without Tableland initialization
   useEffect(() => {
-    const initDb = async () => {
-      try {
-        // In a real implementation, we would connect to Tableland here
-        // For now, we'll use a mock database
-        setDb({} as Database);
-      } catch (error) {
-        console.error('Error initializing Tableland:', error);
-      }
-    };
-
     // Setup mock ethereum provider when wallet is connected
     if (isConnected && address && walletClient) {
       // Initialize the mock ethereum provider
       setupMockEthereumProvider(walletClient, address);
-      initDb();
     }
   }, [isConnected, address, walletClient]);
 
-  // Check if chat table exists or create one
+  // Phase 1: Removed Tableland table setup
+  // Will be re-added in Phase 2
+  /*
   useEffect(() => {
     const setupChatTable = async () => {
       if (!db || !address) return;
@@ -183,6 +178,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       setupChatTable();
     }
   }, [db, address]);
+  */
 
   // Create XMTP identity with more detailed logging and error handling
   // Added option to use a development key for testing
@@ -503,7 +499,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Load conversations
+  // Phase 1: Simplified conversation loading without Tableland integration
   const loadConversations = async (xmtpClient: Client) => {
     if (!xmtpClient) return;
 
@@ -511,23 +507,36 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       setLoadingConversations(true);
       const convos = await xmtpClient.conversations.list();
       
-      // Get conversation metadata from Tableland
-      if (db && tableName) {
-        const chatData = await getChatData(db, tableName);
+      // Phase 1: Use conversations directly from XMTP without Tableland metadata
+      // In Phase 2, we'll add back the Tableland integration for metadata
+      const conversationsWithBasicMetadata = await Promise.all(convos.map(async (convo) => {
+        // Get the most recent message for each conversation to use as preview
+        let lastMessagePreview = 'No messages yet';
+        try {
+          const messages = await convo.messages({ limit: 1 });
+          if (messages.length > 0) {
+            lastMessagePreview = messages[0].content;
+            // Truncate long messages
+            if (lastMessagePreview.length > 30) {
+              lastMessagePreview = lastMessagePreview.substring(0, 27) + '...';
+            }
+          }
+        } catch (e) {
+          console.error('Error fetching messages for conversation:', e);
+        }
         
-        // Merge XMTP conversations with metadata
-        const conversationsWithMetadata = convos.map(convo => {
-          const metadata = chatData.find(data => data.key === convo.peerAddress);
-          return {
-            ...convo,
-            metadata: metadata ? JSON.parse(metadata.value) : {}
-          };
-        });
-        
-        setConversations(conversationsWithMetadata);
-      } else {
-        setConversations(convos);
-      }
+        return {
+          ...convo,
+          metadata: {
+            peerAddress: convo.peerAddress,
+            lastMessage: lastMessagePreview,
+            createdAt: new Date().toISOString(),
+            unreadCount: 0
+          }
+        };
+      }));
+      
+      setConversations(conversationsWithBasicMetadata);
     } catch (e) {
       console.error('Error loading conversations:', e);
     } finally {
@@ -559,28 +568,23 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Create a new conversation
+  // Phase 1: Simplified conversation creation without Tableland integration
   const createNewConversation = async (peerAddress: string) => {
-    if (!client || !db || !tableName) {
-      throw new Error('Client or database not initialized');
+    if (!client) {
+      throw new Error('XMTP client not initialized');
     }
 
     try {
       // Create conversation in XMTP
       const conversation = await client.conversations.newConversation(peerAddress);
       
-      // Store metadata in Tableland
-      const metadata = {
-        peerAddress,
-        createdAt: new Date().toISOString(),
-        lastMessage: null,
-        unreadCount: 0
-      };
-      
-      await insertChatData(db, tableName, peerAddress, JSON.stringify(metadata));
+      // Phase 1: Skip Tableland metadata storage
+      // In Phase 2, we'll add back the Tableland integration for metadata
       
       // Refresh conversations
       await loadConversations(client);
+      
+      return conversation;
     } catch (e) {
       console.error('Error creating conversation:', e);
       throw e;

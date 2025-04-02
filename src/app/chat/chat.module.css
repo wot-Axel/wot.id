@@ -6,6 +6,8 @@
   overflow: hidden;
   margin-top: 20px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 1024px;
 }
 
 .sidebar {
@@ -29,14 +31,30 @@
   font-size: 18px;
 }
 
-.chatMain {
+.newChatButton {
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.newChatButton:hover {
+  background-color: #0060df;
+}
+
+.mainContent {
   flex: 1;
   display: flex;
   flex-direction: column;
   background-color: white;
+  overflow: hidden;
 }
 
-.emptyState {
+.noConversationSelected {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -45,6 +63,7 @@
   color: #666;
   text-align: center;
   padding: 20px;
+  background-color: #f9f9f9;
 }
 
 /* Mobile responsiveness */
@@ -60,16 +79,24 @@
     border-right: none;
     border-bottom: 1px solid #eaeaea;
   }
+  
+  .mainContent {
+    height: calc(100% - 200px);
+  }
 }
 
-/* Loading and error states */
+/* Loading, error, and connect states */
 .loadingContainer,
-.errorContainer {
+.errorContainer,
+.connectPrompt,
+.identityPrompt {
   padding: 2rem;
   border: 1px solid #eaeaea;
   border-radius: 10px;
   margin-top: 1rem;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 1024px;
 }
 
 .loadingContainer {
@@ -79,6 +106,24 @@
 
 .errorContainer {
   color: #e53935;
+}
+
+.connectPrompt {
+  text-align: center;
+  color: #666;
+}
+
+.identityPrompt {
+  text-align: center;
+  color: #333;
+}
+
+.error {
+  color: #e53935;
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background-color: #ffebee;
+  border-radius: 4px;
 }
 
 .errorContainer h2 {

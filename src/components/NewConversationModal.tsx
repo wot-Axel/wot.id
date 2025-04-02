@@ -38,11 +38,8 @@ export default function NewConversationModal({
         throw new Error('This address is not available on XMTP network');
       }
       
-      // Create conversation
-      await createNewConversation(peerAddress);
-      
-      // Get the conversation object
-      const conversation = await client.conversations.newConversation(peerAddress);
+      // Create conversation - in our phased approach, createNewConversation now returns the conversation
+      const conversation = await createNewConversation(peerAddress);
       
       onConversationCreated(conversation);
     } catch (e: any) {
