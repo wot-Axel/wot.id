@@ -7,7 +7,7 @@ import styles from './chat.module.css';
 export default function ChatPage() {
   return (
     <div className="legal-page">
-      <h1>Message</h1>
+      <h1>Chat</h1>
       
       <div className={styles.constructionContainer}>
         <div className={styles.constructionIcon}>
@@ -21,10 +21,10 @@ export default function ChatPage() {
           </svg>
         </div>
         
-        <h2 className={styles.constructionTitle}>Messaging Coming Soon!</h2>
+        <h2 className={styles.constructionTitle}>Chat Coming Soon!</h2>
         
         <div className={styles.constructionMessage}>
-          <p>Our secure, wallet-based messaging functionality is currently under construction and will be available shortly.</p>
+          <p>Our secure, wallet-based chat functionality is currently under construction and will be available shortly.</p>
           <p>Using the XMTP protocol, this feature will enable decentralized, end-to-end encrypted messaging between wallet addresses.</p>
           <p>Please revisit regularly for updates on this exciting feature!</p>
         </div>

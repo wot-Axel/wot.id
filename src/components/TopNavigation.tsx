@@ -47,7 +47,7 @@ export const TopNavigation = () => {
                 open();
               } : undefined}
             >
-              Message
+              Chat
             </Link>
             <Link 
               href={isConnected ? "/transact" : "/#"} 
