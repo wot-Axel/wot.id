@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, Suspe
 import type { Client } from '@xmtp/xmtp-js';
 import { useAccount, useWalletClient } from 'wagmi';
 import { useAppKitAccount } from '@reown/appkit/react';
+import { Wallet } from 'ethers';
 // Phase 1: Removed Tableland dependencies for initial implementation
 // Will be re-added in Phase 2
 // import { Database } from '@tableland/sdk';
@@ -268,11 +269,16 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             
             // Create a fresh client with the development key
             console.log('Creating fresh XMTP client with development key...');
-            xmtp = await xmtpModule.Client.createFromKeys(DEV_PRIVATE_KEY, {
+            
+            // Check which method is available in the XMTP library
+            console.log('Available methods on Client:', Object.keys(xmtpModule.Client));
+            
+            // Create a wallet from the private key
+            const wallet = new Wallet(DEV_PRIVATE_KEY);
+            
+            // Use the create method with the wallet
+            xmtp = await xmtpModule.Client.create(wallet, {
               env: 'dev',
-              codecs: [xmtpModule.ContentTypeText],
-              // Disable persistence to avoid caching issues
-              persistConversations: false,
               skipContactPublishing: true,
             });
             console.log('Successfully created XMTP client with development key');
@@ -520,12 +526,23 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             // Use the development private key to create a client
             const DEV_PRIVATE_KEY = '0x1111111111111111111111111111111111111111111111111111111111111111';
             
-            const xmtp = await xmtpModule.Client.createFromKeys(DEV_PRIVATE_KEY, {
-              env: 'dev',
-              codecs: [xmtpModule.ContentTypeText],
-              persistConversations: false,
-              skipContactPublishing: true,
-            });
+            // Check which method is available in the XMTP library
+            console.log('Available methods on Client:', Object.keys(xmtpModule.Client));
+            
+            // Try to create a client using the available method
+            let xmtp;
+            if (typeof xmtpModule.Client.create === 'function') {
+              // Create a wallet from the private key
+              const wallet = new Wallet(DEV_PRIVATE_KEY);
+              
+              // Use the create method with the wallet
+              xmtp = await xmtpModule.Client.create(wallet, {
+                env: 'dev',
+                skipContactPublishing: true,
+              });
+            } else {
+              throw new Error('No suitable method found to create XMTP client');
+            }
             
             console.log('Successfully created XMTP client with development key');
             setClient(xmtp);
