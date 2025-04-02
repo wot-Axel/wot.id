@@ -175,8 +175,70 @@ export const useWalletPreferences = () => {
     setInitialized(true);
   }, [initialized]);
 
+  const openModal = () => {
+    modal.open();
+    
+    // Apply customization after the modal opens
+    setTimeout(() => {
+      // Find all wallet option elements
+      const walletOptions = document.querySelectorAll('w3m-wallet-image');
+      if (walletOptions.length) {
+        // Get installed wallets
+        const installedWallets: string[] = [];
+        if (isMetaMaskInstalled()) installedWallets.push('metamask');
+        if (isCoinbaseInstalled()) installedWallets.push('coinbase');
+        if (isBraveWalletInstalled()) installedWallets.push('brave');
+
+        // Get last used wallet
+        const lastUsedWallet = getLastUsedWallet();
+
+        // Process each wallet option
+        walletOptions.forEach((option) => {
+          const walletId = option.getAttribute('name')?.toLowerCase();
+          
+          if (walletId) {
+            // Add visual indicator for recently used wallet
+            if (walletId === lastUsedWallet) {
+              const parent = option.parentElement;
+              if (parent) {
+                parent.style.border = '2px solid #3498db';
+                parent.style.borderRadius = '12px';
+                
+                // Add "Recently Used" label
+                const label = document.createElement('div');
+                label.textContent = 'Recently Used';
+                label.style.fontSize = '10px';
+                label.style.color = '#3498db';
+                label.style.textAlign = 'center';
+                label.style.marginTop = '2px';
+                parent.appendChild(label);
+                
+                // Move this option to the top
+                const grandparent = parent.parentElement;
+                if (grandparent && grandparent.firstChild) {
+                  grandparent.insertBefore(parent, grandparent.firstChild);
+                }
+              }
+            }
+            
+            // Boost installed wallets by moving them up
+            if (installedWallets.includes(walletId)) {
+              const parent = option.parentElement;
+              if (parent) {
+                const grandparent = parent.parentElement;
+                if (grandparent && grandparent.firstChild) {
+                  grandparent.insertBefore(parent, grandparent.firstChild);
+                }
+              }
+            }
+          }
+        });
+      }
+    }, 300);
+  };
+
   return {
-    openModal: () => modal.open(),
+    openModal,
     closeModal: () => modal.close(),
   };
 };
