@@ -24,8 +24,17 @@ export const modal = createAppKit({
   networks,
   metadata,
   themeMode: 'light',
-  // Prioritize connection methods in order: social, wallet, email
-  connectMethodsOrder: ['social', 'wallet', 'email'],
+  // Prioritize social login wallets first
+  featuredWalletIds: [
+    // Social login wallets
+    "20459438007b75f4f4acb98bf29aa3b800550309646d375da5fd4aac6c2a2c66", // Discord
+    "6f8c7d9d8f1d01fc6751efe7abc389c153f48e86266d9b3e5a0c2e3e49eeae17", // Google
+    "a797aa35c0d39f9d5f4ecbe0a9d6e981a703187ef018f3ee6245a0978e5baf55", // Twitter
+    // Wallet options
+    "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96", // MetaMask
+    "4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0", // Coinbase
+    "ecc4036f814562b41a5268adc86270fba1365471402006302e70169465b7ac18"  // Email
+  ],
   features: {
     analytics: true // Optional - defaults to your Cloud configuration
   },
