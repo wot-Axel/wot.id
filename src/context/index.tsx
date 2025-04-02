@@ -24,6 +24,7 @@ export const modal = createAppKit({
   networks,
   metadata,
   themeMode: 'light',
+  connectMethodsOrder: ['social', 'wallet', 'email'], // Prioritize social login methods first
   features: {
     analytics: true // Optional - defaults to your Cloud configuration
   },
