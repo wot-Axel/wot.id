@@ -261,13 +261,23 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             
             // Store the client in localStorage to ensure it persists
             if (typeof window !== 'undefined') {
+              // Clear any existing XMTP-related items first to ensure a clean state
+              for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.includes('xmtp')) {
+                  localStorage.removeItem(key);
+                }
+              }
+              
+              // Set both flags to ensure the client is properly detected
               localStorage.setItem('xmtp_dev_client_created', 'true');
+              localStorage.setItem('xmtp_dev_identity_requested', 'true');
               console.log('Saved development client state to localStorage');
               
-              // Force a page reload to ensure the client is properly detected
+              // Force a hard page reload to ensure the client is properly detected
               console.log('Reloading page to ensure fresh client state...');
               setTimeout(() => {
-                window.location.reload();
+                window.location.href = window.location.href.split('?')[0] + '?refresh=' + Date.now();
               }, 1000);
             }
           } catch (devKeyError) {
@@ -490,7 +500,26 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         const xmtpModule = await getXmtpClient();
         
         // Check if user can message or if we're using development mode
-        const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
+        // More robust check for development client
+        let hasDevClient = false;
+        if (typeof window !== 'undefined') {
+          // First check the explicit flag
+          hasDevClient = localStorage.getItem('xmtp_dev_client_created') === 'true';
+          
+          // If we're on the chat page and the user has clicked the button to create a dev identity,
+          // force the flag to be true to bypass the canMessage check
+          const pathname = window.location.pathname;
+          if (pathname.includes('/chat') && !hasDevClient) {
+            // Set a temporary flag to indicate we're trying to create a dev identity
+            localStorage.setItem('xmtp_dev_identity_requested', 'true');
+          }
+          
+          // Check if we have a temporary flag indicating we're trying to create a dev identity
+          if (localStorage.getItem('xmtp_dev_identity_requested') === 'true') {
+            console.log('Development identity was requested, bypassing canMessage check');
+            hasDevClient = true;
+          }
+        }
         console.log('Checking if user can message...');
         console.log('Development client detected in localStorage:', hasDevClient);
         

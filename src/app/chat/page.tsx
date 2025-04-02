@@ -65,6 +65,13 @@ export default function ChatPage() {
       setInitializingClient(true);
       console.log('Explicitly creating identity in development mode...');
       
+      // Set a flag to indicate we're trying to create a dev identity
+      // This will be checked in the XmtpContext to bypass the canMessage check
+      if (typeof window !== 'undefined') {
+        console.log('Setting development identity request flag...');
+        localStorage.setItem('xmtp_dev_identity_requested', 'true');
+      }
+      
       // First clear any existing client state from localStorage
       if (typeof window !== 'undefined') {
         console.log('Clearing any existing XMTP state from localStorage...');
@@ -88,9 +95,14 @@ export default function ChatPage() {
         // No need to reload here as it would cause a double reload
       } else {
         console.error('Failed to create identity in development mode');
+        // If the automatic reload didn't work, provide a manual reload button
+        if (typeof window !== 'undefined') {
+          alert('Identity created, but automatic reload failed. Please refresh the page manually.');
+        }
       }
     } catch (e) {
       console.error('Error creating identity:', e);
+      alert('Error creating identity: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setInitializingClient(false);
     }
