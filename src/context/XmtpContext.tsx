@@ -239,15 +239,23 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             // First check if we can load an existing client with this key
             console.log('Attempting to create XMTP client with development key...');
             
-            // Force a new client creation each time in development mode to avoid stale clients
+            // Clear any existing XMTP state to ensure a fresh start
             if (typeof window !== 'undefined') {
+              console.log('Clearing all XMTP-related localStorage items...');
               localStorage.removeItem('xmtp_dev_client_created');
+              localStorage.removeItem('xmtp_keys');
+              localStorage.removeItem('xmtp_cache');
               console.log('Cleared previous development client state');
             }
             
+            // Create a fresh client with the development key
+            console.log('Creating fresh XMTP client with development key...');
             xmtp = await xmtpModule.Client.createFromKeys(DEV_PRIVATE_KEY, {
               env: 'dev',
-              codecs: [xmtpModule.ContentTypeText]
+              codecs: [xmtpModule.ContentTypeText],
+              // Disable persistence to avoid caching issues
+              persistConversations: false,
+              skipContactPublishing: true,
             });
             console.log('Successfully created XMTP client with development key');
             
@@ -371,22 +379,31 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     console.log('Address available:', !!address);
     console.log('Wallet client available:', !!walletClient);
     
-    if (!isConnected) {
-      console.error('AppKit reports wallet is not connected');
-      setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
-      return;
-    }
+    // Check for development mode client in localStorage
+    const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
+    console.log('Development client detected in localStorage:', hasDevClient);
     
-    if (!address) {
-      console.error('No wallet address available');
-      setError(new Error('Wallet connected but address not available. Please refresh and try again.'));
-      return;
-    }
-    
-    if (!walletClient) {
-      console.error('No wallet client available from wagmi');
-      setError(new Error('Wallet connected but signing capabilities not available. Please refresh and try again.'));
-      return;
+    // In development mode, we can bypass some of the wallet checks
+    if (!hasDevClient) {
+      if (!isConnected) {
+        console.error('AppKit reports wallet is not connected');
+        setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
+        return;
+      }
+      
+      if (!address) {
+        console.error('No wallet address available');
+        setError(new Error('Wallet connected but address not available. Please refresh and try again.'));
+        return;
+      }
+      
+      if (!walletClient) {
+        console.error('No wallet client available from wagmi');
+        setError(new Error('Wallet connected but signing capabilities not available. Please refresh and try again.'));
+        return;
+      }
+    } else {
+      console.log('Using development client, bypassing wallet checks');
     }
 
     try {
@@ -403,7 +420,11 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       
       // Ensure we have a mock ethereum provider setup
       console.log('Ensuring mock ethereum provider is setup...');
-      setupMockEthereumProvider(walletClient, address);
+      if (walletClient) {
+        setupMockEthereumProvider(walletClient, address);
+      } else {
+        console.log('Skipping mock ethereum provider setup - walletClient is undefined');
+      }
       
       // Create our custom signer for all XMTP interactions
       console.log('Creating custom signer for XMTP...');
@@ -421,6 +442,9 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             console.log('Message to sign (first 50 chars):', messageString.substring(0, 50) + '...');
             
             console.log('Requesting signature from wallet...');
+            if (!walletClient) {
+              throw new Error('Wallet client is undefined');
+            }
             const signature = await walletClient.signMessage({ message: messageString });
             console.log('Signature received:', signature.substring(0, 10) + '...');
             
@@ -441,31 +465,43 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         // Dynamically import the XMTP Client
         const xmtpModule = await getXmtpClient();
         
-        // Check if this address can message using our custom signer
+        // Check if user can message or if we're using development mode
+        const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
         console.log('Checking if user can message...');
-        try {
-          // Try to use canMessage with our custom signer (wrapped in try/catch for better error handling)
-          const canMessage = await xmtpModule.Client.canMessage(address, { env: 'dev' });
-          
-          if (!canMessage) {
-            // User doesn't have a message identity, they need to create one first
-            console.log('User needs to create a message identity');
-            setError(new Error('Message identity creation required. Please click the button below to create your message identity.'));
-            setIsLoading(false);
-            return;
+        console.log('Development client detected in localStorage:', hasDevClient);
+        
+        if (hasDevClient) {
+          console.log('Development client detected, skipping canMessage check');
+          console.log('User has a development identity, proceeding with client creation');
+        } else {
+          try {
+            // Try to use canMessage with our custom signer (wrapped in try/catch for better error handling)
+            const canMessage = await xmtpModule.Client.canMessage(address as string, { env: 'dev' });
+            
+            if (!canMessage) {
+              // User doesn't have a message identity, they need to create one first
+              console.log('User needs to create a message identity');
+              setError(new Error('Message identity creation required. Please click the button below to create your message identity.'));
+              setIsLoading(false);
+              return;
+            }
+            
+            console.log('User has a message identity, proceeding with client creation');
+          } catch (e: any) {
+            console.log('Error checking if user can message:', e);
+            if (e.message?.includes('ethereum provider')) {
+              console.error('Ethereum provider error, retrying with mock provider...');
+              // Try reinitializing the mock provider
+              if (walletClient) {
+                setupMockEthereumProvider(walletClient, address);
+              } else {
+                console.error('Cannot setup mock provider: walletClient is undefined');
+              }
+            } else {
+              console.log('This is expected if user has no identity yet, proceeding to create client anyway');
+            }
+            // We'll continue and let Client.create handle any issues
           }
-          
-          console.log('User has a message identity, proceeding with client creation');
-        } catch (e: any) {
-          console.log('Error checking if user can message:', e);
-          if (e.message?.includes('ethereum provider')) {
-            console.error('Ethereum provider error, retrying with mock provider...');
-            // Try reinitializing the mock provider
-            setupMockEthereumProvider(walletClient, address);
-          } else {
-            console.log('This is expected if user has no identity yet, proceeding to create client anyway');
-          }
-          // We'll continue and let Client.create handle any issues
         }
         
         // User already has an XMTP identity or we're proceeding anyway with our custom signer
