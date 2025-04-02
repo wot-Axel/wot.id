@@ -15,34 +15,33 @@ export default function ChatPage() {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [initializingClient, setInitializingClient] = useState(false);
   
-  // Initialize client when page loads if user is connected
+  // Disable automatic client initialization on page load to prevent the continuous loop
+  // Instead, we'll only initialize the client when the user explicitly clicks the button
   useEffect(() => {
-    const initializeXmtpClient = async () => {
-      if (isConnected && !client && !initializingClient) {
-        setInitializingClient(true);
-        console.log('Initializing XMTP client from page load effect...');
-        
-        try {
-          // Check if we have a development client in localStorage
-          const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
-          
-          if (hasDevClient) {
-            console.log('Found existing dev client in localStorage, attempting to use it...');
-          }
-          
-          // Try to initialize the client
-          await initClient();
-          console.log('Client initialization completed successfully');
-        } catch (error) {
-          console.error('Failed to initialize client:', error);
-        } finally {
-          setInitializingClient(false);
+    // Clear any existing XMTP state from localStorage on page load
+    if (typeof window !== 'undefined') {
+      console.log('Clearing any existing XMTP state from localStorage on page load...');
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('xmtp_') || key.includes('xmtp'))) {
+          console.log('Removing localStorage item:', key);
+          localStorage.removeItem(key);
         }
       }
-    };
+    }
     
-    initializeXmtpClient();
-  }, [isConnected, client, initClient, initializingClient]);
+    // Set a flag to indicate we're on the chat page
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('on_chat_page', 'true');
+    }
+    
+    // Cleanup when component unmounts
+    return () => {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('on_chat_page');
+      }
+    };
+  }, []);
   
   // Handle conversation selection
   const handleSelectConversation = (conversation: any) => {

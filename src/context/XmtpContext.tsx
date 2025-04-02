@@ -190,6 +190,24 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     console.log('Wallet client available:', !!walletClient);
     console.log('Using development mode:', useDevelopmentKey);
     
+    // Clear any existing XMTP state from localStorage first
+    if (typeof window !== 'undefined') {
+      console.log('Clearing any existing XMTP state from localStorage...');
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('xmtp_') || key.includes('xmtp'))) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      // Remove the keys in a separate loop to avoid issues with changing localStorage during iteration
+      keysToRemove.forEach(key => {
+        console.log('Removing localStorage item:', key);
+        localStorage.removeItem(key);
+      });
+    }
+    
     // For development key, we don't need a wallet connection
     if (!useDevelopmentKey) {
       if (!isConnected) {
@@ -261,24 +279,20 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             
             // Store the client in localStorage to ensure it persists
             if (typeof window !== 'undefined') {
-              // Clear any existing XMTP-related items first to ensure a clean state
-              for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.includes('xmtp')) {
-                  localStorage.removeItem(key);
-                }
-              }
+              // Set the client directly in the React state
+              setClient(xmtp);
               
-              // Set both flags to ensure the client is properly detected
+              // Set the flag to indicate we have a development client
               localStorage.setItem('xmtp_dev_client_created', 'true');
-              localStorage.setItem('xmtp_dev_identity_requested', 'true');
               console.log('Saved development client state to localStorage');
               
-              // Force a hard page reload to ensure the client is properly detected
-              console.log('Reloading page to ensure fresh client state...');
-              setTimeout(() => {
-                window.location.href = window.location.href.split('?')[0] + '?refresh=' + Date.now();
-              }, 1000);
+              // Load conversations immediately instead of reloading the page
+              console.log('Loading conversations for the development client...');
+              loadConversations(xmtp).then(() => {
+                console.log('Successfully loaded conversations for development client');
+              }).catch(error => {
+                console.error('Error loading conversations:', error);
+              });
             }
           } catch (devKeyError) {
             console.error('Error creating client with development key:', devKeyError);
@@ -395,27 +409,22 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     console.log('Address available:', !!address);
     console.log('Wallet client available:', !!walletClient);
     
-    // Check for development mode client in localStorage - do a more thorough check
-    let hasDevClient = false;
-    if (typeof window !== 'undefined') {
-      // Check all localStorage items for xmtp development client indicators
-      hasDevClient = localStorage.getItem('xmtp_dev_client_created') === 'true';
-      
-      // Additional check for any XMTP keys that might indicate a development client
-      if (!hasDevClient) {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('xmtp_') && key.includes('keys')) {
-            console.log('Found potential XMTP development keys:', key);
-            hasDevClient = true;
-            // Since we found keys but the flag wasn't set, let's set it
-            localStorage.setItem('xmtp_dev_client_created', 'true');
-            break;
-          }
-        }
-      }
+    // If we already have a client, just return it
+    if (client) {
+      console.log('Client already exists, using existing client');
+      return;
     }
+    
+    // Simple check for development client flag
+    const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
     console.log('Development client detected in localStorage:', hasDevClient);
+    
+    // If we're on the chat page and there's no development client, show the message to create one
+    if (!hasDevClient && typeof window !== 'undefined' && window.location.pathname.includes('/chat')) {
+      console.log('On chat page without development client, showing create identity message');
+      setError(new Error('Message identity creation required. Please click the button below to create your message identity.'));
+      return;
+    }
     
     // In development mode, we can bypass some of the wallet checks
     if (!hasDevClient) {
@@ -499,33 +508,42 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         // Dynamically import the XMTP Client
         const xmtpModule = await getXmtpClient();
         
-        // Check if user can message or if we're using development mode
-        // More robust check for development client
-        let hasDevClient = false;
-        if (typeof window !== 'undefined') {
-          // First check the explicit flag
-          hasDevClient = localStorage.getItem('xmtp_dev_client_created') === 'true';
-          
-          // If we're on the chat page and the user has clicked the button to create a dev identity,
-          // force the flag to be true to bypass the canMessage check
-          const pathname = window.location.pathname;
-          if (pathname.includes('/chat') && !hasDevClient) {
-            // Set a temporary flag to indicate we're trying to create a dev identity
-            localStorage.setItem('xmtp_dev_identity_requested', 'true');
-          }
-          
-          // Check if we have a temporary flag indicating we're trying to create a dev identity
-          if (localStorage.getItem('xmtp_dev_identity_requested') === 'true') {
-            console.log('Development identity was requested, bypassing canMessage check');
-            hasDevClient = true;
-          }
-        }
+        // Simple check for development client flag
+        const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
         console.log('Checking if user can message...');
         console.log('Development client detected in localStorage:', hasDevClient);
         
+        // If we have a development client flag, try to create a client with the development key
         if (hasDevClient) {
-          console.log('Development client detected, skipping canMessage check');
-          console.log('User has a development identity, proceeding with client creation');
+          console.log('Development client detected, creating client with development key');
+          try {
+            // Use the development private key to create a client
+            const DEV_PRIVATE_KEY = '0x1111111111111111111111111111111111111111111111111111111111111111';
+            
+            const xmtp = await xmtpModule.Client.createFromKeys(DEV_PRIVATE_KEY, {
+              env: 'dev',
+              codecs: [xmtpModule.ContentTypeText],
+              persistConversations: false,
+              skipContactPublishing: true,
+            });
+            
+            console.log('Successfully created XMTP client with development key');
+            setClient(xmtp);
+            
+            // Load conversations
+            await loadConversations(xmtp);
+            setIsLoading(false);
+            return;
+          } catch (error) {
+            console.error('Error creating development client:', error);
+            // If development client creation fails, clear the flag and show an error
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('xmtp_dev_client_created');
+            }
+            setError(new Error('Failed to create development client. Please try again.'));
+            setIsLoading(false);
+            return;
+          }
         } else {
           try {
             // Try to use canMessage with our custom signer (wrapped in try/catch for better error handling)
