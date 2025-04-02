@@ -263,6 +263,12 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             if (typeof window !== 'undefined') {
               localStorage.setItem('xmtp_dev_client_created', 'true');
               console.log('Saved development client state to localStorage');
+              
+              // Force a page reload to ensure the client is properly detected
+              console.log('Reloading page to ensure fresh client state...');
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
             }
           } catch (devKeyError) {
             console.error('Error creating client with development key:', devKeyError);
@@ -379,8 +385,26 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     console.log('Address available:', !!address);
     console.log('Wallet client available:', !!walletClient);
     
-    // Check for development mode client in localStorage
-    const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
+    // Check for development mode client in localStorage - do a more thorough check
+    let hasDevClient = false;
+    if (typeof window !== 'undefined') {
+      // Check all localStorage items for xmtp development client indicators
+      hasDevClient = localStorage.getItem('xmtp_dev_client_created') === 'true';
+      
+      // Additional check for any XMTP keys that might indicate a development client
+      if (!hasDevClient) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('xmtp_') && key.includes('keys')) {
+            console.log('Found potential XMTP development keys:', key);
+            hasDevClient = true;
+            // Since we found keys but the flag wasn't set, let's set it
+            localStorage.setItem('xmtp_dev_client_created', 'true');
+            break;
+          }
+        }
+      }
+    }
     console.log('Development client detected in localStorage:', hasDevClient);
     
     // In development mode, we can bypass some of the wallet checks

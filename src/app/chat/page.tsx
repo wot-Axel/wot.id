@@ -68,18 +68,24 @@ export default function ChatPage() {
       // First clear any existing client state from localStorage
       if (typeof window !== 'undefined') {
         console.log('Clearing any existing XMTP state from localStorage...');
-        localStorage.removeItem('xmtp_dev_client_created');
-        localStorage.removeItem('xmtp_keys');
-        localStorage.removeItem('xmtp_cache');
+        // Clear all XMTP-related items to ensure a fresh start
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('xmtp_') || key.includes('xmtp'))) {
+            console.log('Removing localStorage item:', key);
+            localStorage.removeItem(key);
+          }
+        }
       }
       
       // Use development mode for easier testing
+      console.log('Creating new development identity...');
       const success = await createIdentity(true);
       
       if (success) {
         console.log('Successfully created identity in development mode');
-        // Force a reload of the page to ensure everything is fresh
-        window.location.reload();
+        // The page will be reloaded by the createIdentity function
+        // No need to reload here as it would cause a double reload
       } else {
         console.error('Failed to create identity in development mode');
       }
