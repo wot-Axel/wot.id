@@ -16,6 +16,9 @@ const nextConfig = {
         net: false,
         tls: false,
       };
+
+      // Handle pino-pretty dependency issue
+      config.externals = [...(config.externals || []), 'pino-pretty'];
     }
 
     return config

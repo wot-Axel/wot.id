@@ -40,8 +40,7 @@ export const modal = createAppKit({
     // 3. Finally email
     "ecc4036f814562b41a5268adc86270fba1365471402006302e70169465b7ac18"  // Email
   ],
-  // Disable explorer to only show our featured wallets
-  enableExplorer: false,
+  // We're only using featuredWalletIds to control which wallets appear
   features: {
     analytics: true // Optional - defaults to your Cloud configuration
   },
