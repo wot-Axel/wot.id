@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { useWalletPreferences } from '@/hooks/useWalletPreferences';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 
@@ -17,8 +18,8 @@ type LooseObject = {
 const AttestationForm = () => {
   // Use the AppKit account for authentication status
   const { address, isConnected } = useAppKitAccount();
-  // Use the AppKit hook for wallet connection
-  const { open } = useAppKit();
+  // Use our custom hook for wallet connection
+  const { openModal } = useWalletPreferences();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wotId, setWotId] = useState('');

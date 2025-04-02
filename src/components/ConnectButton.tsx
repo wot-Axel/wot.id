@@ -1,16 +1,17 @@
 'use client'
 
-import { useAppKitAccount, useAppKit } from '@reown/appkit/react'
+import { useAppKitAccount } from '@reown/appkit/react'
+import { useWalletPreferences } from '@/hooks/useWalletPreferences'
 
 export const ConnectButton = () => {
   const { isConnected } = useAppKitAccount()
-  const { open } = useAppKit()
+  const { openModal } = useWalletPreferences()
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '1rem 0' }}>
       {!isConnected ? (
         <button 
-          onClick={() => open()}
+          onClick={() => openModal()}
           className="connect-button"
         >
           Connect

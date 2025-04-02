@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { useWalletPreferences } from '@/hooks/useWalletPreferences';
 
 export const TopNavigation = () => {
   const pathname = usePathname();
   const { isConnected } = useAppKitAccount();
-  const { open } = useAppKit();
+  const { openModal } = useWalletPreferences();
   
   // Helper function to determine if a link is active
   const isActive = (path: string) => {
@@ -44,7 +45,7 @@ export const TopNavigation = () => {
               className={`nav-link ${isActive('/chat') ? 'active' : ''}`}
               onClick={!isConnected ? (e) => {
                 e.preventDefault();
-                open();
+                openModal();
               } : undefined}
             >
               Chat
@@ -54,7 +55,7 @@ export const TopNavigation = () => {
               className={`nav-link ${isActive('/transact') ? 'active' : ''}`}
               onClick={!isConnected ? (e) => {
                 e.preventDefault();
-                open();
+                openModal();
               } : undefined}
             >
               Transact
@@ -64,7 +65,7 @@ export const TopNavigation = () => {
               className={`nav-link ${isActive('/trust') || isActive('/write') || isActive('/read') ? 'active' : ''}`}
               onClick={!isConnected ? (e) => {
                 e.preventDefault();
-                open();
+                openModal();
               } : undefined}
             >
               Trust
@@ -77,7 +78,7 @@ export const TopNavigation = () => {
               className={`nav-link ${isActive('/me') ? 'active' : ''}`}
               onClick={!isConnected ? (e) => {
                 e.preventDefault();
-                open();
+                openModal();
               } : undefined}
             >
               Me
@@ -86,7 +87,7 @@ export const TopNavigation = () => {
             {!isConnected && (
               <div className="connect-wrapper">
                 <button 
-                  onClick={() => open()}
+                  onClick={() => openModal()}
                   className="connect-button nav-connect-button"
                 >
                   Connect
