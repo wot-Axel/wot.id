@@ -24,8 +24,9 @@ export const modal = createAppKit({
   networks,
   metadata,
   themeMode: 'light',
-  // Specific order of wallets as requested: 4 socials, 3 wallets, email
-  featuredWalletIds: [
+  // Using official AppKit configuration options
+  // Limit to specific wallets and order them as requested
+  includeWalletIds: [
     // 1. Four social login options in this order: Apple, Google, GitHub, X (Twitter)
     "19177a98252e07ddfc9af2083ba8e07ef627cb6103467ffebb3f8f4205fd7927", // Apple
     "6f8c7d9d8f1d01fc6751efe7abc389c153f48e86266d9b3e5a0c2e3e49eeae17", // Google
@@ -40,7 +41,7 @@ export const modal = createAppKit({
     // 3. Finally email
     "ecc4036f814562b41a5268adc86270fba1365471402006302e70169465b7ac18"  // Email
   ],
-  // We're only using featuredWalletIds to control which wallets appear
+  // Standard features
   features: {
     analytics: true // Optional - defaults to your Cloud configuration
   },
