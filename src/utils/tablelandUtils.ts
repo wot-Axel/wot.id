@@ -195,8 +195,12 @@ export const getAccountsData = async (db: Database, tableName: string): Promise<
   return getData(db, TableType.ACCOUNTS, tableName);
 };
 
-export const checkAccountsTableExists = async (db: Database, address: string): Promise<boolean> => {
-  return checkTableExists(db, TableType.ACCOUNTS, address);
+export const checkAccountsTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
+  const exists = await checkTableExists(db, TableType.ACCOUNTS, address);
+  return {
+    exists,
+    tableName: exists ? `${TableType.ACCOUNTS}_${address.slice(0, 8)}_31337_1` : ''
+  };
 };
 
 export const clearAccountsData = async (db: Database, tableName: string): Promise<void> => {

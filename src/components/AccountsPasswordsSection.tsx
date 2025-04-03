@@ -53,12 +53,12 @@ export const AccountsPasswordsSection = () => {
       setDb(tablelandDb);
       
       // Check if table exists
-      const existingTable = await checkAccountsTableExists(tablelandDb, address as string);
+      const tableCheck = await checkAccountsTableExists(tablelandDb, address as string);
       
-      if (existingTable) {
-        setTableName(existingTable);
+      if (tableCheck.exists) {
+        setTableName(tableCheck.tableName);
         // Load existing data
-        const data = await getAccountsData(tablelandDb, existingTable);
+        const data = await getAccountsData(tablelandDb, tableCheck.tableName);
         setAccountsData(data);
       }
       
