@@ -2,34 +2,52 @@ import { Database } from '@tableland/sdk';
 import { optimism } from '@reown/appkit/networks';
 import { getWalletClient } from '@wagmi/core';
 
-// Interface for private data
-export interface PrivateData {
+// Interface for table data
+export interface TableData {
   id: number;
   key: string;
   value: string;
   created_at: string;
 }
 
-// Mock databases for development
-let mockPrivateDatabase: PrivateData[] = [];
-let mockMedicalDatabase: PrivateData[] = [];
-let mockAccountsDatabase: PrivateData[] = [];
-let mockContactsDatabase: PrivateData[] = [];
-let mockAffiliationsDatabase: PrivateData[] = [];
-let mockCurrenciesDatabase: PrivateData[] = [];
-let mockDigitalAssetsDatabase: PrivateData[] = [];
-let mockChatDatabase: PrivateData[] = [];
-let mockPrivateTableCreated = false;
-let mockMedicalTableCreated = false;
-let mockAccountsTableCreated = false;
-let mockContactsTableCreated = false;
-let mockAffiliationsTableCreated = false;
-let mockCurrenciesTableCreated = false;
-let mockDigitalAssetsTableCreated = false;
-let mockChatTableCreated = false;
+// Enum for table types to ensure consistency
+export enum TableType {
+  PRIVATE = 'private',
+  MEDICAL = 'medical',
+  ACCOUNTS = 'accounts',
+  CONTACTS = 'contacts',
+  AFFILIATIONS = 'affiliations',
+  CURRENCIES = 'currencies',
+  DIGITAL_ASSETS = 'digital_assets',
+  CHAT = 'chat'
+}
+
+// Mock database for development
+const mockDatabases: Record<string, TableData[]> = {
+  [TableType.PRIVATE]: [],
+  [TableType.MEDICAL]: [],
+  [TableType.ACCOUNTS]: [],
+  [TableType.CONTACTS]: [],
+  [TableType.AFFILIATIONS]: [],
+  [TableType.CURRENCIES]: [],
+  [TableType.DIGITAL_ASSETS]: [],
+  [TableType.CHAT]: []
+};
+
+// Track created tables
+const mockTablesCreated: Record<string, boolean> = {
+  [TableType.PRIVATE]: false,
+  [TableType.MEDICAL]: false,
+  [TableType.ACCOUNTS]: false,
+  [TableType.CONTACTS]: false,
+  [TableType.AFFILIATIONS]: false,
+  [TableType.CURRENCIES]: false,
+  [TableType.DIGITAL_ASSETS]: false,
+  [TableType.CHAT]: false
+};
 
 // Initialize Tableland database with Optimism chain
-export const initTableland = async () => {
+export const initTableland = async (): Promise<Database> => {
   try {
     // In a real implementation, we would connect to Tableland here
     // For now, we'll return a mock database interface
@@ -40,567 +58,255 @@ export const initTableland = async () => {
   }
 };
 
-// Create a new private table for the user
-export const createPrivateTable = async (db: Database, address: string) => {
+// Generic function to create a table
+export const createTable = async (db: Database, tableType: TableType, address: string): Promise<string> => {
   try {
-    // For development, we'll simulate creating a table
-    mockPrivateTableCreated = true;
-    const tableName = `wot_private_${address.substring(2, 10).toLowerCase()}`;
-    return tableName;
-  } catch (error) {
-    console.error('Error creating private table:', error);
-    throw error;
-  }
-};
-
-// Create a new medical data table for the user
-export const createMedicalTable = async (db: Database, address: string) => {
-  try {
-    // For development, we'll simulate creating a table
-    mockMedicalTableCreated = true;
-    const tableName = `wot_medical_${address.substring(2, 10).toLowerCase()}`;
-    return tableName;
-  } catch (error) {
-    console.error('Error creating medical table:', error);
-    throw error;
-  }
-};
-
-// Insert data into private table
-export const insertPrivateData = async (db: Database, tableName: string, key: string, value: string) => {
-  try {
-    // For development, we'll add to our mock database
-    const timestamp = new Date().toISOString();
-    const newId = mockPrivateDatabase.length > 0 ? Math.max(...mockPrivateDatabase.map(item => item.id)) + 1 : 1;
+    // In a real implementation, we would create a table in Tableland
+    // For now, we'll just mark the table as created in our mock database
+    mockTablesCreated[tableType] = true;
     
-    const newItem: PrivateData = {
-      id: newId,
+    // Return a mock table name
+    return `${tableType}_${address.slice(0, 8)}_31337_1`;
+  } catch (error) {
+    console.error(`Error creating ${tableType} table:`, error);
+    throw error;
+  }
+};
+
+// Generic function to insert data into a table
+export const insertData = async (
+  db: Database, 
+  tableType: TableType, 
+  tableName: string, 
+  key: string, 
+  value: string
+): Promise<void> => {
+  try {
+    // In a real implementation, we would insert data into Tableland
+    // For now, we'll just add it to our mock database
+    const newItem: TableData = {
+      id: mockDatabases[tableType].length + 1,
       key,
       value,
-      created_at: timestamp
+      created_at: new Date().toISOString()
     };
     
-    mockPrivateDatabase.unshift(newItem); // Add to beginning for reverse chronological order
-    return true;
+    mockDatabases[tableType].push(newItem);
   } catch (error) {
-    console.error('Error inserting private data:', error);
+    console.error(`Error inserting data into ${tableType} table:`, error);
     throw error;
   }
 };
 
-// Insert data into medical table
-export const insertMedicalData = async (db: Database, tableName: string, key: string, value: string) => {
+// Generic function to get data from a table
+export const getData = async (db: Database, tableType: TableType, tableName: string): Promise<TableData[]> => {
   try {
-    // For development, we'll add to our mock medical database
-    const timestamp = new Date().toISOString();
-    const newId = mockMedicalDatabase.length > 0 ? Math.max(...mockMedicalDatabase.map(item => item.id)) + 1 : 1;
-    
-    const newItem: PrivateData = {
-      id: newId,
-      key,
-      value,
-      created_at: timestamp
-    };
-    
-    mockMedicalDatabase.unshift(newItem); // Add to beginning for reverse chronological order
-    return true;
+    // In a real implementation, we would query Tableland
+    // For now, we'll just return our mock database
+    return mockDatabases[tableType];
   } catch (error) {
-    console.error('Error inserting medical data:', error);
+    console.error(`Error getting data from ${tableType} table:`, error);
     throw error;
   }
 };
 
-// Get all private data for a user
-export const getPrivateData = async (db: Database, tableName: string) => {
+// Generic function to check if a table exists
+export const checkTableExists = async (db: Database, tableType: TableType, address: string): Promise<boolean> => {
   try {
-    // For development, return our mock private database
-    return mockPrivateDatabase;
+    // In a real implementation, we would query Tableland to check if the table exists
+    // For now, we'll just check our mock database
+    return mockTablesCreated[tableType];
   } catch (error) {
-    console.error('Error getting private data:', error);
-    return [];
-  }
-};
-
-// Get all medical data for a user
-export const getMedicalData = async (db: Database, tableName: string) => {
-  try {
-    // For development, return our mock medical database
-    return mockMedicalDatabase;
-  } catch (error) {
-    console.error('Error getting medical data:', error);
-    return [];
-  }
-};
-
-// Check if a private table exists for a user
-export const checkTableExists = async (db: Database, address: string) => {
-  try {
-    // For development, check our mock flag
-    if (mockPrivateTableCreated) {
-      return `wot_private_${address.substring(2, 10).toLowerCase()}`;
-    }
-    return '';
-  } catch (error) {
-    // Table doesn't exist
-    return '';
-  }
-};
-
-// Check if a medical table exists for a user
-export const checkMedicalTableExists = async (db: Database, address: string) => {
-  try {
-    // For development, check our mock flag
-    if (mockMedicalTableCreated) {
-      return `wot_medical_${address.substring(2, 10).toLowerCase()}`;
-    }
-    return '';
-  } catch (error) {
-    // Table doesn't exist
-    return '';
-  }
-};
-
-// Clear all private data
-export const clearPrivateData = async (db: Database, tableName: string) => {
-  try {
-    // For development, clear our mock private database
-    mockPrivateDatabase = [];
-    return true;
-  } catch (error) {
-    console.error('Error clearing private data:', error);
+    console.error(`Error checking if ${tableType} table exists:`, error);
     throw error;
   }
 };
 
-// Create a new accounts table for the user
-export const createAccountsTable = async (db: Database, address: string) => {
+// Generic function to clear data from a table
+export const clearData = async (db: Database, tableType: TableType, tableName: string): Promise<void> => {
   try {
-    // For development, we'll simulate creating a table
-    mockAccountsTableCreated = true;
-    const tableName = `wot_accounts_${address.substring(2, 10).toLowerCase()}`;
-    return tableName;
+    // In a real implementation, we would delete data from Tableland
+    // For now, we'll just clear our mock database
+    mockDatabases[tableType] = [];
   } catch (error) {
-    console.error('Error creating accounts table:', error);
+    console.error(`Error clearing data from ${tableType} table:`, error);
     throw error;
   }
 };
 
-// Insert data into accounts table
-export const insertAccountData = async (db: Database, tableName: string, key: string, value: string) => {
-  try {
-    // For development, we'll add to our mock accounts database
-    const timestamp = new Date().toISOString();
-    const newId = mockAccountsDatabase.length > 0 ? Math.max(...mockAccountsDatabase.map(item => item.id)) + 1 : 1;
-    
-    const newItem: PrivateData = {
-      id: newId,
-      key,
-      value,
-      created_at: timestamp
-    };
-    
-    mockAccountsDatabase.unshift(newItem); // Add to beginning for reverse chronological order
-    return true;
-  } catch (error) {
-    console.error('Error inserting account data:', error);
-    throw error;
-  }
+// Backwards compatibility functions for existing code
+// These functions use the generic functions above but maintain the same interface
+
+// Private table functions
+export const createPrivateTable = async (db: Database, address: string): Promise<string> => {
+  return createTable(db, TableType.PRIVATE, address);
 };
 
-// Get all accounts data for a user
-export const getAccountsData = async (db: Database, tableName: string) => {
-  try {
-    // For development, return our mock accounts database
-    return mockAccountsDatabase;
-  } catch (error) {
-    console.error('Error getting accounts data:', error);
-    return [];
-  }
+export const insertPrivateData = async (db: Database, tableName: string, key: string, value: string): Promise<void> => {
+  return insertData(db, TableType.PRIVATE, tableName, key, value);
 };
 
-// Check if an accounts table exists for a user
-export const checkAccountsTableExists = async (db: Database, address: string) => {
-  try {
-    // For development, check our mock flag
-    if (mockAccountsTableCreated) {
-      return `wot_accounts_${address.substring(2, 10).toLowerCase()}`;
-    }
-    return '';
-  } catch (error) {
-    // Table doesn't exist
-    return '';
-  }
+export const getPrivateData = async (db: Database, tableName: string): Promise<TableData[]> => {
+  return getData(db, TableType.PRIVATE, tableName);
 };
 
-// Clear all accounts data
-export const clearAccountsData = async (db: Database, tableName: string) => {
-  try {
-    // For development, clear our mock accounts database
-    mockAccountsDatabase = [];
-    return true;
-  } catch (error) {
-    console.error('Error clearing accounts data:', error);
-    throw error;
-  }
+export const checkPrivateTableExists = async (db: Database, address: string): Promise<boolean> => {
+  return checkTableExists(db, TableType.PRIVATE, address);
 };
 
-// Create a new contacts table for the user
-export const createContactsTable = async (db: Database, address: string) => {
-  try {
-    // For development, we'll simulate creating a table
-    mockContactsTableCreated = true;
-    const tableName = `wot_contacts_${address.substring(2, 10).toLowerCase()}`;
-    return tableName;
-  } catch (error) {
-    console.error('Error creating contacts table:', error);
-    throw error;
-  }
+export const clearPrivateData = async (db: Database, tableName: string): Promise<void> => {
+  return clearData(db, TableType.PRIVATE, tableName);
 };
 
-// Insert data into contacts table
-export const insertContactData = async (db: Database, tableName: string, key: string, value: string) => {
-  try {
-    // For development, we'll add to our mock contacts database
-    const timestamp = new Date().toISOString();
-    const newId = mockContactsDatabase.length > 0 ? Math.max(...mockContactsDatabase.map(item => item.id)) + 1 : 1;
-    
-    const newItem: PrivateData = {
-      id: newId,
-      key,
-      value,
-      created_at: timestamp
-    };
-    
-    mockContactsDatabase.unshift(newItem); // Add to beginning for reverse chronological order
-    return true;
-  } catch (error) {
-    console.error('Error inserting contact data:', error);
-    throw error;
-  }
+// Medical table functions
+export const createMedicalTable = async (db: Database, address: string): Promise<string> => {
+  return createTable(db, TableType.MEDICAL, address);
 };
 
-// Get all contacts data for a user
-export const getContactsData = async (db: Database, tableName: string) => {
-  try {
-    // For development, return our mock contacts database
-    return mockContactsDatabase;
-  } catch (error) {
-    console.error('Error getting contacts data:', error);
-    return [];
-  }
+export const insertMedicalData = async (db: Database, tableName: string, key: string, value: string): Promise<void> => {
+  return insertData(db, TableType.MEDICAL, tableName, key, value);
 };
 
-// Check if a contacts table exists for a user
-export const checkContactsTableExists = async (db: Database, address: string) => {
-  try {
-    // For development, check our mock flag
-    if (mockContactsTableCreated) {
-      return `wot_contacts_${address.substring(2, 10).toLowerCase()}`;
-    }
-    return '';
-  } catch (error) {
-    // Table doesn't exist
-    return '';
-  }
+export const getMedicalData = async (db: Database, tableName: string): Promise<TableData[]> => {
+  return getData(db, TableType.MEDICAL, tableName);
 };
 
-// Clear all contacts data
-export const clearContactsData = async (db: Database, tableName: string) => {
-  try {
-    // For development, clear our mock contacts database
-    mockContactsDatabase = [];
-    return true;
-  } catch (error) {
-    console.error('Error clearing contacts data:', error);
-    throw error;
-  }
+export const checkMedicalTableExists = async (db: Database, address: string): Promise<boolean> => {
+  return checkTableExists(db, TableType.MEDICAL, address);
 };
 
-// Create a new affiliations table for the user
-export const createAffiliationsTable = async (db: Database, address: string) => {
-  try {
-    // For development, we'll simulate creating a table
-    mockAffiliationsTableCreated = true;
-    const tableName = `wot_affiliations_${address.substring(2, 10).toLowerCase()}`;
-    return tableName;
-  } catch (error) {
-    console.error('Error creating affiliations table:', error);
-    throw error;
-  }
+export const clearMedicalData = async (db: Database, tableName: string): Promise<void> => {
+  return clearData(db, TableType.MEDICAL, tableName);
 };
 
-// Insert data into affiliations table
-export const insertAffiliationData = async (db: Database, tableName: string, key: string, value: string) => {
-  try {
-    // For development, we'll add to our mock affiliations database
-    const timestamp = new Date().toISOString();
-    const newId = mockAffiliationsDatabase.length > 0 ? Math.max(...mockAffiliationsDatabase.map(item => item.id)) + 1 : 1;
-    
-    const newItem: PrivateData = {
-      id: newId,
-      key,
-      value,
-      created_at: timestamp
-    };
-    
-    mockAffiliationsDatabase.unshift(newItem); // Add to beginning for reverse chronological order
-    return true;
-  } catch (error) {
-    console.error('Error inserting affiliation data:', error);
-    throw error;
-  }
+// Accounts table functions
+export const createAccountsTable = async (db: Database, address: string): Promise<string> => {
+  return createTable(db, TableType.ACCOUNTS, address);
 };
 
-// Get all affiliations data for a user
-export const getAffiliationsData = async (db: Database, tableName: string) => {
-  try {
-    // For development, return our mock affiliations database
-    return mockAffiliationsDatabase;
-  } catch (error) {
-    console.error('Error getting affiliations data:', error);
-    return [];
-  }
+export const insertAccountData = async (db: Database, tableName: string, key: string, value: string): Promise<void> => {
+  return insertData(db, TableType.ACCOUNTS, tableName, key, value);
 };
 
-// Check if an affiliations table exists for a user
-export const checkAffiliationsTableExists = async (db: Database, address: string) => {
-  try {
-    // For development, check our mock flag
-    if (mockAffiliationsTableCreated) {
-      return `wot_affiliations_${address.substring(2, 10).toLowerCase()}`;
-    }
-    return '';
-  } catch (error) {
-    // Table doesn't exist
-    return '';
-  }
+export const getAccountsData = async (db: Database, tableName: string): Promise<TableData[]> => {
+  return getData(db, TableType.ACCOUNTS, tableName);
 };
 
-// Clear all affiliations data
-export const clearAffiliationsData = async (db: Database, tableName: string) => {
-  try {
-    // For development, clear our mock affiliations database
-    mockAffiliationsDatabase = [];
-    return true;
-  } catch (error) {
-    console.error('Error clearing affiliations data:', error);
-    throw error;
-  }
+export const checkAccountsTableExists = async (db: Database, address: string): Promise<boolean> => {
+  return checkTableExists(db, TableType.ACCOUNTS, address);
 };
 
-// Create a new currencies table for the user
-export const createCurrenciesTable = async (db: Database, address: string) => {
-  try {
-    // For development, we'll simulate creating a table
-    mockCurrenciesTableCreated = true;
-    const tableName = `wot_currencies_${address.substring(2, 10).toLowerCase()}`;
-    return tableName;
-  } catch (error) {
-    console.error('Error creating currencies table:', error);
-    throw error;
-  }
+export const clearAccountsData = async (db: Database, tableName: string): Promise<void> => {
+  return clearData(db, TableType.ACCOUNTS, tableName);
 };
 
-// Insert data into currencies table
-export const insertCurrencyData = async (db: Database, tableName: string, key: string, value: string) => {
-  try {
-    // For development, we'll add to our mock currencies database
-    const timestamp = new Date().toISOString();
-    const newId = mockCurrenciesDatabase.length > 0 ? Math.max(...mockCurrenciesDatabase.map(item => item.id)) + 1 : 1;
-    
-    const newItem: PrivateData = {
-      id: newId,
-      key,
-      value,
-      created_at: timestamp
-    };
-    
-    mockCurrenciesDatabase.unshift(newItem); // Add to beginning for reverse chronological order
-    return true;
-  } catch (error) {
-    console.error('Error inserting currency data:', error);
-    throw error;
-  }
+// Contacts table functions
+export const createContactsTable = async (db: Database, address: string): Promise<string> => {
+  return createTable(db, TableType.CONTACTS, address);
 };
 
-// Get all currencies data for a user
-export const getCurrenciesData = async (db: Database, tableName: string) => {
-  try {
-    // For development, return our mock currencies database
-    return mockCurrenciesDatabase;
-  } catch (error) {
-    console.error('Error getting currencies data:', error);
-    return [];
-  }
+export const insertContactData = async (db: Database, tableName: string, key: string, value: string): Promise<void> => {
+  return insertData(db, TableType.CONTACTS, tableName, key, value);
 };
 
-// Check if a currencies table exists for a user
-export const checkCurrenciesTableExists = async (db: Database, address: string) => {
-  try {
-    // For development, check our mock flag
-    if (mockCurrenciesTableCreated) {
-      return `wot_currencies_${address.substring(2, 10).toLowerCase()}`;
-    }
-    return '';
-  } catch (error) {
-    // Table doesn't exist
-    return '';
-  }
+export const getContactsData = async (db: Database, tableName: string): Promise<TableData[]> => {
+  return getData(db, TableType.CONTACTS, tableName);
 };
 
-// Clear all currencies data
-export const clearCurrenciesData = async (db: Database, tableName: string) => {
-  try {
-    // For development, clear our mock currencies database
-    mockCurrenciesDatabase = [];
-    return true;
-  } catch (error) {
-    console.error('Error clearing currencies data:', error);
-    throw error;
-  }
+export const checkContactsTableExists = async (db: Database, address: string): Promise<boolean> => {
+  return checkTableExists(db, TableType.CONTACTS, address);
 };
 
-// Create a new digital assets table for the user
-export const createDigitalAssetsTable = async (db: Database, address: string) => {
-  try {
-    // For development, we'll simulate creating a table
-    mockDigitalAssetsTableCreated = true;
-    const tableName = `wot_digital_assets_${address.substring(2, 10).toLowerCase()}`;
-    return { tableName };
-  } catch (error) {
-    console.error('Error creating digital assets table:', error);
-    throw error;
-  }
+export const clearContactsData = async (db: Database, tableName: string): Promise<void> => {
+  return clearData(db, TableType.CONTACTS, tableName);
 };
 
-// Insert data into digital assets table
-export const insertDigitalAssetData = async (db: Database, tableName: string, value: string) => {
-  try {
-    // For development, we'll add to our mock digital assets database
-    const timestamp = new Date().toISOString();
-    const newId = mockDigitalAssetsDatabase.length > 0 ? Math.max(...mockDigitalAssetsDatabase.map(item => item.id)) + 1 : 1;
-    
-    const newItem: PrivateData = {
-      id: newId,
-      key: `asset_${newId}`,
-      value,
-      created_at: timestamp
-    };
-    
-    mockDigitalAssetsDatabase.unshift(newItem); // Add to beginning for reverse chronological order
-    return true;
-  } catch (error) {
-    console.error('Error inserting digital asset data:', error);
-    throw error;
-  }
+// Affiliations table functions
+export const createAffiliationsTable = async (db: Database, address: string): Promise<string> => {
+  return createTable(db, TableType.AFFILIATIONS, address);
 };
 
-// Get all digital assets data for a user
-export const getDigitalAssetsData = async (db: Database, tableName: string) => {
-  try {
-    // For development, return our mock digital assets database
-    return mockDigitalAssetsDatabase;
-  } catch (error) {
-    console.error('Error getting digital assets data:', error);
-    return [];
-  }
+export const insertAffiliationData = async (db: Database, tableName: string, key: string, value: string): Promise<void> => {
+  return insertData(db, TableType.AFFILIATIONS, tableName, key, value);
 };
 
-// Check if a digital assets table exists for a user
-export const checkDigitalAssetsTableExists = async (db: Database, address: string) => {
-  try {
-    // For development, check our mock flag
-    if (mockDigitalAssetsTableCreated) {
-      const tableName = `wot_digital_assets_${address.substring(2, 10).toLowerCase()}`;
-      return { exists: true, tableName };
-    }
-    return { exists: false, tableName: '' };
-  } catch (error) {
-    // Table doesn't exist
-    return { exists: false, tableName: '' };
-  }
+export const getAffiliationsData = async (db: Database, tableName: string): Promise<TableData[]> => {
+  return getData(db, TableType.AFFILIATIONS, tableName);
 };
 
-// Clear all digital assets data
-export const clearDigitalAssetsData = async (db: Database, tableName: string) => {
-  try {
-    // For development, clear our mock digital assets database
-    mockDigitalAssetsDatabase = [];
-    return true;
-  } catch (error) {
-    console.error('Error clearing digital assets data:', error);
-    throw error;
-  }
+export const checkAffiliationsTableExists = async (db: Database, address: string): Promise<boolean> => {
+  return checkTableExists(db, TableType.AFFILIATIONS, address);
 };
 
-// Create a new chat table for the user
-export const createChatTable = async (db: Database, address: string) => {
-  try {
-    // For development, we'll simulate creating a table
-    mockChatTableCreated = true;
-    const tableName = `wot_chat_${address.substring(2, 10).toLowerCase()}`;
-    return tableName;
-  } catch (error) {
-    console.error('Error creating chat table:', error);
-    throw error;
-  }
+export const clearAffiliationsData = async (db: Database, tableName: string): Promise<void> => {
+  return clearData(db, TableType.AFFILIATIONS, tableName);
 };
 
-// Insert data into chat table
-export const insertChatData = async (db: Database, tableName: string, key: string, value: string) => {
-  try {
-    // For development, we'll add to our mock chat database
-    const timestamp = new Date().toISOString();
-    const newId = mockChatDatabase.length > 0 ? Math.max(...mockChatDatabase.map(item => item.id)) + 1 : 1;
-    
-    const newItem: PrivateData = {
-      id: newId,
-      key,
-      value,
-      created_at: timestamp
-    };
-    
-    mockChatDatabase.unshift(newItem); // Add to beginning for reverse chronological order
-    return true;
-  } catch (error) {
-    console.error('Error inserting chat data:', error);
-    throw error;
-  }
+// Currencies table functions
+export const createCurrenciesTable = async (db: Database, address: string): Promise<string> => {
+  return createTable(db, TableType.CURRENCIES, address);
 };
 
-// Get all chat data for a user
-export const getChatData = async (db: Database, tableName: string) => {
-  try {
-    // For development, return our mock chat database
-    return mockChatDatabase;
-  } catch (error) {
-    console.error('Error getting chat data:', error);
-    return [];
-  }
+export const insertCurrencyData = async (db: Database, tableName: string, key: string, value: string): Promise<void> => {
+  return insertData(db, TableType.CURRENCIES, tableName, key, value);
 };
 
-// Check if a chat table exists for a user
-export const checkChatTableExists = async (db: Database, address: string) => {
-  try {
-    // For development, check our mock flag
-    if (mockChatTableCreated) {
-      return `wot_chat_${address.substring(2, 10).toLowerCase()}`;
-    }
-    return '';
-  } catch (error) {
-    // Table doesn't exist
-    return '';
-  }
+export const getCurrenciesData = async (db: Database, tableName: string): Promise<TableData[]> => {
+  return getData(db, TableType.CURRENCIES, tableName);
 };
 
-// Clear all chat data
-export const clearChatData = async (db: Database, tableName: string) => {
-  try {
-    // For development, clear our mock chat database
-    mockChatDatabase = [];
-    return true;
-  } catch (error) {
-    console.error('Error clearing chat data:', error);
-    throw error;
-  }
+export const checkCurrenciesTableExists = async (db: Database, address: string): Promise<boolean> => {
+  return checkTableExists(db, TableType.CURRENCIES, address);
+};
+
+export const clearCurrenciesData = async (db: Database, tableName: string): Promise<void> => {
+  return clearData(db, TableType.CURRENCIES, tableName);
+};
+
+// Digital Assets table functions
+export const createDigitalAssetsTable = async (db: Database, address: string): Promise<{tableName: string}> => {
+  const tableName = await createTable(db, TableType.DIGITAL_ASSETS, address);
+  return { tableName };
+};
+
+export const insertDigitalAssetData = async (db: Database, tableName: string, value: string): Promise<void> => {
+  // Digital assets use a different signature, so we use an empty key
+  return insertData(db, TableType.DIGITAL_ASSETS, tableName, '', value);
+};
+
+export const getDigitalAssetsData = async (db: Database, tableName: string): Promise<TableData[]> => {
+  return getData(db, TableType.DIGITAL_ASSETS, tableName);
+};
+
+export const checkDigitalAssetsTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
+  const exists = await checkTableExists(db, TableType.DIGITAL_ASSETS, address);
+  return {
+    exists,
+    tableName: exists ? `${TableType.DIGITAL_ASSETS}_${address.slice(0, 8)}_31337_1` : ''
+  };
+};
+
+export const clearDigitalAssetsData = async (db: Database, tableName: string): Promise<void> => {
+  return clearData(db, TableType.DIGITAL_ASSETS, tableName);
+};
+
+// Chat table functions
+export const createChatTable = async (db: Database, address: string): Promise<string> => {
+  return createTable(db, TableType.CHAT, address);
+};
+
+export const insertChatData = async (db: Database, tableName: string, key: string, value: string): Promise<void> => {
+  return insertData(db, TableType.CHAT, tableName, key, value);
+};
+
+export const getChatData = async (db: Database, tableName: string): Promise<TableData[]> => {
+  return getData(db, TableType.CHAT, tableName);
+};
+
+export const checkChatTableExists = async (db: Database, address: string): Promise<boolean> => {
+  return checkTableExists(db, TableType.CHAT, address);
+};
+
+export const clearChatData = async (db: Database, tableName: string): Promise<void> => {
+  return clearData(db, TableType.CHAT, tableName);
 };

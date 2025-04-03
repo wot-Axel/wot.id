@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  initTableland, 
   checkDigitalAssetsTableExists,
   createDigitalAssetsTable,
   getDigitalAssetsData,
@@ -12,6 +10,10 @@ import {
   clearDigitalAssetsData,
   PrivateData
 } from '../utils/tablelandUtils';
+import { 
+  initTablelandWithOptimismWrite,
+  isUserOnOptimism
+} from '../utils/optimismProvider';
 import { Database } from '@tableland/sdk';
 
 // Types for digital assets
@@ -231,7 +233,6 @@ const parseAssetData = (data: string | undefined): DigitalAsset => {
 
 export const DigitalAssetsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
   const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -254,63 +255,54 @@ export const DigitalAssetsSection = () => {
   const [attributes, setAttributes] = useState<string>('');
   const [acquiredDate, setAcquiredDate] = useState<string>('');
 
-  // Initialize Tableland connection and check network
+  // Check if user is on Optimism (for informational purposes only)
+  useEffect(() => {
+    const checkNetwork = async () => {
+      const onOptimism = await isUserOnOptimism();
+      setIsOptimismNetwork(onOptimism);
+    };
+    
+    if (isConnected) {
+      checkNetwork();
+    }
+  }, [isConnected]);
+
+  // Initialize Tableland connection with our dedicated Optimism provider
   useEffect(() => {
     const init = async () => {
       try {
-        if (isConnected) {
-          // Check if window.ethereum exists and define its type
-          const ethereum = (window as any).ethereum;
-          const network = ethereum ? await ethereum.request({ method: 'eth_chainId' }) : null;
+        if (isConnected && address) {
+          setLoading(true);
+          setError('');
           
-          // Consider both Optimism mainnet and testnet
-          const isOnOptimism = network === '0xa' || network === '0xa13'; // Optimism or Optimism Goerli
-          
-          // In production, require Optimism network. In development, be more permissive
-          const isDevelopment = process.env.NODE_ENV === 'development';
-          setIsOptimismNetwork(isOnOptimism || isDevelopment);
-          
-          // Always initialize the database connection
-          const database = await initTableland();
+          // Use our dedicated Optimism provider - no network switching required
+          const database = await initTablelandWithOptimismWrite(address);
           setDb(database);
           
-          // If on Optimism or in development mode, proceed with table operations
-          if (isOnOptimism || isDevelopment) {
-            // Database already initialized above
+          // Check if table exists
+          const exists = await checkDigitalAssetsTableExists(database, address);
+          if (exists.exists) {
+            setTableName(exists.tableName);
             
-            // Check if table exists
-            const exists = await checkDigitalAssetsTableExists(database, address || '');
-            if (exists.exists) {
-              setTableName(exists.tableName);
-              
-              // Get existing data
-              const data = await getDigitalAssetsData(database, exists.tableName);
-              setAssetsData(data);
-            }
+            // Get existing data
+            const data = await getDigitalAssetsData(database, exists.tableName);
+            setAssetsData(data);
           }
+          
+          setLoading(false);
         }
       } catch (err) {
         console.error('Error initializing:', err);
         setError('Failed to initialize. Please try again.');
+        setLoading(false);
       }
     };
     
     init();
-  }, [isConnected, isOptimismNetwork, address]);
+  }, [isConnected, address]);
 
-  // Handle switching to Optimism network
-  const handleSwitchToOptimism = async () => {
-    try {
-      setLoading(true);
-      await switchNetwork(optimism);
-      setIsOptimismNetwork(true);
-    } catch (err) {
-      console.error('Error switching network:', err);
-      setError('Failed to switch network. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // We no longer need to switch networks as we're using a dedicated Optimism provider
+  // Instead, we provide information about which network is being used for data storage
 
   // Handle table creation
   const handleCreateTable = async () => {
@@ -439,22 +431,17 @@ export const DigitalAssetsSection = () => {
       <h2>My Digital Assets</h2>
       <p className="section-description" style={{ marginBottom: '1rem' }}>
         Securely store and manage your digital assets from multiple blockchains including Ethereum, Optimism, Polygon, and more.
+        <span className="network-info" style={{ display: 'block', fontSize: '0.9rem', marginTop: '0.5rem', color: '#666' }}>
+          Data is stored on Optimism for faster and cheaper transactions while keeping your main wallet connection unchanged.
+        </span>
       </p>
       <div className="legal-content">
-        {!isOptimismNetwork ? (
-          <div className="alert alert-warning">
-            <p>Please switch to Optimism network to use digital assets storage. Your assets can be from any blockchain, but the data is stored on Optimism.</p>
-            <button 
-              className="button-primary" 
-              onClick={handleSwitchToOptimism}
-              disabled={loading}
-            >
-              Switch to Optimism
-            </button>
-          </div>
+        {loading ? (
+          <div className="loading-indicator">Loading digital assets...</div>
+        ) : error ? (
+          <div className="alert alert-error">{error}</div>
         ) : (
           <>
-            {error && <div className="alert alert-error">{error}</div>}
             
             {!tableName ? (
               <div>
