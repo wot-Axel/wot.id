@@ -70,9 +70,11 @@ export const sanitizeInput = (input: string): string => {
 // New code should use initTablelandWithOptimismWrite from optimismProvider.ts
 export const initTableland = async (): Promise<Database> => {
   try {
-    // Import dynamically to avoid circular dependencies
-    const { initTablelandWithOptimismWrite } = await import('./optimismProvider');
-    return await initTablelandWithOptimismWrite('');
+    // Create a new instance of Database with default options
+    // This will use the connected wallet's address automatically
+    const db = new Database();
+    
+    return db;
   } catch (error) {
     console.error('Error initializing Tableland:', error);
     throw error;
@@ -140,12 +142,20 @@ export const insertData = async (
 export const getData = async (db: Database, tableType: TableType, tableName: string): Promise<TableData[]> => {
   try {
     // Query data from the Tableland table
-    // Using item_key and item_value in the query, but mapping to key and value in the result
+    // Avoid using reserved keywords as column aliases
     const { results } = await db.prepare(`
-      SELECT id, item_key as key, item_value as value, created_at FROM ${tableName} ORDER BY id ASC
-    `).all<TableData>();
+      SELECT id, item_key, item_value, created_at FROM ${tableName} ORDER BY id ASC
+    `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
     
-    return results;
+    // Map the results to match the TableData interface
+    const mappedResults = results.map(item => ({
+      id: item.id,
+      key: item.item_key,
+      value: item.item_value,
+      created_at: item.created_at
+    }));
+    
+    return mappedResults;
   } catch (error) {
     console.error(`Error getting data from ${tableType} table:`, error);
     // Return empty array instead of throwing to prevent UI crashes
@@ -161,10 +171,10 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     const expectedTablePrefix = `${tableType}_${prefix}`;
     
     // Query Tableland to list tables owned by this address
-    // Using a more compatible query format
+    // Using a more compatible query format without the LIKE operator
     const { results } = await db.prepare(`
       SELECT name FROM information_schema.tables
-      WHERE name LIKE '${expectedTablePrefix}%'
+      WHERE name = '${expectedTablePrefix}'
     `).all<{name: string}>();
     
     // Check if any of the tables match our expected name pattern
@@ -374,12 +384,19 @@ export const getDigitalAssetsData = async (db: Database, tableName: string): Pro
   try {
     // Query data from the Tableland table
     // Digital assets table has a different schema with no key field
-    // Using asset_value in the query, but mapping to value in the result
     const { results } = await db.prepare(`
-      SELECT id, '' as key, asset_value as value, created_at FROM ${tableName} ORDER BY id ASC
-    `).all<TableData>();
+      SELECT id, asset_value, created_at FROM ${tableName} ORDER BY id ASC
+    `).all<{id: number, asset_value: string, created_at: string}>();
     
-    return results;
+    // Map the results to match the TableData interface
+    const mappedResults = results.map(item => ({
+      id: item.id,
+      key: '',  // Digital assets don't use keys
+      value: item.asset_value,
+      created_at: item.created_at
+    }));
+    
+    return mappedResults;
   } catch (error) {
     console.error(`Error getting data from digital assets table:`, error);
     // Return empty array instead of throwing to prevent UI crashes
