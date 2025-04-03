@@ -156,7 +156,7 @@ export const AccountsPasswordsSection = () => {
             
             {!collectionId ? (
               <div>
-                <p>You don't have an accounts table yet. Create one to store your account information securely on Tableland.</p>
+                <p>You don't have an accounts collection yet. Create one to store your account information securely on Ceramic.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateCollection}

@@ -123,7 +123,7 @@ export const PrivateDataSection = () => {
 
   return (
     <div className="legal-section">
-      <h2>Private Data (Tableland)</h2>
+      <h2>Private Data (Ceramic)</h2>
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>

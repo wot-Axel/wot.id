@@ -169,7 +169,7 @@ export const HumanRelationshipsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your relationship information is stored securely on Tableland on the Optimism network.</p>
+                <p>Your relationship information is stored securely on Ceramic.</p>
                 
                 <form onSubmit={handleAddContact} className="private-data-form">
                   <div className="form-group">
