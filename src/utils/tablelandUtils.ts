@@ -10,6 +10,9 @@ export interface TableData {
   created_at: string;
 }
 
+// Alias for TableData to maintain compatibility with existing code
+export type PrivateData = TableData;
+
 // Enum for table types to ensure consistency
 export enum TableType {
   PRIVATE = 'private',
