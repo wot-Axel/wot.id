@@ -1,15 +1,30 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react';
+import * as React from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react';
 // Import Client type only for type checking, not the actual implementation
 import type { Client } from '@xmtp/xmtp-js';
 import { useAccount, useWalletClient } from 'wagmi';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { Wallet } from 'ethers';
-// Phase 1: Removed Tableland dependencies for initial implementation
-// Will be re-added in Phase 2
+
+/**
+ * IMPLEMENTATION PHASES
+ * 
+ * Phase 1 (Current): Basic XMTP messaging functionality without persistent storage
+ * - Setup XMTP client with wallet connection
+ * - Send and receive messages
+ * - List conversations
+ * 
+ * Phase 2 (Planned): Add persistent storage with Tableland
+ * - Store message history in Tableland
+ * - Retrieve message history when reconnecting
+ * - Implement message encryption for privacy
+ */
+
+// Phase 2 imports (will be uncommented when implemented)
 // import { Database } from '@tableland/sdk';
-// import { checkChatTableExists, createChatTable, insertChatData, getChatData } from '@/utils/tablelandUtils';
+// import { TableType, checkTableExists, createTable, insertData, getData } from '../utils/tablelandUtils';
 
 // Use dynamic import to prevent server-side rendering of XMTP client
 // which uses WebAssembly and can cause issues on the server
@@ -50,7 +65,9 @@ const setupMockEthereumProvider = (walletClient: any, address: string | undefine
       
       if (method === 'eth_chainId') {
         // Return the current chain ID from walletClient
-        return walletClient?.chain?.id ? `0x${walletClient.chain.id.toString(16)}` : '0x1';
+        // This allows XMTP to work with any chain the user is connected to
+        const chainId = walletClient?.chain?.id;
+        return chainId ? `0x${chainId.toString(16)}` : '0x1';
       }
       
       if (method === 'personal_sign' || method === 'eth_sign') {
@@ -99,12 +116,8 @@ const setupMockEthereumProvider = (walletClient: any, address: string | undefine
   return mockProvider;
 };
 
-// Add global type definition for window.ethereum
-declare global {
-  interface Window {
-    ethereum?: Record<string, unknown>;
-  }
-}
+// We don't need to redeclare window.ethereum as it's already defined elsewhere
+// This was causing TypeScript errors
 
 interface XmtpContextType {
   client: Client | null;
@@ -116,7 +129,7 @@ interface XmtpContextType {
   createIdentity: (useDevelopmentKey?: boolean) => Promise<boolean>;
   disconnect: () => void;
   sendMessage: (peerAddress: string, content: string) => Promise<void>;
-  createNewConversation: (peerAddress: string) => Promise<any>; // Updated to return the conversation
+  createNewConversation: (peerAddress: string) => Promise<any>;
 }
 
 const XmtpContext = createContext<XmtpContextType | undefined>(undefined);
@@ -138,8 +151,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<Error | null>(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [loadingConversations, setLoadingConversations] = useState<boolean>(false);
-  // Phase 1: Removed Tableland state for initial implementation
-  // Will be re-added in Phase 2
+  // Phase 2: Tableland state (commented out until implementation)
   // const [db, setDb] = useState<Database | null>(null);
   // const [tableName, setTableName] = useState<string>('');
 
@@ -152,23 +164,26 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isConnected, address, walletClient]);
 
-  // Phase 1: Removed Tableland table setup
-  // Will be re-added in Phase 2
+  // Phase 2: Tableland table setup (commented out until implementation)
   /*
   useEffect(() => {
     const setupChatTable = async () => {
       if (!db || !address) return;
-
+      
       try {
-        // Check if table exists
-        const existingTable = await checkChatTableExists(db, address);
+        // Check if chat table exists using our generic function
+        const tableExists = await checkTableExists(db, TableType.CHAT, address);
         
-        if (existingTable) {
-          setTableName(existingTable);
-        } else {
-          // Create new table
-          const newTableName = await createChatTable(db, address);
+        if (!tableExists) {
+          // Create chat table using our generic function
+          const newTableName = await createTable(db, TableType.CHAT, address);
           setTableName(newTableName);
+          console.log('Created new chat table:', newTableName);
+        } else {
+          // Get existing table name (in a real implementation, we would query for this)
+          const existingTableName = `${TableType.CHAT}_${address.slice(0, 8)}_31337_1`;
+          setTableName(existingTableName);
+          console.log('Using existing chat table:', existingTableName);
         }
       } catch (error) {
         console.error('Error setting up chat table:', error);
@@ -631,7 +646,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Phase 1: Simplified conversation loading without Tableland integration
+  // Simplified conversation loading without Tableland integration
+  // In Phase 2, this will be updated to use Tableland for persistent storage
   const loadConversations = async (xmtpClient: Client) => {
     if (!xmtpClient) return;
 
@@ -639,15 +655,17 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       setLoadingConversations(true);
       const convos = await xmtpClient.conversations.list();
       
-      // Phase 1: Use conversations directly from XMTP without Tableland metadata
-      // In Phase 2, we'll add back the Tableland integration for metadata
+      // Use conversations directly from XMTP without Tableland metadata
       const conversationsWithBasicMetadata = await Promise.all(convos.map(async (convo) => {
         // Get the most recent message for each conversation to use as preview
         let lastMessagePreview = 'No messages yet';
         try {
           const messages = await convo.messages({ limit: 1 });
           if (messages.length > 0) {
-            lastMessagePreview = messages[0].content;
+            lastMessagePreview = typeof messages[0].content === 'string' 
+              ? messages[0].content 
+              : 'Message content not available';
+              
             // Truncate long messages
             if (lastMessagePreview.length > 30) {
               lastMessagePreview = lastMessagePreview.substring(0, 27) + '...';
@@ -700,7 +718,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Phase 1: Simplified conversation creation without Tableland integration
+  // Create a new conversation with a peer address
   const createNewConversation = async (peerAddress: string) => {
     if (!client) {
       throw new Error('XMTP client not initialized');
@@ -710,8 +728,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       // Create conversation in XMTP
       const conversation = await client.conversations.newConversation(peerAddress);
       
-      // Phase 1: Skip Tableland metadata storage
-      // In Phase 2, we'll add back the Tableland integration for metadata
+      // In Phase 2, we'll add Tableland integration for metadata storage
       
       // Refresh conversations
       await loadConversations(client);
