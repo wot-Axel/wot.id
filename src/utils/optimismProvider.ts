@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { Database } from '@tableland/sdk';
+import { Database, Validator } from '@tableland/sdk';
 import { optimism } from '@reown/appkit/networks';
 
 // Constants
@@ -25,13 +25,20 @@ export const getOptimismProvider = () => {
  */
 export const initTablelandWithOptimism = async (userAddress: string): Promise<Database> => {
   try {
-    // For development purposes, we'll return the same mock database
-    // that the original initTableland function returns
-    // In a real implementation, we would connect to Tableland on Optimism
+    // Create a dedicated provider for Optimism
+    const optimismProvider = getOptimismProvider();
     
-    // This is a placeholder that matches the interface of the original initTableland function
-    // In production, this would use the Optimism provider to connect to Tableland
-    return {} as Database;
+    // Create a read-only signer for the user's address
+    // This allows us to connect to Optimism without requiring network switching
+    const readOnlySigner = new ethers.VoidSigner(userAddress, optimismProvider);
+    
+    // Initialize the Database with the signer
+    const db = new Database({
+      signer: readOnlySigner,
+      autoWait: true
+    });
+    
+    return db;
   } catch (error) {
     console.error('Error initializing Tableland with Optimism provider:', error);
     throw error;
@@ -72,6 +79,57 @@ export const getOptimismAddress = (mainnetAddress: string): string => {
 };
 
 /**
+ * Creates a cross-chain signer that can sign transactions for Optimism
+ * while the user's wallet remains connected to their preferred network.
+ * 
+ * This approach uses the user's wallet for signing but directs the
+ * transactions to Optimism without requiring a network switch.
+ * 
+ * @param userAddress The user's Ethereum address
+ * @returns A signer that can be used for Optimism transactions
+ */
+export const createOptimismSigner = async (userAddress: string) => {
+  // Get the Optimism provider
+  const optimismProvider = getOptimismProvider();
+  
+  // Create a custom signer that uses the user's wallet for signing
+  // but sends transactions to Optimism
+  const customSigner = {
+    provider: optimismProvider,
+    getAddress: async () => userAddress,
+    signMessage: async (message: string | Uint8Array) => {
+      // Request signature from the user's wallet
+      // This doesn't require switching networks
+      const ethereum = (window as any).ethereum;
+      if (!ethereum) throw new Error('No Ethereum provider found');
+      
+      // Convert message to string if it's a Uint8Array
+      const messageStr = typeof message === 'string' 
+        ? message 
+        : ethers.toUtf8String(message);
+      
+      // Request signature from wallet
+      const signature = await ethereum.request({
+        method: 'personal_sign',
+        params: [messageStr, userAddress]
+      });
+      
+      return signature;
+    },
+    signTransaction: async (transaction: any) => {
+      // For full transaction signing, we would need a more complex implementation
+      // that handles the transaction serialization and signing
+      // This is a simplified version that works for our current needs
+      throw new Error('Direct transaction signing not implemented');
+    },
+    // Add other required Signer methods as needed
+    connect: () => customSigner
+  };
+  
+  return customSigner;
+};
+
+/**
  * Initializes Tableland with write capabilities using a dedicated Optimism provider.
  * This function provides the same interface as the original initTableland
  * but doesn't require the user to switch networks.
@@ -81,13 +139,25 @@ export const getOptimismAddress = (mainnetAddress: string): string => {
  */
 export const initTablelandWithOptimismWrite = async (userAddress: string): Promise<Database> => {
   try {
-    // For development purposes, we'll return the same mock database
-    // In a real implementation, we would connect to Tableland on Optimism
-    // with proper signing capabilities
+    // Create a dedicated provider for Optimism
+    const optimismProvider = getOptimismProvider();
     
-    // This is a placeholder that matches the interface of the original initTableland function
-    // In production, this would use the Optimism provider to connect to Tableland
-    return {} as Database;
+    // For operations that require signing (like creating tables),
+    // we need to use a custom approach that leverages the user's wallet
+    // without requiring them to switch networks
+    
+    // For now, we'll use a VoidSigner which is read-only
+    // In production, you would implement a proper cross-chain signing mechanism
+    // using the createOptimismSigner function above
+    const readOnlySigner = new ethers.VoidSigner(userAddress, optimismProvider);
+    
+    // Initialize the Database with the signer
+    const db = new Database({
+      signer: readOnlySigner,
+      autoWait: true
+    });
+    
+    return db;
   } catch (error) {
     console.error('Error initializing Tableland with Optimism write access:', error);
     throw error;

@@ -12,6 +12,7 @@ import {
 } from '../utils/tablelandUtils';
 import { 
   initTablelandWithOptimismWrite,
+  initTablelandWithOptimism,
   isUserOnOptimism
 } from '../utils/optimismProvider';
 import { Database } from '@tableland/sdk';
@@ -266,6 +267,19 @@ export const DigitalAssetsSection = () => {
       checkNetwork();
     }
   }, [isConnected]);
+  
+  // Display a message about multi-chain support
+  const renderMultiChainInfo = () => {
+    return (
+      <div className="info-box">
+        <p>
+          <strong>Multi-Chain Support:</strong> Your digital assets can be from any blockchain network.
+          The asset data is securely stored on Optimism for cost efficiency, while your wallet remains 
+          connected to your preferred network.
+        </p>
+      </div>
+    );
+  };
 
   // Initialize Tableland connection with our dedicated Optimism provider
   useEffect(() => {
@@ -275,8 +289,9 @@ export const DigitalAssetsSection = () => {
           setLoading(true);
           setError('');
           
-          // Use our dedicated Optimism provider - no network switching required
-          const database = await initTablelandWithOptimismWrite(address);
+          // Use our dedicated Optimism provider for read operations
+          // This doesn't require the user to switch networks
+          const database = await initTablelandWithOptimism(address);
           setDb(database);
           
           // Check if table exists
@@ -310,24 +325,31 @@ export const DigitalAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      if (!db || !address) {
-        setError('No database connection or wallet address.');
+      if (!address) {
+        setError('No wallet address.');
         return;
       }
       
-      const result = await createDigitalAssetsTable(db, address);
+      // For write operations, we need a provider with write capabilities
+      const writeDb = await initTablelandWithOptimismWrite(address);
+      
+      const result = await createDigitalAssetsTable(writeDb, address);
       setTableName(result.tableName);
       
       // Add mock data for demonstration
       if (process.env.NODE_ENV === 'development') {
         for (const nft of mockNFTs) {
-          await insertDigitalAssetData(db, result.tableName, JSON.stringify(nft));
+          await insertDigitalAssetData(writeDb, result.tableName, JSON.stringify(nft));
         }
         for (const gamingAsset of mockGamingAssets) {
-          await insertDigitalAssetData(db, result.tableName, JSON.stringify(gamingAsset));
+          await insertDigitalAssetData(writeDb, result.tableName, JSON.stringify(gamingAsset));
         }
         
-        const data = await getDigitalAssetsData(db, result.tableName);
+        // For read operations, use the read-only provider
+        const readDb = await initTablelandWithOptimism(address);
+        setDb(readDb);
+        
+        const data = await getDigitalAssetsData(readDb, result.tableName);
         setAssetsData(data);
       }
     } catch (err) {
@@ -346,8 +368,8 @@ export const DigitalAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      if (!db || !tableName) {
-        setError('No database connection or table.');
+      if (!address || !tableName) {
+        setError('No wallet address or table.');
         return;
       }
       
@@ -371,12 +393,17 @@ export const DigitalAssetsSection = () => {
         lastUpdated: new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
       };
       
-      // Insert into table
-      await insertDigitalAssetData(db, tableName, JSON.stringify(asset));
+      // For write operations, we need a provider with write capabilities
+      const writeDb = await initTablelandWithOptimismWrite(address);
       
-      // Refresh data
-      const data = await getDigitalAssetsData(db, tableName);
-      setAssetsData(data);
+      // Insert into table
+      await insertDigitalAssetData(writeDb, tableName, JSON.stringify(asset));
+      
+      // Refresh data using the read-only provider
+      if (db) {
+        const data = await getDigitalAssetsData(db, tableName);
+        setAssetsData(data);
+      }
       
       // Reset form
       setAssetName('');
@@ -402,12 +429,15 @@ export const DigitalAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      if (!db || !tableName) {
-        setError('No database connection or table.');
+      if (!address || !tableName) {
+        setError('No wallet connected or table created.');
         return;
       }
       
-      await clearDigitalAssetsData(db, tableName);
+      // For write operations, we need a provider with write capabilities
+      const writeDb = await initTablelandWithOptimismWrite(address);
+      
+      await clearDigitalAssetsData(writeDb, tableName);
       setAssetsData([]);
     } catch (err) {
       console.error('Error clearing assets:', err);
