@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { useCeramic } from '../context/CeramicContext';
+import { useCeramic } from '@/context/CeramicContext';
 import { 
   DataType,
   DataRecord

@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { useCeramic } from '../context/CeramicContext';
+import { useCeramic } from '@/context/CeramicContext';
 import { 
   DataType,
   DataRecord
-} from '../utils/ceramicUtils';
+} from '@/utils/ceramicUtils';
 
 export const AccountsPasswordsSection = () => {
   const { address, isConnected } = useAppKitAccount();
