@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { optimism } from '@reown/appkit/networks';
 import { 
-  initTableland, 
   createAffiliationsTable, 
   insertAffiliationData, 
   getAffiliationsData,
@@ -12,6 +11,7 @@ import {
   clearAffiliationsData,
   type PrivateData
 } from '@/utils/tablelandUtils';
+import { initTablelandWithOptimismWrite } from '@/utils/optimismProvider';
 import { Database } from '@tableland/sdk';
 
 export const OrganizationalAffiliationsSection = () => {
@@ -29,28 +29,30 @@ export const OrganizationalAffiliationsSection = () => {
   const [endDate, setEndDate] = useState<string>('');
   const [description, setDescription] = useState<string>('');
 
-  // Check network and initialize Tableland
+  // Initialize Tableland when connected
   useEffect(() => {
     if (isConnected && address) {
-      // We'll assume we're on Optimism for the mock implementation
-      setIsOptimismNetwork(true);
+      // No need to check network - we use cross-chain signing
       initTablelandDb();
     }
   }, [isConnected, address]);
 
-  // Function to switch to Optimism network
+  // No longer needed as we use cross-chain signing
+  // Keeping this commented for reference
+  /*
   const handleSwitchToOptimism = () => {
     switchNetwork(optimism);
     setIsOptimismNetwork(true);
   };
+  */
 
   const initTablelandDb = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Initialize Tableland
-      const tablelandDb = await initTableland();
+      // Initialize Tableland with Optimism provider for writing
+      const tablelandDb = await initTablelandWithOptimismWrite(address || '');
       setDb(tablelandDb);
       
       // Check if table exists
@@ -159,19 +161,14 @@ export const OrganizationalAffiliationsSection = () => {
   return (
     <div className="legal-section">
       <h2>My Organizational Affiliations</h2>
-      <div className="legal-content">
-        {!isOptimismNetwork ? (
-          <div className="alert alert-warning">
-            <p>Please switch to Optimism network to use affiliations storage.</p>
-            <button 
-              className="button-primary" 
-              onClick={handleSwitchToOptimism}
-              disabled={loading}
-            >
-              Switch to Optimism
-            </button>
-          </div>
-        ) : (
+      <div className="section-content">
+        <div className="info-box" style={{ marginBottom: '1rem' }}>
+          <p>
+            <strong>Multi-Chain Support:</strong> Your organizational affiliations data is securely stored on Optimism for cost efficiency, 
+            while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
+            interactions behind the scenes - no network switching required.
+          </p>
+        </div>
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
@@ -307,7 +304,6 @@ export const OrganizationalAffiliationsSection = () => {
               </div>
             )}
           </>
-        )}
       </div>
     </div>
   );
