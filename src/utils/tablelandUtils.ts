@@ -153,8 +153,12 @@ export const getPrivateData = async (db: Database, tableName: string): Promise<T
   return getData(db, TableType.PRIVATE, tableName);
 };
 
-export const checkPrivateTableExists = async (db: Database, address: string): Promise<boolean> => {
-  return checkTableExists(db, TableType.PRIVATE, address);
+export const checkPrivateTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
+  const exists = await checkTableExists(db, TableType.PRIVATE, address);
+  return {
+    exists,
+    tableName: exists ? `${TableType.PRIVATE}_${address.slice(0, 8)}_31337_1` : ''
+  };
 };
 
 export const clearPrivateData = async (db: Database, tableName: string): Promise<void> => {
@@ -174,8 +178,12 @@ export const getMedicalData = async (db: Database, tableName: string): Promise<T
   return getData(db, TableType.MEDICAL, tableName);
 };
 
-export const checkMedicalTableExists = async (db: Database, address: string): Promise<boolean> => {
-  return checkTableExists(db, TableType.MEDICAL, address);
+export const checkMedicalTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
+  const exists = await checkTableExists(db, TableType.MEDICAL, address);
+  return {
+    exists,
+    tableName: exists ? `${TableType.MEDICAL}_${address.slice(0, 8)}_31337_1` : ''
+  };
 };
 
 export const clearMedicalData = async (db: Database, tableName: string): Promise<void> => {
@@ -220,8 +228,12 @@ export const getContactsData = async (db: Database, tableName: string): Promise<
   return getData(db, TableType.CONTACTS, tableName);
 };
 
-export const checkContactsTableExists = async (db: Database, address: string): Promise<boolean> => {
-  return checkTableExists(db, TableType.CONTACTS, address);
+export const checkContactsTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
+  const exists = await checkTableExists(db, TableType.CONTACTS, address);
+  return {
+    exists,
+    tableName: exists ? `${TableType.CONTACTS}_${address.slice(0, 8)}_31337_1` : ''
+  };
 };
 
 export const clearContactsData = async (db: Database, tableName: string): Promise<void> => {
@@ -241,8 +253,12 @@ export const getAffiliationsData = async (db: Database, tableName: string): Prom
   return getData(db, TableType.AFFILIATIONS, tableName);
 };
 
-export const checkAffiliationsTableExists = async (db: Database, address: string): Promise<boolean> => {
-  return checkTableExists(db, TableType.AFFILIATIONS, address);
+export const checkAffiliationsTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
+  const exists = await checkTableExists(db, TableType.AFFILIATIONS, address);
+  return {
+    exists,
+    tableName: exists ? `${TableType.AFFILIATIONS}_${address.slice(0, 8)}_31337_1` : ''
+  };
 };
 
 export const clearAffiliationsData = async (db: Database, tableName: string): Promise<void> => {
@@ -262,8 +278,12 @@ export const getCurrenciesData = async (db: Database, tableName: string): Promis
   return getData(db, TableType.CURRENCIES, tableName);
 };
 
-export const checkCurrenciesTableExists = async (db: Database, address: string): Promise<boolean> => {
-  return checkTableExists(db, TableType.CURRENCIES, address);
+export const checkCurrenciesTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
+  const exists = await checkTableExists(db, TableType.CURRENCIES, address);
+  return {
+    exists,
+    tableName: exists ? `${TableType.CURRENCIES}_${address.slice(0, 8)}_31337_1` : ''
+  };
 };
 
 export const clearCurrenciesData = async (db: Database, tableName: string): Promise<void> => {
@@ -310,8 +330,12 @@ export const getChatData = async (db: Database, tableName: string): Promise<Tabl
   return getData(db, TableType.CHAT, tableName);
 };
 
-export const checkChatTableExists = async (db: Database, address: string): Promise<boolean> => {
-  return checkTableExists(db, TableType.CHAT, address);
+export const checkChatTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
+  const exists = await checkTableExists(db, TableType.CHAT, address);
+  return {
+    exists,
+    tableName: exists ? `${TableType.CHAT}_${address.slice(0, 8)}_31337_1` : ''
+  };
 };
 
 export const clearChatData = async (db: Database, tableName: string): Promise<void> => {

@@ -51,12 +51,12 @@ export const MedicalDataSection = () => {
       setDb(tablelandDb);
       
       // Check if medical table exists
-      const existingTable = await checkMedicalTableExists(tablelandDb, address as string);
+      const tableCheck = await checkMedicalTableExists(tablelandDb, address as string);
       
-      if (existingTable) {
-        setTableName(existingTable);
+      if (tableCheck.exists) {
+        setTableName(tableCheck.tableName);
         // Load existing data
-        const data = await getMedicalData(tablelandDb, existingTable);
+        const data = await getMedicalData(tablelandDb, tableCheck.tableName);
         setPrivateData(data);
         
         // Check if medical data is already imported

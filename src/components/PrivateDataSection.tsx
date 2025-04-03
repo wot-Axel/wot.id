@@ -8,7 +8,7 @@ import {
   createPrivateTable, 
   insertPrivateData, 
   getPrivateData,
-  checkTableExists,
+  checkPrivateTableExists,
   clearPrivateData,
   type PrivateData
 } from '@/utils/tablelandUtils';
@@ -55,12 +55,12 @@ export const PrivateDataSection = () => {
       setDb(tablelandDb);
       
       // Check if table exists
-      const existingTable = await checkTableExists(tablelandDb, address as string);
+      const tableCheck = await checkPrivateTableExists(tablelandDb, address as string);
       
-      if (existingTable) {
-        setTableName(existingTable);
+      if (tableCheck.exists) {
+        setTableName(tableCheck.tableName);
         // Load existing data
-        const data = await getPrivateData(tablelandDb, existingTable);
+        const data = await getPrivateData(tablelandDb, tableCheck.tableName);
         setPrivateData(data);
       }
       

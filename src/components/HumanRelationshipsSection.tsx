@@ -53,12 +53,12 @@ export const HumanRelationshipsSection = () => {
       setDb(tablelandDb);
       
       // Check if table exists
-      const existingTable = await checkContactsTableExists(tablelandDb, address as string);
+      const tableCheck = await checkContactsTableExists(tablelandDb, address as string);
       
-      if (existingTable) {
-        setTableName(existingTable);
+      if (tableCheck.exists) {
+        setTableName(tableCheck.tableName);
         // Load existing data
-        const data = await getContactsData(tablelandDb, existingTable);
+        const data = await getContactsData(tablelandDb, tableCheck.tableName);
         setContactsData(data);
       }
       

@@ -9,7 +9,7 @@ import {
   createPrivateTable, 
   insertPrivateData, 
   getPrivateData,
-  checkTableExists,
+  checkPrivateTableExists,
   type PrivateData
 } from '@/utils/tablelandUtils';
 import { Database } from '@tableland/sdk';
@@ -77,15 +77,14 @@ export const IdentitySection = () => {
       setDb(dbInstance);
       
       // Check if table exists
-      const exists = await checkTableExists(dbInstance, address || '');
+      const tableCheck = await checkPrivateTableExists(dbInstance, address || '');
       
-      if (exists) {
-        // Get existing table name
-        const existingTableName = `wot_private_${address?.substring(2, 10).toLowerCase()}`;
-        setTableName(existingTableName);
+      if (tableCheck.exists) {
+        // Use the table name from the check result
+        setTableName(tableCheck.tableName);
         
         // Load existing data
-        await loadIdentityData(dbInstance, existingTableName);
+        await loadIdentityData(dbInstance, tableCheck.tableName);
       } else {
         // Create new table
         const newTableName = await createPrivateTable(dbInstance, address || '');
