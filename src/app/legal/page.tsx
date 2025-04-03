@@ -9,9 +9,8 @@ const Legal = () => {
         <h2>Responsible</h2>
         <div className="legal-content">
           <p>Dr. Axel Noack</p>
-          <p>Behmstr. 1</p>
-          <p>13357 Berlin</p>
-          <p>Germany</p>
+          <p>c/o wot.id Project</p>
+          <p>Berlin, Germany</p>
           <p className="support-note">(Your support is most welcome: axelnoack.eth)</p>
         </div>
       </div>
@@ -19,7 +18,8 @@ const Legal = () => {
       <div className="legal-section">
         <h2>Contact</h2>
         <div className="legal-content">
-          <p>axel@wot.id</p>
+          <p>Email: axel@wot.id</p>
+          <p>For legal inquiries requiring a postal address, please contact via email first.</p>
         </div>
       </div>
       
@@ -41,7 +41,7 @@ const Legal = () => {
           </p>
           
           <p>
-            The Ethereum Blockchain and any other blockchain used in this projejet are peer-to-peer environments. Any activities performed there, such as
+            The Ethereum Blockchain and any other blockchain used in this project are peer-to-peer environments. Any activities performed there, such as
             storing information and making it available to others, or the use of cryptocurrencies for whatever purpose are always and
             exclusively the responsibility of the individual user only.
           </p>
@@ -56,7 +56,15 @@ const Legal = () => {
             the user agrees to this. An explicit agreement by the user is not
             necessary.
           </p>
-          <p>We do not collect, store, or analyse any user data.</p>
+          <p>
+            We do not collect, store, or analyse any user data on our servers. Any data you create
+            while using this application is stored directly on the blockchain and/or in your local browser storage,
+            giving you full control over your information.
+          </p>
+          <p>
+            As a decentralized application (dApp), wot.id is designed with privacy and user sovereignty as core principles.
+            You maintain complete ownership of your data at all times.
+          </p>
         </div>
       </div>
       
