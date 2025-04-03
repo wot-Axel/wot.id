@@ -1,9 +1,12 @@
 'use client'
 
-import { wagmiAdapter, projectId, networks } from '@/config'
+// Use relative import to avoid path alias issues
+import { wagmiAdapter, projectId, networks } from '../config'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createAppKit } from '@reown/appkit/react'
-import React, { type ReactNode } from 'react'
+// Import React properly for Next.js
+import * as React from 'react'
+import type { ReactNode } from 'react'
 import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi'
 
 // Set up queryClient
@@ -24,11 +27,19 @@ export const modal = createAppKit({
   networks,
   metadata,
   themeMode: 'light',
-  // Using only well-documented properties for maximum compatibility
-  featuredWalletIds: [
-    // MetaMask and WalletConnect as primary options
-    "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96", // MetaMask
+  // Using correct documented properties for maximum compatibility
+  includeWalletIds: [
+    // Social logins first
+    "0b01c72cecc164a2e1111b6d6b6d6e774e1c3cbe0d4b6d6c3b6e3d6c3b6e3d6c", // Apple
+    "4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0", // Google
+    "19177a98252e07ddfc9af2e929a3c533d6c0a794e0e2a854b7c3320e1ab0124c", // GitHub
+    "86f5ed4b88162d3f7c3b59f491c7c633aa35e953c352625d98c1b740174c9edf", // X/Twitter
+    // Wallet options second
     "ef333840daf915aafdc4a004525502d6d49d77bd9c65e0642dbaefb3c2893bef", // WalletConnect
+    "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96", // MetaMask
+    "f5b4eeb6015d66d8ed9a072fb6c9b70cafe0f926c67c1b6532ea3ccdaa6602aa", // Brave
+    // Email option last
+    "d01c7758d741b363e637a817a09bcf579feae4db9f5bb16f599fdd1f66e2f974"  // Email
   ],
   // Default account types
   defaultAccountTypes: { 
@@ -43,7 +54,14 @@ export const modal = createAppKit({
   }
 })
 
-function ContextProvider({ children, cookies }: { children: ReactNode; cookies: string | null }) {
+// Explicitly type the props for better type checking
+interface ContextProviderProps {
+  children: ReactNode;
+  cookies: string | null;
+}
+
+function ContextProvider({ children, cookies }: ContextProviderProps) {
+  // Use a more specific type assertion if possible
   const initialState = cookieToInitialState(wagmiAdapter.wagmiConfig as Config, cookies)
 
   return (
