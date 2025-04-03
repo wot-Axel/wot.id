@@ -11,8 +11,8 @@ const RETRY_DELAY_BASE = 1000; // 1 second
 // Interface for table data
 export interface TableData {
   id: number;
-  key: string;
-  value: string;
+  key: string;      // This maps to item_key in the database
+  value: string;    // This maps to item_value in the database
   created_at: string;
 }
 
@@ -83,12 +83,16 @@ export const initTableland = async (): Promise<Database> => {
 export const createTable = async (db: Database, tableType: TableType, address: string): Promise<string> => {
   return executeWithRetry(async () => {
     // Create a real Tableland table with the appropriate schema
-    // All tables have the same schema: id, key, value, created_at
+    // All tables have the same schema: id, item_key, item_value, created_at
+    // Note: We're using item_key instead of key because key is a reserved SQL keyword
+    const prefix = address.toLowerCase().slice(2, 10); // Remove 0x and take 8 chars
+    const tableName = `${tableType}_${prefix}`;
+    
     const { meta: create } = await db.prepare(`
-      CREATE TABLE ${tableType}_${address.slice(0, 8)} (
+      CREATE TABLE ${tableName} (
         id INTEGER PRIMARY KEY,
-        key TEXT NOT NULL,
-        value TEXT NOT NULL,
+        item_key TEXT NOT NULL,
+        item_value TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     `).run();
@@ -97,7 +101,7 @@ export const createTable = async (db: Database, tableType: TableType, address: s
     await create.txn?.wait();
     
     // Return the actual table name from Tableland
-    return create.txn?.name || `${tableType}_${address.slice(0, 8)}`;
+    return create.txn?.name || tableName;
   }, tableType);
 };
 
@@ -121,8 +125,9 @@ export const insertData = async (
     const timestamp = new Date().toISOString();
     
     // Insert data into the Tableland table
+    // Using item_key and item_value instead of key and value (reserved keywords)
     const { meta: insert } = await db.prepare(`
-      INSERT INTO ${tableName} (key, value, created_at)
+      INSERT INTO ${tableName} (item_key, item_value, created_at)
       VALUES ('${sanitizedKey}', '${sanitizedValue}', '${timestamp}')
     `).run();
     
@@ -135,8 +140,9 @@ export const insertData = async (
 export const getData = async (db: Database, tableType: TableType, tableName: string): Promise<TableData[]> => {
   try {
     // Query data from the Tableland table
+    // Using item_key and item_value in the query, but mapping to key and value in the result
     const { results } = await db.prepare(`
-      SELECT * FROM ${tableName} ORDER BY id ASC
+      SELECT id, item_key as key, item_value as value, created_at FROM ${tableName} ORDER BY id ASC
     `).all<TableData>();
     
     return results;
@@ -150,24 +156,27 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
 // Generic function to check if a table exists
 export const checkTableExists = async (db: Database, tableType: TableType, address: string): Promise<{exists: boolean, tableName: string}> => {
   try {
-    // Generate the expected table name
-    const expectedTableName = `${tableType}_${address.slice(0, 8)}`;
+    // Format the address correctly - remove 0x prefix and use lowercase
+    const prefix = address.toLowerCase().slice(2, 10);
+    const expectedTablePrefix = `${tableType}_${prefix}`;
     
     // Query Tableland to list tables owned by this address
+    // Using a more compatible query format
     const { results } = await db.prepare(`
       SELECT name FROM information_schema.tables
-      WHERE name LIKE '${expectedTableName}%'
+      WHERE name LIKE '${expectedTablePrefix}%'
     `).all<{name: string}>();
     
     // Check if any of the tables match our expected name pattern
     const exists = results.length > 0;
-    const tableName = exists ? results[0].name : expectedTableName;
+    const tableName = exists ? results[0].name : expectedTablePrefix;
     
     return { exists, tableName };
   } catch (error) {
     console.error(`Error checking if ${tableType} table exists:`, error);
     // Return false instead of throwing to prevent UI crashes
-    return { exists: false, tableName: `${tableType}_${address.slice(0, 8)}` };
+    const prefix = address.toLowerCase().slice(2, 10);
+    return { exists: false, tableName: `${tableType}_${prefix}` };
   }
 };
 
@@ -318,10 +327,14 @@ export const createDigitalAssetsTable = async (db: Database, address: string): P
   return executeWithRetry(async () => {
     // Create a real Tableland table with the appropriate schema for digital assets
     // Digital assets table has a slightly different schema with no key field
+    // Format the address correctly - remove 0x prefix and use lowercase
+    const prefix = address.toLowerCase().slice(2, 10);
+    const tableName = `${TableType.DIGITAL_ASSETS}_${prefix}`;
+    
     const { meta: create } = await db.prepare(`
-      CREATE TABLE ${TableType.DIGITAL_ASSETS}_${address.slice(0, 8)} (
+      CREATE TABLE ${tableName} (
         id INTEGER PRIMARY KEY,
-        value TEXT NOT NULL,
+        asset_value TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     `).run();
@@ -330,7 +343,7 @@ export const createDigitalAssetsTable = async (db: Database, address: string): P
     await create.txn?.wait();
     
     // Return the actual table name from Tableland
-    return { tableName: create.txn?.name || `${TableType.DIGITAL_ASSETS}_${address.slice(0, 8)}` };
+    return { tableName: create.txn?.name || tableName };
   }, TableType.DIGITAL_ASSETS);
 };
 
@@ -346,8 +359,9 @@ export const insertDigitalAssetData = async (db: Database, tableName: string, va
     const timestamp = new Date().toISOString();
     
     // Insert data into the Tableland table (digital assets table has no key field)
+    // Using asset_value instead of value (reserved keyword)
     const { meta: insert } = await db.prepare(`
-      INSERT INTO ${tableName} (value, created_at)
+      INSERT INTO ${tableName} (asset_value, created_at)
       VALUES ('${sanitizedValue}', '${timestamp}')
     `).run();
     
@@ -360,8 +374,9 @@ export const getDigitalAssetsData = async (db: Database, tableName: string): Pro
   try {
     // Query data from the Tableland table
     // Digital assets table has a different schema with no key field
+    // Using asset_value in the query, but mapping to value in the result
     const { results } = await db.prepare(`
-      SELECT id, '' as key, value, created_at FROM ${tableName} ORDER BY id ASC
+      SELECT id, '' as key, asset_value as value, created_at FROM ${tableName} ORDER BY id ASC
     `).all<TableData>();
     
     return results;
