@@ -1,18 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { useCeramic } from '../context/CeramicContext';
 import { 
-  initTableland, 
-  createPrivateTable, 
-  insertPrivateData, 
-  getPrivateData,
-  checkTableExists,
-  type PrivateData,
-  TableType
-} from '@/utils/tablelandUtils';
-import { Database } from '@tableland/sdk';
+  DataType,
+  DataRecord
+} from '../utils/ceramicUtils';
 
 // Define document fields
 interface DocumentField {
@@ -31,72 +25,57 @@ const documentFields: DocumentField[] = [
 
 export const DocumentsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
+  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [documentsData, setDocumentsData] = useState<PrivateData[]>([]);
+  const [collectionId, setCollectionId] = useState<string>('');
+  const [documentsData, setDocumentsData] = useState<DataRecord[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // Check network and initialize Tableland
+  // Initialize Ceramic when connected
   useEffect(() => {
-    if (isConnected && address) {
-      // We'll assume we're on Optimism for the mock implementation
-      setIsOptimismNetwork(true);
-      initTablelandDb();
+    if (isConnected && address && isInitialized) {
+      initCeramicCollection();
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, isInitialized]);
 
-  // Function to switch to Optimism network
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-
-  const initTablelandDb = async () => {
+  const initCeramicCollection = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Initialize Tableland
-      const dbInstance = await initTableland();
-      setDb(dbInstance);
+      // Check if collection exists
+      const collectionCheck = await checkCollectionExists(DataType.DOCUMENTS);
       
-      // Check if table exists
-      const exists = await checkTableExists(dbInstance, TableType.PRIVATE, address || '');
-      
-      if (exists) {
-        // Get existing table name
-        const existingTableName = `wot_private_${address?.substring(2, 10).toLowerCase()}`;
-        setTableName(existingTableName);
+      if (collectionCheck.exists) {
+        // Use the collection ID from the check result
+        setCollectionId(collectionCheck.collectionId);
         
         // Load existing data
-        await loadDocumentsData(dbInstance, existingTableName);
+        await loadDocumentsData(collectionCheck.collectionId);
       } else {
-        // Create new table
-        const newTableName = await createPrivateTable(dbInstance, address || '');
-        setTableName(newTableName);
+        // Create new collection
+        const result = await createCollection(DataType.DOCUMENTS);
+        setCollectionId(result.collectionId);
       }
     } catch (err) {
-      console.error('Error initializing Tableland:', err);
-      setError('Failed to initialize database. Please try again.');
+      console.error('Error initializing Ceramic:', err);
+      setError('Failed to initialize Ceramic. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadDocumentsData = async (dbInstance: Database, tableName: string) => {
+  const loadDocumentsData = async (collectionId: string) => {
     try {
       setLoading(true);
       
-      // Get all private data
-      const allData = await getPrivateData(dbInstance, tableName);
+      // Get all documents data
+      const allData = await getData(DataType.DOCUMENTS, collectionId);
       
       // Filter for document-related data
-      const documentDataItems = allData.filter(item => 
+      const documentDataItems = allData.filter((item: DataRecord) => 
         documentFields.some(field => field.id === item.key)
       );
       
@@ -125,8 +104,8 @@ export const DocumentsSection = () => {
   };
 
   const saveDocumentsData = async () => {
-    if (!db || !tableName) {
-      setError('Database not initialized. Please try again.');
+    if (!ceramic || !collectionId) {
+      setError('Ceramic not initialized. Please try again.');
       return;
     }
     
@@ -134,7 +113,7 @@ export const DocumentsSection = () => {
       setLoading(true);
       setError('');
       
-      // Save each field to the database
+      // Save each field to the Ceramic collection
       for (const field of documentFields) {
         const value = formData[field.id] || '';
         
@@ -143,12 +122,12 @@ export const DocumentsSection = () => {
         
         // Only save if there's a value or if we're updating an existing value
         if (value || existingItem) {
-          await insertPrivateData(db, tableName, field.id, value);
+          await insertData(DataType.DOCUMENTS, collectionId, { key: field.id, value });
         }
       }
       
       // Reload data to show updated values
-      await loadDocumentsData(db, tableName);
+      await loadDocumentsData(collectionId);
       setIsEditing(false);
     } catch (err) {
       console.error('Error saving documents data:', err);
@@ -166,13 +145,6 @@ export const DocumentsSection = () => {
         <div className="legal-content">
           <p>Please connect your wallet to manage your document information.</p>
         </div>
-      ) : !isOptimismNetwork ? (
-        <div className="legal-content">
-          <p>Please switch to the Optimism network to use this feature.</p>
-          <button onClick={handleSwitchToOptimism} className="button-primary logged-in-button">
-            Switch to Optimism
-          </button>
-        </div>
       ) : (
         <div className="legal-content">
           {loading ? (
@@ -180,7 +152,7 @@ export const DocumentsSection = () => {
           ) : error ? (
             <div className="error-message">
               <p>{error}</p>
-              <button onClick={initTablelandDb} className="button-primary logged-in-button">
+              <button onClick={initCeramicCollection} className="button-primary logged-in-button">
                 Try Again
               </button>
             </div>

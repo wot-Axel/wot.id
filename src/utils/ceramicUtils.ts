@@ -19,7 +19,13 @@ declare global {
 export enum DataType {
   PROFILE = 'profile',           // User profile information
   MEDICAL = 'medical',           // Medical records and health data
-  DIGITAL_ASSETS = 'digital_assets', // Digital assets and NFTs
+  REAL_WORLD_ASSETS = 'real_world_assets', // Real world assets information
+  DIGITAL_ASSETS = 'digital_assets',    // Digital assets like NFTs
+  DOCUMENTS = 'documents',       // Personal documents and IDs
+  CONTACTS = 'contacts',         // Human relationships and contacts
+  ACCOUNTS = 'accounts',         // Accounts and passwords information
+  AFFILIATIONS = 'affiliations', // Organizational affiliations
+  PRIVATE = 'private',           // Private data storage
   CREDENTIALS = 'credentials',   // Verifiable credentials
   CONNECTIONS = 'connections',   // Social connections and contacts
   PREFERENCES = 'preferences'    // User preferences and settings

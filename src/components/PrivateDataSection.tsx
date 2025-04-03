@@ -1,38 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { useCeramic } from '../context/CeramicContext';
 import { 
-  createPrivateTable, 
-  insertPrivateData, 
-  getPrivateData,
-  checkPrivateTableExists,
-  clearPrivateData,
-  type PrivateData
-} from '@/utils/tablelandUtils';
-import { initTablelandWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@tableland/sdk';
+  DataType,
+  DataRecord
+} from '../utils/ceramicUtils';
 
 export const PrivateDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
+  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData, clearData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [privateData, setPrivateData] = useState<PrivateData[]>([]);
+  const [collectionId, setCollectionId] = useState<string>('');
+  const [privateData, setPrivateData] = useState<DataRecord[]>([]);
   const [newKey, setNewKey] = useState<string>('');
   const [newValue, setNewValue] = useState<string>('');
 
-  // Initialize Tableland when connected
+  // Initialize Ceramic when connected
   useEffect(() => {
-    if (isConnected && address) {
-      // No need to check network - we use cross-chain signing
-      initTablelandDb();
+    if (isConnected && address && isInitialized) {
+      initCeramicCollection();
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, isInitialized]);
 
   // No longer needed as we use cross-chain signing
   // Keeping this commented for reference
@@ -43,61 +34,57 @@ export const PrivateDataSection = () => {
   };
   */
 
-  const initTablelandDb = async () => {
+  const initCeramicCollection = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Initialize Tableland with Optimism provider for writing
-      const tablelandDb = await initTablelandWithOptimismWrite(address || '');
-      setDb(tablelandDb);
+      // Check if collection exists
+      const collectionCheck = await checkCollectionExists(DataType.PRIVATE);
       
-      // Check if table exists
-      const tableCheck = await checkPrivateTableExists(tablelandDb, address as string);
-      
-      if (tableCheck.exists) {
-        setTableName(tableCheck.tableName);
+      if (collectionCheck.exists) {
+        setCollectionId(collectionCheck.collectionId);
         // Load existing data
-        const data = await getPrivateData(tablelandDb, tableCheck.tableName);
+        const data = await getData(DataType.PRIVATE, collectionCheck.collectionId);
         setPrivateData(data);
       }
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error initializing Tableland');
+      setError(err.message || 'Error initializing Ceramic');
       setLoading(false);
     }
   };
 
-  const handleCreateTable = async () => {
-    if (!db || !address) return;
+  const handleCreateCollection = async () => {
+    if (!ceramic || !isInitialized) return;
     
     try {
       setLoading(true);
       setError('');
       
-      const name = await createPrivateTable(db, address);
-      setTableName(name);
+      const result = await createCollection(DataType.PRIVATE);
+      setCollectionId(result.collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating table');
+      setError(err.message || 'Error creating collection');
       setLoading(false);
     }
   };
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !tableName || !newKey || !newValue) return;
+    if (!ceramic || !collectionId || !newKey || !newValue) return;
     
     try {
       setLoading(true);
       setError('');
       
-      await insertPrivateData(db, tableName, newKey, newValue);
+      await insertData(DataType.PRIVATE, collectionId, { key: newKey, value: newValue });
       
       // Refresh data
-      const data = await getPrivateData(db, tableName);
+      const data = await getData(DataType.PRIVATE, collectionId);
       setPrivateData(data);
       
       // Clear form
@@ -111,16 +98,16 @@ export const PrivateDataSection = () => {
   };
 
   const handleClearPrivateData = async () => {
-    if (!db || !tableName) return;
+    if (!ceramic || !collectionId) return;
     
     try {
       setLoading(true);
       setError('');
       
-      await clearPrivateData(db, tableName);
+      await clearData(DataType.PRIVATE, collectionId);
       
       // Refresh data
-      const data = await getPrivateData(db, tableName);
+      const data = await getData(DataType.PRIVATE, collectionId);
       setPrivateData(data);
       
       setLoading(false);
@@ -148,20 +135,20 @@ export const PrivateDataSection = () => {
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!tableName ? (
+            {!collectionId ? (
               <div>
-                <p>You don't have a private data table yet. Create one to store your private data on Tableland.</p>
+                <p>You don't have a private data collection yet. Create one to store your private data on Ceramic.</p>
                 <button 
                   className="button-primary" 
-                  onClick={handleCreateTable}
-                  disabled={loading}
+                  onClick={handleCreateCollection}
+                  disabled={loading || ceramicLoading}
                 >
-                  {loading ? 'Creating...' : 'Create Private Table'}
+                  {loading ? 'Creating...' : 'Create Private Collection'}
                 </button>
               </div>
             ) : (
               <div>
-                <p>Your private data is stored on Tableland on the Optimism network.</p>
+                <p>Your private data is stored securely on the Ceramic Network.</p>
                 
                 <form onSubmit={handleAddData} className="private-data-form">
                   <div className="form-group">
@@ -228,7 +215,7 @@ export const PrivateDataSection = () => {
                           <tr key={item.id}>
                             <td>{item.key}</td>
                             <td>{item.value}</td>
-                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{new Date().toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>

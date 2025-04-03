@@ -2,20 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
+import { useCeramic } from '../context/CeramicContext';
 import { 
-  checkDigitalAssetsTableExists,
-  createDigitalAssetsTable,
-  getDigitalAssetsData,
-  insertDigitalAssetData,
-  clearDigitalAssetsData,
-  PrivateData
-} from '../utils/tablelandUtils';
-import { 
-  initTablelandWithOptimismWrite,
-  initTablelandWithOptimism,
-  isUserOnOptimism
-} from '../utils/optimismProvider';
-import { Database } from '@tableland/sdk';
+  DataType,
+  DataRecord
+} from '../utils/ceramicUtils';
 
 // Types for digital assets
 interface DigitalAsset {
@@ -234,12 +225,11 @@ const parseAssetData = (data: string | undefined): DigitalAsset => {
 
 export const DigitalAssetsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
+  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData, clearData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [assetsData, setAssetsData] = useState<PrivateData[]>([]);
+  const [collectionId, setCollectionId] = useState<string>('');
+  const [assetsData, setAssetsData] = useState<DataRecord[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   
   // Form state
@@ -256,52 +246,34 @@ export const DigitalAssetsSection = () => {
   const [attributes, setAttributes] = useState<string>('');
   const [acquiredDate, setAcquiredDate] = useState<string>('');
 
-  // Check if user is on Optimism (for informational purposes only)
-  useEffect(() => {
-    const checkNetwork = async () => {
-      const onOptimism = await isUserOnOptimism();
-      setIsOptimismNetwork(onOptimism);
-    };
-    
-    if (isConnected) {
-      checkNetwork();
-    }
-  }, [isConnected]);
-  
-  // Display a message about multi-chain support
-  const renderMultiChainInfo = () => {
+  // Display a message about Ceramic Network support
+  const renderCeramicInfo = () => {
     return (
       <div className="info-box">
         <p>
-          <strong>Multi-Chain Support:</strong> Your digital assets can be from any blockchain network.
-          The asset data is securely stored on Optimism for cost efficiency, while your wallet remains 
-          connected to your preferred network. Our cross-chain technology handles all network interactions 
-          behind the scenes - no network switching required.
+          <strong>Ceramic Network:</strong> Your digital assets data is securely stored on the Ceramic Network,
+          a decentralized data network built specifically for Web3 applications. Ceramic provides better 
+          performance, lower costs, and enhanced privacy for your digital assets information.
         </p>
       </div>
     );
   };
 
-  // Initialize Tableland connection with our dedicated Optimism provider
+  // Initialize Ceramic connection
   useEffect(() => {
     const init = async () => {
       try {
-        if (isConnected && address) {
+        if (isConnected && address && isInitialized && !loading && !ceramicLoading) {
           setLoading(true);
           setError('');
           
-          // Use our dedicated Optimism provider for read operations
-          // This doesn't require the user to switch networks
-          const database = await initTablelandWithOptimism(address);
-          setDb(database);
-          
-          // Check if table exists
-          const exists = await checkDigitalAssetsTableExists(database, address);
-          if (exists.exists) {
-            setTableName(exists.tableName);
+          // Check if collection exists
+          const collectionCheck = await checkCollectionExists(DataType.DIGITAL_ASSETS);
+          if (collectionCheck.exists) {
+            setCollectionId(collectionCheck.collectionId);
             
             // Get existing data
-            const data = await getDigitalAssetsData(database, exists.tableName);
+            const data = await getData(DataType.DIGITAL_ASSETS, collectionCheck.collectionId);
             setAssetsData(data);
           }
           
@@ -315,47 +287,42 @@ export const DigitalAssetsSection = () => {
     };
     
     init();
-  }, [isConnected, address]);
+  }, [isConnected, address, isInitialized, loading, ceramicLoading]);
 
   // We no longer need to switch networks as we're using a dedicated Optimism provider
   // Instead, we provide information about which network is being used for data storage
 
-  // Handle table creation
-  const handleCreateTable = async () => {
+  // Handle collection creation
+  const handleCreateCollection = async () => {
     try {
       setLoading(true);
       setError('');
       
-      if (!address) {
-        setError('No wallet address.');
+      if (!address || !isInitialized) {
+        setError('No wallet address or Ceramic not initialized.');
         return;
       }
       
-      // For write operations, we need a provider with write capabilities
-      const writeDb = await initTablelandWithOptimismWrite(address);
-      
-      const result = await createDigitalAssetsTable(writeDb, address);
-      setTableName(result.tableName);
+      // Create a new collection for digital assets
+      const result = await createCollection(DataType.DIGITAL_ASSETS);
+      setCollectionId(result.collectionId);
       
       // Add mock data for demonstration
       if (process.env.NODE_ENV === 'development') {
         for (const nft of mockNFTs) {
-          await insertDigitalAssetData(writeDb, result.tableName, JSON.stringify(nft));
+          await insertData(DataType.DIGITAL_ASSETS, result.collectionId, { key: nft.identifier, value: JSON.stringify(nft) });
         }
         for (const gamingAsset of mockGamingAssets) {
-          await insertDigitalAssetData(writeDb, result.tableName, JSON.stringify(gamingAsset));
+          await insertData(DataType.DIGITAL_ASSETS, result.collectionId, { key: gamingAsset.identifier, value: JSON.stringify(gamingAsset) });
         }
         
-        // For read operations, use the read-only provider
-        const readDb = await initTablelandWithOptimism(address);
-        setDb(readDb);
-        
-        const data = await getDigitalAssetsData(readDb, result.tableName);
+        // Get the updated data
+        const data = await getData(DataType.DIGITAL_ASSETS, result.collectionId);
         setAssetsData(data);
       }
     } catch (err) {
-      console.error('Error creating table:', err);
-      setError('Failed to create table. Please try again.');
+      console.error('Error creating collection:', err);
+      setError('Failed to create collection. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -369,8 +336,8 @@ export const DigitalAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      if (!address || !tableName) {
-        setError('No wallet address or table.');
+      if (!address || !collectionId || !ceramic) {
+        setError('No wallet address or Ceramic collection.');
         return;
       }
       
@@ -394,17 +361,12 @@ export const DigitalAssetsSection = () => {
         lastUpdated: new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
       };
       
-      // For write operations, we need a provider with write capabilities
-      const writeDb = await initTablelandWithOptimismWrite(address);
+      // Insert into Ceramic collection
+      await insertData(DataType.DIGITAL_ASSETS, collectionId, { key: identifier, value: JSON.stringify(asset) });
       
-      // Insert into table
-      await insertDigitalAssetData(writeDb, tableName, JSON.stringify(asset));
-      
-      // Refresh data using the read-only provider
-      if (db) {
-        const data = await getDigitalAssetsData(db, tableName);
-        setAssetsData(data);
-      }
+      // Refresh data
+      const data = await getData(DataType.DIGITAL_ASSETS, collectionId);
+      setAssetsData(data);
       
       // Reset form
       setAssetName('');
@@ -430,15 +392,12 @@ export const DigitalAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      if (!address || !tableName) {
-        setError('No wallet connected or table created.');
+      if (!address || !collectionId || !ceramic) {
+        setError('No wallet connected or Ceramic collection created.');
         return;
       }
       
-      // For write operations, we need a provider with write capabilities
-      const writeDb = await initTablelandWithOptimismWrite(address);
-      
-      await clearDigitalAssetsData(writeDb, tableName);
+      await clearData(DataType.DIGITAL_ASSETS, collectionId);
       setAssetsData([]);
     } catch (err) {
       console.error('Error clearing assets:', err);
@@ -463,7 +422,7 @@ export const DigitalAssetsSection = () => {
       <p className="section-description" style={{ marginBottom: '1rem' }}>
         Securely store and manage your digital assets from multiple blockchains including Ethereum, Optimism, Polygon, and more.
         <span className="network-info" style={{ display: 'block', fontSize: '0.9rem', marginTop: '0.5rem', color: '#666' }}>
-          Data is stored on Optimism for faster and cheaper transactions while keeping your main wallet connection unchanged.
+          Data is stored on Ceramic Network for better performance and privacy while keeping your main wallet connection unchanged.
         </span>
       </p>
       <div className="section-content">
@@ -474,15 +433,15 @@ export const DigitalAssetsSection = () => {
         ) : (
           <>
             
-            {!tableName ? (
+            {!collectionId ? (
               <div>
-                <p>You don't have a digital assets table yet. Create one to track your NFTs and gaming assets.</p>
+                <p>You don't have a digital assets collection yet. Create one to track your NFTs and gaming assets.</p>
                 <button 
                   className="button-primary" 
-                  onClick={handleCreateTable}
-                  disabled={loading}
+                  onClick={handleCreateCollection}
+                  disabled={loading || ceramicLoading}
                 >
-                  {loading ? 'Creating...' : 'Create Digital Assets Table'}
+                  {loading ? 'Creating...' : 'Create Digital Assets Collection'}
                 </button>
               </div>
             ) : (
@@ -624,7 +583,7 @@ export const DigitalAssetsSection = () => {
                                 )}
                                 
                                 <p className="asset-timestamp">
-                                  Added: {new Date(item.created_at).toLocaleString()}
+                                  Added: {new Date().toLocaleString()}
                                 </p>
                               </div>
                             </div>

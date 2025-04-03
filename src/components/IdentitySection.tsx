@@ -1,18 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
 import dynamic from 'next/dynamic';
-import { 
-  initTableland, 
-  createPrivateTable, 
-  insertPrivateData, 
-  getPrivateData,
-  checkPrivateTableExists,
-  type PrivateData
-} from '@/utils/tablelandUtils';
-import { Database } from '@tableland/sdk';
+import { useCeramic } from '@/context/CeramicContext';
+import { DataType, DataRecord } from '@/utils/ceramicUtils';
 
 // Dynamically import the ScannerModal component with no SSR
 const ScannerModal = dynamic(() => import('./ScannerModal'), {
@@ -41,72 +33,58 @@ const identityFields: IdentityField[] = [
 
 export const IdentitySection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
+  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [identityData, setIdentityData] = useState<PrivateData[]>([]);
+  const [collectionId, setCollectionId] = useState<string>('');
+  const [identityData, setIdentityData] = useState<DataRecord[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
 
-  // Check network and initialize Tableland
+  // Initialize Ceramic when connected
   useEffect(() => {
-    if (isConnected && address) {
-      // We'll assume we're on Optimism for the mock implementation
-      setIsOptimismNetwork(true);
-      initTablelandDb();
+    if (isConnected && address && isInitialized && !loading && !ceramicLoading) {
+      initCeramicCollection();
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, isInitialized, loading, ceramicLoading]);
 
-  // Function to switch to Optimism network
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-
-  const initTablelandDb = async () => {
+  const initCeramicCollection = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Initialize Tableland
-      const dbInstance = await initTableland();
-      setDb(dbInstance);
+      // Check if collection exists
+      const collectionCheck = await checkCollectionExists(DataType.PROFILE);
       
-      // Check if table exists
-      const tableCheck = await checkPrivateTableExists(dbInstance, address || '');
-      
-      if (tableCheck.exists) {
-        // Use the table name from the check result
-        setTableName(tableCheck.tableName);
+      if (collectionCheck.exists) {
+        // Use the collection ID from the check result
+        setCollectionId(collectionCheck.collectionId);
         
         // Load existing data
-        await loadIdentityData(dbInstance, tableCheck.tableName);
+        await loadIdentityData(collectionCheck.collectionId);
       } else {
-        // Create new table
-        const newTableName = await createPrivateTable(dbInstance, address || '');
-        setTableName(newTableName);
+        // Create new collection
+        const result = await createCollection(DataType.PROFILE);
+        setCollectionId(result.collectionId);
       }
     } catch (err) {
-      console.error('Error initializing Tableland:', err);
-      setError('Failed to initialize database. Please try again.');
+      console.error('Error initializing Ceramic:', err);
+      setError('Failed to initialize Ceramic. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadIdentityData = async (dbInstance: Database, tableName: string) => {
+  const loadIdentityData = async (collectionId: string) => {
     try {
       setLoading(true);
       
-      // Get all private data
-      const allData = await getPrivateData(dbInstance, tableName);
+      // Get all profile data
+      const allData = await getData(DataType.PROFILE, collectionId);
       
       // Filter for identity-related data
-      const identityDataItems = allData.filter(item => 
+      const identityDataItems = allData.filter((item: DataRecord) => 
         identityFields.some(field => field.id === item.key)
       );
       
@@ -114,7 +92,7 @@ export const IdentitySection = () => {
       
       // Populate form data from existing data
       const initialFormData: Record<string, string> = {};
-      identityDataItems.forEach(item => {
+      identityDataItems.forEach((item: DataRecord) => {
         initialFormData[item.key] = item.value;
       });
       
@@ -205,8 +183,8 @@ export const IdentitySection = () => {
   };
 
   const saveIdentityData = async () => {
-    if (!db || !tableName) {
-      setError('Database not initialized. Please try again.');
+    if (!ceramic || !collectionId) {
+      setError('Ceramic not initialized. Please try again.');
       return;
     }
     
@@ -214,7 +192,7 @@ export const IdentitySection = () => {
       setLoading(true);
       setError('');
       
-      // Save each field to the database
+      // Save each field to the Ceramic collection
       for (const field of identityFields) {
         const value = formData[field.id] || '';
         
@@ -223,12 +201,12 @@ export const IdentitySection = () => {
         
         // Only save if there's a value or if we're updating an existing value
         if (value || existingItem) {
-          await insertPrivateData(db, tableName, field.id, value);
+          await insertData(DataType.PROFILE, collectionId, { key: field.id, value });
         }
       }
       
       // Reload data to show updated values
-      await loadIdentityData(db, tableName);
+      await loadIdentityData(collectionId);
       setIsEditing(false);
     } catch (err) {
       console.error('Error saving identity data:', err);
@@ -250,9 +228,9 @@ export const IdentitySection = () => {
         <div className="section-content">
           <div className="info-box" style={{ marginBottom: '1rem' }}>
             <p>
-              <strong>Multi-Chain Support:</strong> Your identity data is securely stored on Optimism for cost efficiency, 
-              while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
-              interactions behind the scenes - no network switching required.
+              <strong>Ceramic Network:</strong> Your identity data is securely stored on the Ceramic Network, 
+              a decentralized data network built specifically for Web3 applications. Ceramic provides better 
+              performance, lower costs, and enhanced privacy for your sensitive identity information.
             </p>
           </div>
           {loading ? (
@@ -260,7 +238,7 @@ export const IdentitySection = () => {
           ) : error ? (
             <div className="error-message">
               <p>{error}</p>
-              <button onClick={initTablelandDb} className="button-primary logged-in-button">
+              <button onClick={initCeramicCollection} className="button-primary logged-in-button">
                 Try Again
               </button>
             </div>

@@ -1,41 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { useCeramic } from '../context/CeramicContext';
 import { 
-  createAffiliationsTable, 
-  insertAffiliationData, 
-  getAffiliationsData,
-  checkAffiliationsTableExists,
-  clearAffiliationsData,
-  type PrivateData
-} from '@/utils/tablelandUtils';
-import { initTablelandWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@tableland/sdk';
+  DataType,
+  DataRecord
+} from '../utils/ceramicUtils';
 
 export const OrganizationalAffiliationsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
+  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData, clearData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [affiliationsData, setAffiliationsData] = useState<PrivateData[]>([]);
+  const [collectionId, setCollectionId] = useState<string>('');
+  const [affiliationsData, setAffiliationsData] = useState<DataRecord[]>([]);
   const [organizationName, setOrganizationName] = useState<string>('');
   const [role, setRole] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [description, setDescription] = useState<string>('');
 
-  // Initialize Tableland when connected
+  // Initialize Ceramic when connected
   useEffect(() => {
-    if (isConnected && address) {
-      // No need to check network - we use cross-chain signing
-      initTablelandDb();
+    if (isConnected && address && isInitialized) {
+      initCeramicCollection();
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, isInitialized]);
 
   // No longer needed as we use cross-chain signing
   // Keeping this commented for reference
@@ -46,52 +37,48 @@ export const OrganizationalAffiliationsSection = () => {
   };
   */
 
-  const initTablelandDb = async () => {
+  const initCeramicCollection = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Initialize Tableland with Optimism provider for writing
-      const tablelandDb = await initTablelandWithOptimismWrite(address || '');
-      setDb(tablelandDb);
+      // Check if collection exists
+      const collectionCheck = await checkCollectionExists(DataType.AFFILIATIONS);
       
-      // Check if table exists
-      const tableCheck = await checkAffiliationsTableExists(tablelandDb, address as string);
-      
-      if (tableCheck.exists) {
-        setTableName(tableCheck.tableName);
+      if (collectionCheck.exists) {
+        setCollectionId(collectionCheck.collectionId);
         // Load existing data
-        const data = await getAffiliationsData(tablelandDb, tableCheck.tableName);
+        const data = await getData(DataType.AFFILIATIONS, collectionCheck.collectionId);
         setAffiliationsData(data);
       }
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error initializing Tableland');
+      setError(err.message || 'Error initializing Ceramic');
       setLoading(false);
     }
   };
 
-  const handleCreateTable = async () => {
-    if (!db || !address) return;
+  const handleCreateCollection = async () => {
+    if (!ceramic || !isInitialized) return;
     
     try {
       setLoading(true);
       setError('');
       
-      const name = await createAffiliationsTable(db, address);
-      setTableName(name);
+      const result = await createCollection(DataType.AFFILIATIONS);
+      setCollectionId(result.collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating table');
+      setError(err.message || 'Error creating collection');
       setLoading(false);
     }
   };
 
   const handleAddAffiliation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !tableName || !organizationName) return;
+    if (!ceramic || !collectionId || !organizationName) return;
     
     try {
       setLoading(true);
@@ -106,10 +93,10 @@ export const OrganizationalAffiliationsSection = () => {
         description
       });
       
-      await insertAffiliationData(db, tableName, organizationName, affiliationData);
+      await insertData(DataType.AFFILIATIONS, collectionId, { key: organizationName, value: affiliationData });
       
       // Refresh data
-      const data = await getAffiliationsData(db, tableName);
+      const data = await getData(DataType.AFFILIATIONS, collectionId);
       setAffiliationsData(data);
       
       // Clear form
@@ -126,16 +113,16 @@ export const OrganizationalAffiliationsSection = () => {
   };
 
   const handleClearAffiliationsData = async () => {
-    if (!db || !tableName) return;
+    if (!ceramic || !collectionId) return;
     
     try {
       setLoading(true);
       setError('');
       
-      await clearAffiliationsData(db, tableName);
+      await clearData(DataType.AFFILIATIONS, collectionId);
       
       // Refresh data
-      const data = await getAffiliationsData(db, tableName);
+      const data = await getData(DataType.AFFILIATIONS, collectionId);
       setAffiliationsData(data);
       
       setLoading(false);
@@ -172,20 +159,20 @@ export const OrganizationalAffiliationsSection = () => {
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!tableName ? (
+            {!collectionId ? (
               <div>
-                <p>You don't have an affiliations table yet. Create one to store your organizational affiliations securely on Tableland.</p>
+                <p>You don't have an affiliations collection yet. Create one to store your organizational affiliations securely on Ceramic.</p>
                 <button 
                   className="button-primary" 
-                  onClick={handleCreateTable}
-                  disabled={loading}
+                  onClick={handleCreateCollection}
+                  disabled={loading || ceramicLoading}
                 >
-                  {loading ? 'Creating...' : 'Create Affiliations Table'}
+                  {loading ? 'Creating...' : 'Create Affiliations Collection'}
                 </button>
               </div>
             ) : (
               <div>
-                <p>Your organizational affiliations are stored securely on Tableland on the Optimism network.</p>
+                <p>Your organizational affiliations are stored securely on the Ceramic Network.</p>
                 
                 <form onSubmit={handleAddAffiliation} className="private-data-form">
                   <div className="form-group">
@@ -293,7 +280,7 @@ export const OrganizationalAffiliationsSection = () => {
                               <td>{affiliationInfo.startDate || '-'}</td>
                               <td>{affiliationInfo.endDate || 'Current'}</td>
                               <td>{affiliationInfo.description || '-'}</td>
-                              <td>{new Date(item.created_at).toLocaleString()}</td>
+                              <td>{new Date().toLocaleString()}</td>
                             </tr>
                           );
                         })}

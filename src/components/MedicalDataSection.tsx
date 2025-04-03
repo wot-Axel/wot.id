@@ -1,64 +1,41 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
-import { 
-  createMedicalTable, 
-  insertMedicalData, 
-  getMedicalData,
-  checkMedicalTableExists,
-  type PrivateData
-} from '@/utils/tablelandUtils';
-import { initTablelandWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@tableland/sdk';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { useCeramic } from '@/context/CeramicContext';
+import { DataType, DataRecord } from '@/utils/ceramicUtils';
 import { MedicalDataTable } from './MedicalDataTable';
 
 export const MedicalDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
+  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [privateData, setPrivateData] = useState<PrivateData[]>([]);
-  const [medicalDataSections, setMedicalDataSections] = useState<Record<string, PrivateData[]>>({});
+  const [collectionId, setCollectionId] = useState<string>('');
+  const [privateData, setPrivateData] = useState<DataRecord[]>([]);
+  const [medicalDataSections, setMedicalDataSections] = useState<Record<string, DataRecord[]>>({});
   const [importedData, setImportedData] = useState<boolean>(false);
 
-  // Initialize Tableland when connected
+  // Initialize Ceramic and check for existing collection when connected
   useEffect(() => {
-    if (isConnected && address) {
-      // No need to check network - we use cross-chain signing
-      initTablelandDb();
+    if (isConnected && isInitialized && !loading && !ceramicLoading) {
+      checkMedicalCollection();
     }
-  }, [isConnected, address]);
+  }, [isConnected, isInitialized, loading, ceramicLoading]);
 
-  // No longer needed as we use cross-chain signing
-  // Keeping this commented for reference
-  /*
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-  */
-
-  const initTablelandDb = async () => {
+  // Check if medical collection exists
+  const checkMedicalCollection = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Initialize Tableland with Optimism provider for writing
-      const tablelandDb = await initTablelandWithOptimismWrite(address || '');
-      setDb(tablelandDb);
+      // Check if medical collection exists
+      const collectionCheck = await checkCollectionExists(DataType.MEDICAL);
       
-      // Check if medical table exists
-      const tableCheck = await checkMedicalTableExists(tablelandDb, address as string);
-      
-      if (tableCheck.exists) {
-        setTableName(tableCheck.tableName);
+      if (collectionCheck.exists) {
+        setCollectionId(collectionCheck.collectionId);
         // Load existing data
-        const data = await getMedicalData(tablelandDb, tableCheck.tableName);
+        const data = await getData(DataType.MEDICAL, collectionCheck.collectionId);
         setPrivateData(data);
         
         // Check if medical data is already imported
@@ -71,30 +48,30 @@ export const MedicalDataSection = () => {
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error initializing Tableland');
+      setError(err.message || 'Error checking Ceramic collection');
       setLoading(false);
     }
   };
 
-  const handleCreateTable = async () => {
-    if (!db || !address) return;
+  const handleCreateCollection = async () => {
+    if (!isInitialized || !ceramic) return;
     
     try {
       setLoading(true);
       setError('');
       
-      const name = await createMedicalTable(db, address);
-      setTableName(name);
+      const result = await createCollection(DataType.MEDICAL);
+      setCollectionId(result.collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating medical table');
+      setError(err.message || 'Error creating medical collection');
       setLoading(false);
     }
   };
 
-  const organizeMedicalData = (data: PrivateData[]) => {
-    const sections: Record<string, PrivateData[]> = {};
+  const organizeMedicalData = (data: DataRecord[]) => {
+    const sections: Record<string, DataRecord[]> = {};
     
     data.forEach(item => {
       if (item.key.includes('|')) {
@@ -110,7 +87,7 @@ export const MedicalDataSection = () => {
   };
 
   const handleImportMedicalData = async () => {
-    if (!db || !tableName) return;
+    if (!ceramic || !collectionId) return;
     
     try {
       setLoading(true);
@@ -119,17 +96,17 @@ export const MedicalDataSection = () => {
       // Parse the CSV data
       const medicalData = parseMedicalData();
       
-      // Store each data point in the medical table
+      // Store each data point in the Ceramic collection
       for (const section in medicalData) {
         for (const entry of medicalData[section]) {
           const key = `${section}.${entry.parameter}|${entry.date}`;
           const value = `${entry.unit}|${entry.referenceRange}|${entry.value}`;
-          await insertMedicalData(db, tableName, key, value);
+          await insertData(DataType.MEDICAL, collectionId, { key, value });
         }
       }
       
       // Refresh data
-      const data = await getMedicalData(db, tableName);
+      const data = await getData(DataType.MEDICAL, collectionId);
       setPrivateData(data);
       organizeMedicalData(data);
       setImportedData(true);
@@ -287,28 +264,28 @@ export const MedicalDataSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Multi-Chain Support:</strong> Your medical data is securely stored on Optimism for cost efficiency, 
-            while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
-            interactions behind the scenes - no network switching required.
+            <strong>Ceramic Network:</strong> Your medical data is securely stored on the Ceramic Network, 
+            a decentralized data network built specifically for Web3 applications. Ceramic provides better 
+            performance, lower costs, and enhanced privacy for your sensitive medical information.
           </p>
         </div>
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!tableName ? (
+            {!collectionId ? (
               <div>
-                <p>You don't have a medical data table yet. Create one to store your lab results securely.</p>
+                <p>You don't have a medical data collection yet. Create one to store your lab results securely.</p>
                 <button 
                   className="button-primary logged-in-button" 
-                  onClick={handleCreateTable}
-                  disabled={loading}
+                  onClick={handleCreateCollection}
+                  disabled={loading || ceramicLoading}
                 >
-                  {loading ? 'Creating...' : 'Create Medical Table'}
+                  {loading ? 'Creating...' : 'Create Medical Collection'}
                 </button>
               </div>
             ) : (
               <div>
-                <p>Your lab results are stored privately on Tableland on the Optimism network.</p>
+                <p>Your lab results are stored privately on the Ceramic Network.</p>
                 
                 {!importedData ? (
                   <div>
