@@ -54,7 +54,7 @@ export const initTablelandWithOptimism = async (userAddress: string): Promise<Da
 export const isUserOnOptimism = async (): Promise<boolean> => {
   try {
     // Check if window.ethereum exists and define its type
-    const ethereum = (window as any).ethereum;
+    const ethereum = window.ethereum as unknown as ethers.Eip1193Provider;
     if (!ethereum) return false;
     
     const chainId = await ethereum.request({ method: 'eth_chainId' });
@@ -100,7 +100,7 @@ export const createOptimismSigner = async (userAddress: string) => {
     signMessage: async (message: string | Uint8Array) => {
       // Request signature from the user's wallet
       // This doesn't require switching networks
-      const ethereum = (window as any).ethereum;
+      const ethereum = window.ethereum as unknown as ethers.Eip1193Provider;
       if (!ethereum) throw new Error('No Ethereum provider found');
       
       // Convert message to string if it's a Uint8Array
@@ -117,13 +117,38 @@ export const createOptimismSigner = async (userAddress: string) => {
       return signature;
     },
     signTransaction: async (transaction: any) => {
-      // For full transaction signing, we would need a more complex implementation
-      // that handles the transaction serialization and signing
-      // This is a simplified version that works for our current needs
-      throw new Error('Direct transaction signing not implemented');
+      const ethereum = window.ethereum as unknown as ethers.Eip1193Provider;
+      if (!ethereum) throw new Error('No Ethereum provider found');
+      
+      // Get the transaction hash
+      const serializedTx = ethers.Transaction.from(transaction).serialized;
+      
+      // Request signature from wallet without requiring network switch
+      try {
+        const signature = await ethereum.request({
+          method: 'eth_signTransaction',
+          params: [{
+            ...transaction,
+            chainId: OPTIMISM_CHAIN_ID, // Explicitly set Optimism chain ID
+          }]
+        });
+        
+        return signature;
+      } catch (error) {
+        console.error('Error signing transaction:', error);
+        throw new Error('Failed to sign transaction');
+      }
     },
     // Add other required Signer methods as needed
-    connect: () => customSigner
+    connect: () => customSigner,
+    // Add populateTransaction method to handle transaction preparation
+    populateTransaction: async (transaction: any) => {
+      // Ensure the chainId is set to Optimism
+      return {
+        ...transaction,
+        chainId: parseInt(OPTIMISM_CHAIN_ID, 16) // Convert hex to decimal
+      };
+    }
   };
   
   return customSigner;
@@ -142,16 +167,31 @@ export const initTablelandWithOptimismWrite = async (userAddress: string): Promi
     // Create a dedicated provider for Optimism
     const optimismProvider = getOptimismProvider();
     
-    // For operations that require signing (like creating tables),
-    // we need to use a custom approach that leverages the user's wallet
-    // without requiring them to switch networks
+    // Check if we can use the custom signer
+    const ethereum = window.ethereum as unknown as ethers.Eip1193Provider;
     
-    // For now, we'll use a VoidSigner which is read-only
-    // In production, you would implement a proper cross-chain signing mechanism
-    // using the createOptimismSigner function above
+    if (ethereum) {
+      try {
+        // Create a custom signer that can sign transactions for Optimism
+        // while the user remains on their preferred network
+        const customSigner = await createOptimismSigner(userAddress);
+        
+        // Initialize the Database with the custom signer
+        const db = new Database({
+          signer: customSigner as unknown as ethers.Signer,
+          autoWait: true
+        });
+        
+        return db;
+      } catch (signerError) {
+        console.warn('Could not create custom signer, falling back to read-only mode:', signerError);
+      }
+    }
+    
+    // Fallback to read-only signer if custom signer fails or isn't available
     const readOnlySigner = new ethers.VoidSigner(userAddress, optimismProvider);
     
-    // Initialize the Database with the signer
+    // Initialize the Database with the read-only signer
     const db = new Database({
       signer: readOnlySigner,
       autoWait: true

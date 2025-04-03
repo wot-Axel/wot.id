@@ -243,18 +243,18 @@ export const IdentitySection = () => {
       <h2>My Identity</h2>
       
       {!isConnected ? (
-        <div className="legal-content">
+        <div className="section-content">
           <p>Please connect your wallet to manage your identity information.</p>
         </div>
-      ) : !isOptimismNetwork ? (
-        <div className="legal-content">
-          <p>Please switch to the Optimism network to use this feature.</p>
-          <button onClick={handleSwitchToOptimism} className="button-primary logged-in-button">
-            Switch to Optimism
-          </button>
-        </div>
       ) : (
-        <div className="legal-content">
+        <div className="section-content">
+          <div className="info-box" style={{ marginBottom: '1rem' }}>
+            <p>
+              <strong>Multi-Chain Support:</strong> Your identity data is securely stored on Optimism for cost efficiency, 
+              while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
+              interactions behind the scenes - no network switching required.
+            </p>
+          </div>
           {loading ? (
             <p>Loading...</p>
           ) : error ? (

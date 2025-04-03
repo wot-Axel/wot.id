@@ -487,7 +487,8 @@ label {
   border-bottom: 1px solid #e0e0e0;
 }
 
-.legal-content {
+/* General content section styling */
+.section-content, .legal-content {
   padding: 20px;
   width: 100%;
   max-width: 100%;
@@ -497,11 +498,13 @@ label {
   word-wrap: break-word;
 }
 
-.legal-content p {
+/* legal-content is kept for backward compatibility and will be gradually replaced with section-content */
+
+.legal-content p, .section-content p {
   margin-bottom: 15px;
 }
 
-.legal-content p:last-child {
+.legal-content p:last-child, .section-content p:last-child {
   margin-bottom: 0;
 }
 

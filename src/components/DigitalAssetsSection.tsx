@@ -275,7 +275,8 @@ export const DigitalAssetsSection = () => {
         <p>
           <strong>Multi-Chain Support:</strong> Your digital assets can be from any blockchain network.
           The asset data is securely stored on Optimism for cost efficiency, while your wallet remains 
-          connected to your preferred network.
+          connected to your preferred network. Our cross-chain technology handles all network interactions 
+          behind the scenes - no network switching required.
         </p>
       </div>
     );
@@ -465,7 +466,7 @@ export const DigitalAssetsSection = () => {
           Data is stored on Optimism for faster and cheaper transactions while keeping your main wallet connection unchanged.
         </span>
       </p>
-      <div className="legal-content">
+      <div className="section-content">
         {loading ? (
           <div className="loading-indicator">Loading digital assets...</div>
         ) : error ? (
