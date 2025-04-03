@@ -31,7 +31,7 @@ import {
   updateRecord,
   deleteRecord,
   clearCollection
-} from '../utils/ceramicUtils.new';
+} from '../utils/ceramicUtils';
 
 // Define medical parameter categories
 const MEDICAL_CATEGORIES = {

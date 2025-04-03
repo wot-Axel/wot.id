@@ -2,7 +2,12 @@ import React from 'react';
 import { Box, Container, Heading, Text, Button, VStack, HStack } from '@chakra-ui/react';
 import { useAppKit } from '../context';
 import CeramicMedicalDataSection from '../components/CeramicMedicalDataSection.new';
-import Layout from '../components/Layout';
+// Using a simple layout instead of importing Layout component
+const Layout = ({ children }: { children: React.ReactNode }) => (
+  <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+    {children}
+  </div>
+);
 
 const CeramicTestPage: React.FC = () => {
   const { address, connect, disconnect } = useAppKit();
