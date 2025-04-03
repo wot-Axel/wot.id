@@ -3,41 +3,14 @@
 // Footer is now included in the layout
 import { AboutSubNav } from "@/components/AboutSubNav";
 import Link from "next/link";
+import { useState } from "react";
 
 const About = () => {
+  const [showDetails, setShowDetails] = useState(false);
+  
   return (
     <div className="legal-page">
       <h1 className="page-title">My Trusted Identity</h1>
-      
-      <div className="legal-section">
-        <h2>About Web of Trust</h2>
-        <div className="legal-content">
-          <p>
-            The Web of Trust (WOT) is a concept in cryptography that helps establish the authenticity of binding between a public key and its owner. It's a decentralized alternative to the centralized certificate authority model.
-          </p>
-          
-          <p>
-            Our implementation uses the Ethereum Attestation Service to create verifiable claims about identity on the blockchain, allowing users to build a network of trust in a decentralized manner. Your primary identity remains on Ethereum L1, ensuring maximum security and interoperability with the broader ecosystem.
-          </p>
-        </div>
-      </div>
-      
-      <div className="legal-section">
-        <h2>How It Works</h2>
-        <div className="legal-content">
-          <p>
-            Users can create attestations that verify certain claims about themselves or others. These attestations are stored on the Optimism blockchain using the Ethereum Attestation Service, providing faster and more cost-effective transactions while maintaining security.
-          </p>
-          
-          <p>
-            By creating and receiving attestations, users build a web of trust that can be used to establish reputation and identity without relying on centralized authorities. All data remains under your control at all times.
-          </p>
-          
-          <p>
-            Our multi-chain architecture allows you to maintain your primary identity on Ethereum L1 while leveraging other networks like Optimism for specific features. This approach gives you the best of both worlds: the security and widespread adoption of Ethereum combined with the speed and lower costs of L2 solutions.
-          </p>
-        </div>
-      </div>
       
       <div className="legal-section">
         <h2>For Everything</h2>
@@ -94,33 +67,67 @@ const About = () => {
         </div>
       </div>
       
-      <div className="legal-section">
-        <h2>Technology</h2>
-        <div className="legal-content">
-          <p>
-            This dApp is built using modern technologies that prioritize security, privacy, and user experience:
-          </p>
-          <ul className="tech-list">
-            <li>Next.js for a fast, responsive frontend framework</li>
-            <li>Ethereum Attestation Service for verifiable blockchain attestations</li>
-            <li>Multi-chain architecture leveraging Ethereum L1 and Optimism L2</li>
-            <li>Tableland for structured, decentralized data storage</li>
-            <li>Reown AppKit for secure wallet connection</li>
-            <li>Dedicated RPC providers for seamless cross-chain operations</li>
-          </ul>
+      {showDetails && (
+        <>
+          <div className="legal-section">
+            <h2>About Web of Trust</h2>
+            <div className="legal-content">
+              <p>
+                The Web of Trust (WOT) is a concept in cryptography that helps establish the authenticity of binding between a public key and its owner. It's a decentralized alternative to the centralized certificate authority model.
+              </p>
+              
+              <p>
+                Our implementation uses the Ethereum Attestation Service to create verifiable claims about identity on the blockchain, allowing users to build a network of trust in a decentralized manner. Your primary identity remains on Ethereum L1, ensuring maximum security and interoperability with the broader ecosystem.
+              </p>
+            </div>
+          </div>
           
-          <p>
-            What makes wot.id different from other identity solutions:
-          </p>
-          <ul className="tech-list">
-            <li><strong>True Self-Sovereignty:</strong> Your data remains under your control at all times</li>
-            <li><strong>Multi-Chain by Design:</strong> Leverages the strengths of different networks without forcing you to switch</li>
-            <li><strong>Comprehensive Identity:</strong> Manages both on-chain and off-chain aspects of your identity</li>
-            <li><strong>Privacy-First:</strong> Built from the ground up with privacy as a core principle</li>
-            <li><strong>No Lock-In:</strong> Your identity isn't tied to our platform or any single blockchain</li>
-          </ul>
-        </div>
-      </div>
+          <div className="legal-section">
+            <h2>How It Works</h2>
+            <div className="legal-content">
+              <p>
+                Users can create attestations that verify certain claims about themselves or others. These attestations are stored on the Optimism blockchain using the Ethereum Attestation Service, providing faster and more cost-effective transactions while maintaining security.
+              </p>
+              
+              <p>
+                By creating and receiving attestations, users build a web of trust that can be used to establish reputation and identity without relying on centralized authorities. All data remains under your control at all times.
+              </p>
+              
+              <p>
+                Our multi-chain architecture allows you to maintain your primary identity on Ethereum L1 while leveraging other networks like Optimism for specific features. This approach gives you the best of both worlds: the security and widespread adoption of Ethereum combined with the speed and lower costs of L2 solutions.
+              </p>
+            </div>
+          </div>
+          
+          <div className="legal-section">
+            <h2>Technology</h2>
+            <div className="legal-content">
+              <p>
+                This dApp is built using modern technologies that prioritize security, privacy, and user experience:
+              </p>
+              <ul className="tech-list">
+                <li>Next.js for a fast, responsive frontend framework</li>
+                <li>Ethereum Attestation Service for verifiable blockchain attestations</li>
+                <li>Multi-chain architecture leveraging Ethereum L1 and Optimism L2</li>
+                <li>Tableland for structured, decentralized data storage</li>
+                <li>Reown AppKit for secure wallet connection</li>
+                <li>Dedicated RPC providers for seamless cross-chain operations</li>
+              </ul>
+              
+              <p>
+                What makes wot.id different from other identity solutions:
+              </p>
+              <ul className="tech-list">
+                <li><strong>True Self-Sovereignty:</strong> Your data remains under your control at all times</li>
+                <li><strong>Multi-Chain by Design:</strong> Leverages the strengths of different networks without forcing you to switch</li>
+                <li><strong>Comprehensive Identity:</strong> Manages both on-chain and off-chain aspects of your identity</li>
+                <li><strong>Privacy-First:</strong> Built from the ground up with privacy as a core principle</li>
+                <li><strong>No Lock-In:</strong> Your identity isn't tied to our platform or any single blockchain</li>
+              </ul>
+            </div>
+          </div>
+        </>
+      )}
       
       <div className="caution-text">
         <p>
@@ -130,8 +137,16 @@ const About = () => {
       </div>
       
       <div className="tell-me-more-button">
+        {showDetails ? (
+          <button className="button-primary" onClick={() => setShowDetails(false)}>Hide details</button>
+        ) : (
+          <button className="button-primary" onClick={() => setShowDetails(true)}>Tell me more about wot.id</button>
+        )}
+      </div>
+      
+      <div className="tell-me-more-button" style={{ marginTop: '10px' }}>
         <Link href="/about/who">
-          <button className="button-primary">Tell me more about wot.id</button>
+          <button className="button-secondary">Learn more about who we are</button>
         </Link>
       </div>
       

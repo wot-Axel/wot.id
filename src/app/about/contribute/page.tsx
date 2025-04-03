@@ -12,14 +12,18 @@ const AboutContribute = () => {
       <AboutSubNav />
       
       <div className="legal-section">
-        <h2>Our Unique Approach to Contribution</h2>
+        <h2>Contribute Work and Capital</h2>
         <div className="legal-content">
           <p>
-            wot.id is a bootstrapping startup with a vision to revolutionize digital identity. We welcome contributions of both work and capital, but we approach compensation differently than traditional startups.
+            <strong>Anyone interested can contribute work and capital to wot.id.</strong>
           </p>
           
           <p>
-            Anyone interested in cooperating on this project can contribute their skills, time, and resources. As a bootstrapping startup, we've developed an innovative approach to compensation that we call a <strong>"liquid equity split"</strong> - a transparent, fair, and blockchain-aligned way to reward early contributors.
+            As a bootstrapping startup, we've developed an innovative approach to compensation that we call a <strong>"liquid equity split"</strong> - a transparent, fair, and blockchain-aligned way to reward early contributors.
+          </p>
+          
+          <p>
+            wot.id welcomes contributions of both work and capital. Our approach to compensation differs from traditional startups, focusing on fair recognition of early contributions.
           </p>
           
           <p>
