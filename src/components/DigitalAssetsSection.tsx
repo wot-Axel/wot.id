@@ -262,11 +262,21 @@ export const DigitalAssetsSection = () => {
           // Check if window.ethereum exists and define its type
           const ethereum = (window as any).ethereum;
           const network = ethereum ? await ethereum.request({ method: 'eth_chainId' }) : null;
-          setIsOptimismNetwork(network === '0xa' || network === '0xa13'); // Optimism or Optimism Goerli
           
-          if (isOptimismNetwork) {
-            const database = await initTableland();
-            setDb(database);
+          // Consider both Optimism mainnet and testnet
+          const isOnOptimism = network === '0xa' || network === '0xa13'; // Optimism or Optimism Goerli
+          
+          // In production, require Optimism network. In development, be more permissive
+          const isDevelopment = process.env.NODE_ENV === 'development';
+          setIsOptimismNetwork(isOnOptimism || isDevelopment);
+          
+          // Always initialize the database connection
+          const database = await initTableland();
+          setDb(database);
+          
+          // If on Optimism or in development mode, proceed with table operations
+          if (isOnOptimism || isDevelopment) {
+            // Database already initialized above
             
             // Check if table exists
             const exists = await checkDigitalAssetsTableExists(database, address || '');
@@ -427,10 +437,13 @@ export const DigitalAssetsSection = () => {
   return (
     <div className="legal-section">
       <h2>My Digital Assets</h2>
+      <p className="section-description" style={{ marginBottom: '1rem' }}>
+        Securely store and manage your digital assets from multiple blockchains including Ethereum, Optimism, Polygon, and more.
+      </p>
       <div className="legal-content">
         {!isOptimismNetwork ? (
           <div className="alert alert-warning">
-            <p>Please switch to Optimism network to use digital assets storage.</p>
+            <p>Please switch to Optimism network to use digital assets storage. Your assets can be from any blockchain, but the data is stored on Optimism.</p>
             <button 
               className="button-primary" 
               onClick={handleSwitchToOptimism}
