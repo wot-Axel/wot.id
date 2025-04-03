@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { EAS } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
@@ -31,14 +31,8 @@ export const TrustBalanceSection = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (isConnected && address) {
-      fetchAttestations();
-    }
-  }, [isConnected, address]);
-
   // Function to fetch attestations
-  const fetchAttestations = async () => {
+  const fetchAttestations = useCallback(async () => {
     if (!isConnected || !address) {
       setError('Please connect your wallet first');
       return;
@@ -113,7 +107,13 @@ export const TrustBalanceSection = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isConnected, address]);
+
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchAttestations();
+    }
+  }, [isConnected, address, fetchAttestations]);
 
   // Filter attestations based on type
   const trustGiven = attestations.filter(att => 

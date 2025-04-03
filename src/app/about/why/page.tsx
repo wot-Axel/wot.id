@@ -14,7 +14,7 @@ const AboutWhy = () => {
         <h2>Why We Built wot.id</h2>
         <div className="legal-content">
           <p>
-            In today's digital world, our identities are fragmented across countless platforms and services. 
+            In today&apos;s digital world, our identities are fragmented across countless platforms and services. 
             Personal information is often stored in centralized databases vulnerable to breaches, and users have little control over how their data is used.
           </p>
           

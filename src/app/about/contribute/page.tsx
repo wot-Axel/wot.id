@@ -19,7 +19,7 @@ const AboutContribute = () => {
           </p>
           
           <p>
-            As a bootstrapping startup, we've developed an innovative approach to compensation that we call a <strong>"liquid equity split"</strong> - a transparent, fair, and blockchain-aligned way to reward early contributors.
+            As a bootstrapping startup, we&apos;ve developed an innovative approach to compensation that we call a <strong>&quot;liquid equity split&quot;</strong> - a transparent, fair, and blockchain-aligned way to reward early contributors.
           </p>
           
           <p>
@@ -104,7 +104,7 @@ const AboutContribute = () => {
           </ul>
           
           <p>
-            Importantly, our purpose is <em>explicitly not</em> the maximization of profits for outside shareholders. This legal structure supports our technical architecture's focus on user control and privacy.
+            Importantly, our purpose is <em>explicitly not</em> the maximization of profits for outside shareholders. This legal structure supports our technical architecture&apos;s focus on user control and privacy.
           </p>
         </div>
       </div>
@@ -117,11 +117,11 @@ const AboutContribute = () => {
           </p>
           
           <p>
-            This approach aligns perfectly with our multi-chain architecture, which already leverages different blockchain networks to optimize for efficiency, cost, and user experience. Just as we've designed our technical infrastructure to give users the best of both worlds, our economic model aims to give contributors fair compensation while maintaining our core principles.
+            This approach aligns perfectly with our multi-chain architecture, which already leverages different blockchain networks to optimize for efficiency, cost, and user experience. Just as we&apos;ve designed our technical infrastructure to give users the best of both worlds, our economic model aims to give contributors fair compensation while maintaining our core principles.
           </p>
           
           <p>
-            By participating in wot.id now, you're not just contributing to a project - you're helping to build a new model for how digital identity, data ownership, and value distribution can work in a more equitable digital future.
+            By participating in wot.id now, you&apos;re not just contributing to a project - you&apos;re helping to build a new model for how digital identity, data ownership, and value distribution can work in a more equitable digital future.
           </p>
         </div>
       </div>

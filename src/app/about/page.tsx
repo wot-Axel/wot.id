@@ -32,7 +32,7 @@ const About = () => {
           <ul className="feature-list">
             <li>I can access my identity from anywhere in the world with just a web browser</li>
             <li>My credentials are always available when I need them, backed by blockchain technology</li>
-            <li>I don't need to carry physical documents anymore, reducing risk of loss or theft</li>
+            <li>I don&apos;t need to carry physical documents anymore, reducing risk of loss or theft</li>
             <li>I can prove who I am without relying on centralized authorities that may be compromised</li>
             <li>My blockchain-based attestations are universally verifiable across multiple networks</li>
             <li>My identity works seamlessly across different blockchain ecosystems</li>
@@ -59,9 +59,9 @@ const About = () => {
         <div className="legal-content">
           <ul className="feature-list">
             <li>My identity attestations are permanent and immutable</li>
-            <li>I have a lasting record of my credentials that can't be erased</li>
+            <li>I have a lasting record of my credentials that can&apos;t be erased</li>
             <li>My reputation is preserved through time</li>
-            <li>I don't have to worry about losing important documents</li>
+            <li>I don&apos;t have to worry about losing important documents</li>
             <li>My digital identity will persist as long as the blockchain exists</li>
           </ul>
         </div>

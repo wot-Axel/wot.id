@@ -5,7 +5,29 @@
   },
   "overrides": [
     {
-      "files": ["src/components/AttestationForm.tsx"],
+      "files": [
+        "src/components/AttestationForm.tsx",
+        "src/components/ConversationView.tsx",
+        "src/components/ConversationList.tsx",
+        "src/components/NewConversationModal.tsx",
+        "src/app/chat/page.tsx",
+        "src/hooks/useWalletPreferences.ts",
+        "src/utils/optimismProvider.ts",
+        "src/config/index.ts",
+        "src/components/Scanner.tsx"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": [
+        "src/components/AccountsPasswordsSection.tsx",
+        "src/components/HumanRelationshipsSection.tsx",
+        "src/components/MedicalDataSection.tsx",
+        "src/components/OrganizationalAffiliationsSection.tsx",
+        "src/components/PrivateDataSection.tsx"
+      ],
       "rules": {
         "@typescript-eslint/no-explicit-any": "off"
       }

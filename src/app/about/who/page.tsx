@@ -52,7 +52,7 @@ const AboutWho = () => {
             <li><strong>Multi-Chain by Design:</strong> We leverage the strengths of different blockchain networks without forcing you to switch between them</li>
             <li><strong>Comprehensive Identity:</strong> We manage both on-chain assets and off-chain personal information in one unified interface</li>
             <li><strong>Privacy-First:</strong> Our platform is built from the ground up with privacy as a core principle, not as an afterthought</li>
-            <li><strong>No Lock-In:</strong> Your identity isn't tied to our platform or any single blockchain, giving you true portability</li>
+            <li><strong>No Lock-In:</strong> Your identity isn&apos;t tied to our platform or any single blockchain, giving you true portability</li>
           </ul>
         </div>
       </div>
