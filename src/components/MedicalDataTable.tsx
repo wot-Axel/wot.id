@@ -1,18 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { PrivateData } from '@/utils/tablelandUtils';
+import { DataRecord } from '@/utils/ceramicUtils';
 
 interface MedicalDataTableProps {
   sectionTitle: string;
-  data: PrivateData[];
+  data: DataRecord[];
 }
 
 export const MedicalDataTable: React.FC<MedicalDataTableProps> = ({ sectionTitle, data }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Group data by parameter
-  const parameterGroups: Record<string, PrivateData[]> = {};
+  const parameterGroups: Record<string, DataRecord[]> = {};
   data.forEach(item => {
     const parameter = item.key.split('|')[0]; // Format: "Parameter|Date"
     if (!parameterGroups[parameter]) {
