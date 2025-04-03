@@ -44,10 +44,47 @@ export interface ContentRecord extends CeramicRecord {
   tags?: string[];    // Optional tags for categorization and searching
 }
 
+/**
+ * Interface for data records returned by Ceramic functions
+ * This is a simplified version for minimal implementation
+ */
+export interface DataRecord {
+  id: string;         // Unique identifier for the record
+  key: string;        // Key for the record (often used for categorization)
+  value: string;      // Value of the record (usually JSON-stringified data)
+}
+
 // Configuration constants
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_BASE = 1000; // 1 second base for exponential backoff
 const CERAMIC_API_URL = 'https://ceramic-clay.3boxlabs.com';
+
+/**
+ * Insert data into a Ceramic collection
+ * Placeholder implementation for minimal build compatibility
+ */
+export const insertData = async (dataType: DataType, collectionId: string, data: any) => {
+  console.log('Inserting data into Ceramic (placeholder)', { dataType, collectionId, data });
+  return { id: `placeholder-${Date.now()}`, key: 'placeholder-key', value: JSON.stringify(data) };
+};
+
+/**
+ * Get data from a Ceramic collection
+ * Placeholder implementation for minimal build compatibility
+ */
+export const getData = async (dataType: DataType, collectionId: string) => {
+  console.log('Getting data from Ceramic (placeholder)', { dataType, collectionId });
+  return [];
+};
+
+/**
+ * Clear data from a Ceramic collection
+ * Placeholder implementation for minimal build compatibility
+ */
+export const clearData = async (dataType: DataType, collectionId: string) => {
+  console.log('Clearing data from Ceramic (placeholder)', { dataType, collectionId });
+  return true;
+};
 
 /**
  * Execute a Ceramic operation with retry logic and exponential backoff
