@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { optimism } from '@reown/appkit/networks';
 import { 
-  initTableland, 
   createPrivateTable, 
   insertPrivateData, 
   getPrivateData,
   checkPrivateTableExists,
   type PrivateData
 } from '@/utils/tablelandUtils';
+import { initTablelandWithOptimismWrite } from '@/utils/optimismProvider';
 import { Database } from '@tableland/sdk';
 
 // Define asset fields
@@ -40,28 +40,30 @@ export const RealWorldAssetsSection = () => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // Check network and initialize Tableland
+  // Initialize Tableland when connected
   useEffect(() => {
     if (isConnected && address) {
-      // We'll assume we're on Optimism for the mock implementation
-      setIsOptimismNetwork(true);
+      // No need to check network - we use cross-chain signing
       initTablelandDb();
     }
   }, [isConnected, address]);
 
-  // Function to switch to Optimism network
+  // No longer needed as we use cross-chain signing
+  // Keeping this commented for reference
+  /*
   const handleSwitchToOptimism = () => {
     switchNetwork(optimism);
     setIsOptimismNetwork(true);
   };
+  */
 
   const initTablelandDb = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Initialize Tableland
-      const dbInstance = await initTableland();
+      // Initialize Tableland with Optimism provider for writing
+      const dbInstance = await initTablelandWithOptimismWrite(address || '');
       setDb(dbInstance);
       
       // Check if table exists
@@ -161,18 +163,18 @@ export const RealWorldAssetsSection = () => {
       <h2>My Real World Assets</h2>
       
       {!isConnected ? (
-        <div className="legal-content">
+        <div className="section-content">
           <p>Please connect your wallet to manage your real world assets information.</p>
         </div>
-      ) : !isOptimismNetwork ? (
-        <div className="legal-content">
-          <p>Please switch to the Optimism network to use this feature.</p>
-          <button onClick={handleSwitchToOptimism} className="button-primary logged-in-button">
-            Switch to Optimism
-          </button>
-        </div>
       ) : (
-        <div className="legal-content">
+        <div className="section-content">
+          <div className="info-box" style={{ marginBottom: '1rem' }}>
+            <p>
+              <strong>Multi-Chain Support:</strong> Your real world assets data is securely stored on Optimism for cost efficiency, 
+              while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
+              interactions behind the scenes - no network switching required.
+            </p>
+          </div>
           {loading ? (
             <p>Loading...</p>
           ) : error ? (
