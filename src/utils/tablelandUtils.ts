@@ -2,6 +2,12 @@ import { Database } from '@tableland/sdk';
 import { optimism } from '@reown/appkit/networks';
 import { getWalletClient } from '@wagmi/core';
 
+// Maximum number of retry attempts for blockchain transactions
+const MAX_RETRY_ATTEMPTS = 3;
+
+// Delay between retry attempts in milliseconds (exponential backoff)
+const RETRY_DELAY_BASE = 1000; // 1 second
+
 // Interface for table data
 export interface TableData {
   id: number;
@@ -25,36 +31,48 @@ export enum TableType {
   CHAT = 'chat'
 }
 
-// Mock database for development
-const mockDatabases: Record<string, TableData[]> = {
-  [TableType.PRIVATE]: [],
-  [TableType.MEDICAL]: [],
-  [TableType.ACCOUNTS]: [],
-  [TableType.CONTACTS]: [],
-  [TableType.AFFILIATIONS]: [],
-  [TableType.CURRENCIES]: [],
-  [TableType.DIGITAL_ASSETS]: [],
-  [TableType.CHAT]: []
+// Utility function to execute a database operation with retry logic
+export const executeWithRetry = async <T>(operation: () => Promise<T>, tableType: TableType): Promise<T> => {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`Attempt ${attempt}/${MAX_RETRY_ATTEMPTS} failed for ${tableType} operation:`, error);
+      
+      // If this is the last attempt, don't delay, just throw
+      if (attempt === MAX_RETRY_ATTEMPTS) break;
+      
+      // Exponential backoff delay
+      const delay = RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  // If we've exhausted all retries, throw the last error
+  throw lastError;
 };
 
-// Track created tables
-const mockTablesCreated: Record<string, boolean> = {
-  [TableType.PRIVATE]: false,
-  [TableType.MEDICAL]: false,
-  [TableType.ACCOUNTS]: false,
-  [TableType.CONTACTS]: false,
-  [TableType.AFFILIATIONS]: false,
-  [TableType.CURRENCIES]: false,
-  [TableType.DIGITAL_ASSETS]: false,
-  [TableType.CHAT]: false
+// Utility function to validate and sanitize input strings
+export const sanitizeInput = (input: string): string => {
+  if (input === undefined || input === null) {
+    throw new Error('Input cannot be null or undefined');
+  }
+  
+  // Replace single quotes with two single quotes to escape them in SQL
+  return input.replace(/'/g, "''");
 };
 
 // Initialize Tableland database with Optimism chain
+// This function is kept for backwards compatibility
+// New code should use initTablelandWithOptimismWrite from optimismProvider.ts
 export const initTableland = async (): Promise<Database> => {
   try {
-    // In a real implementation, we would connect to Tableland here
-    // For now, we'll return a mock database interface
-    return {} as Database;
+    // Import dynamically to avoid circular dependencies
+    const { initTablelandWithOptimismWrite } = await import('./optimismProvider');
+    return await initTablelandWithOptimismWrite('');
   } catch (error) {
     console.error('Error initializing Tableland:', error);
     throw error;
@@ -63,17 +81,24 @@ export const initTableland = async (): Promise<Database> => {
 
 // Generic function to create a table
 export const createTable = async (db: Database, tableType: TableType, address: string): Promise<string> => {
-  try {
-    // In a real implementation, we would create a table in Tableland
-    // For now, we'll just mark the table as created in our mock database
-    mockTablesCreated[tableType] = true;
+  return executeWithRetry(async () => {
+    // Create a real Tableland table with the appropriate schema
+    // All tables have the same schema: id, key, value, created_at
+    const { meta: create } = await db.prepare(`
+      CREATE TABLE ${tableType}_${address.slice(0, 8)} (
+        id INTEGER PRIMARY KEY,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    `).run();
     
-    // Return a mock table name
-    return `${tableType}_${address.slice(0, 8)}_31337_1`;
-  } catch (error) {
-    console.error(`Error creating ${tableType} table:`, error);
-    throw error;
-  }
+    // Wait for transaction to complete
+    await create.txn?.wait();
+    
+    // Return the actual table name from Tableland
+    return create.txn?.name || `${tableType}_${address.slice(0, 8)}`;
+  }, tableType);
 };
 
 // Generic function to insert data into a table
@@ -84,57 +109,79 @@ export const insertData = async (
   key: string, 
   value: string
 ): Promise<void> => {
-  try {
-    // In a real implementation, we would insert data into Tableland
-    // For now, we'll just add it to our mock database
-    const newItem: TableData = {
-      id: mockDatabases[tableType].length + 1,
-      key,
-      value,
-      created_at: new Date().toISOString()
-    };
+  return executeWithRetry(async () => {
+    // Validate inputs to prevent SQL injection
+    if (!key || !value) {
+      throw new Error('Key and value must not be empty');
+    }
     
-    mockDatabases[tableType].push(newItem);
-  } catch (error) {
-    console.error(`Error inserting data into ${tableType} table:`, error);
-    throw error;
-  }
+    // Sanitize inputs using our utility function
+    const sanitizedKey = sanitizeInput(key);
+    const sanitizedValue = sanitizeInput(value);
+    const timestamp = new Date().toISOString();
+    
+    // Insert data into the Tableland table
+    const { meta: insert } = await db.prepare(`
+      INSERT INTO ${tableName} (key, value, created_at)
+      VALUES ('${sanitizedKey}', '${sanitizedValue}', '${timestamp}')
+    `).run();
+    
+    // Wait for transaction to complete
+    await insert.txn?.wait();
+  }, tableType);
 };
 
 // Generic function to get data from a table
 export const getData = async (db: Database, tableType: TableType, tableName: string): Promise<TableData[]> => {
   try {
-    // In a real implementation, we would query Tableland
-    // For now, we'll just return our mock database
-    return mockDatabases[tableType];
+    // Query data from the Tableland table
+    const { results } = await db.prepare(`
+      SELECT * FROM ${tableName} ORDER BY id ASC
+    `).all<TableData>();
+    
+    return results;
   } catch (error) {
     console.error(`Error getting data from ${tableType} table:`, error);
-    throw error;
+    // Return empty array instead of throwing to prevent UI crashes
+    return [];
   }
 };
 
 // Generic function to check if a table exists
-export const checkTableExists = async (db: Database, tableType: TableType, address: string): Promise<boolean> => {
+export const checkTableExists = async (db: Database, tableType: TableType, address: string): Promise<{exists: boolean, tableName: string}> => {
   try {
-    // In a real implementation, we would query Tableland to check if the table exists
-    // For now, we'll just check our mock database
-    return mockTablesCreated[tableType];
+    // Generate the expected table name
+    const expectedTableName = `${tableType}_${address.slice(0, 8)}`;
+    
+    // Query Tableland to list tables owned by this address
+    const { results } = await db.prepare(`
+      SELECT name FROM information_schema.tables
+      WHERE name LIKE '${expectedTableName}%'
+    `).all<{name: string}>();
+    
+    // Check if any of the tables match our expected name pattern
+    const exists = results.length > 0;
+    const tableName = exists ? results[0].name : expectedTableName;
+    
+    return { exists, tableName };
   } catch (error) {
     console.error(`Error checking if ${tableType} table exists:`, error);
-    throw error;
+    // Return false instead of throwing to prevent UI crashes
+    return { exists: false, tableName: `${tableType}_${address.slice(0, 8)}` };
   }
 };
 
 // Generic function to clear data from a table
 export const clearData = async (db: Database, tableType: TableType, tableName: string): Promise<void> => {
-  try {
-    // In a real implementation, we would delete data from Tableland
-    // For now, we'll just clear our mock database
-    mockDatabases[tableType] = [];
-  } catch (error) {
-    console.error(`Error clearing data from ${tableType} table:`, error);
-    throw error;
-  }
+  return executeWithRetry(async () => {
+    // Delete all data from the Tableland table
+    const { meta: clear } = await db.prepare(`
+      DELETE FROM ${tableName}
+    `).run();
+    
+    // Wait for transaction to complete
+    await clear.txn?.wait();
+  }, tableType);
 };
 
 // Backwards compatibility functions for existing code
@@ -154,11 +201,7 @@ export const getPrivateData = async (db: Database, tableName: string): Promise<T
 };
 
 export const checkPrivateTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
-  const exists = await checkTableExists(db, TableType.PRIVATE, address);
-  return {
-    exists,
-    tableName: exists ? `${TableType.PRIVATE}_${address.slice(0, 8)}_31337_1` : ''
-  };
+  return checkTableExists(db, TableType.PRIVATE, address);
 };
 
 export const clearPrivateData = async (db: Database, tableName: string): Promise<void> => {
@@ -179,11 +222,7 @@ export const getMedicalData = async (db: Database, tableName: string): Promise<T
 };
 
 export const checkMedicalTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
-  const exists = await checkTableExists(db, TableType.MEDICAL, address);
-  return {
-    exists,
-    tableName: exists ? `${TableType.MEDICAL}_${address.slice(0, 8)}_31337_1` : ''
-  };
+  return checkTableExists(db, TableType.MEDICAL, address);
 };
 
 export const clearMedicalData = async (db: Database, tableName: string): Promise<void> => {
@@ -204,11 +243,7 @@ export const getAccountsData = async (db: Database, tableName: string): Promise<
 };
 
 export const checkAccountsTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
-  const exists = await checkTableExists(db, TableType.ACCOUNTS, address);
-  return {
-    exists,
-    tableName: exists ? `${TableType.ACCOUNTS}_${address.slice(0, 8)}_31337_1` : ''
-  };
+  return checkTableExists(db, TableType.ACCOUNTS, address);
 };
 
 export const clearAccountsData = async (db: Database, tableName: string): Promise<void> => {
@@ -229,11 +264,7 @@ export const getContactsData = async (db: Database, tableName: string): Promise<
 };
 
 export const checkContactsTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
-  const exists = await checkTableExists(db, TableType.CONTACTS, address);
-  return {
-    exists,
-    tableName: exists ? `${TableType.CONTACTS}_${address.slice(0, 8)}_31337_1` : ''
-  };
+  return checkTableExists(db, TableType.CONTACTS, address);
 };
 
 export const clearContactsData = async (db: Database, tableName: string): Promise<void> => {
@@ -254,11 +285,7 @@ export const getAffiliationsData = async (db: Database, tableName: string): Prom
 };
 
 export const checkAffiliationsTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
-  const exists = await checkTableExists(db, TableType.AFFILIATIONS, address);
-  return {
-    exists,
-    tableName: exists ? `${TableType.AFFILIATIONS}_${address.slice(0, 8)}_31337_1` : ''
-  };
+  return checkTableExists(db, TableType.AFFILIATIONS, address);
 };
 
 export const clearAffiliationsData = async (db: Database, tableName: string): Promise<void> => {
@@ -279,11 +306,7 @@ export const getCurrenciesData = async (db: Database, tableName: string): Promis
 };
 
 export const checkCurrenciesTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
-  const exists = await checkTableExists(db, TableType.CURRENCIES, address);
-  return {
-    exists,
-    tableName: exists ? `${TableType.CURRENCIES}_${address.slice(0, 8)}_31337_1` : ''
-  };
+  return checkTableExists(db, TableType.CURRENCIES, address);
 };
 
 export const clearCurrenciesData = async (db: Database, tableName: string): Promise<void> => {
@@ -292,25 +315,65 @@ export const clearCurrenciesData = async (db: Database, tableName: string): Prom
 
 // Digital Assets table functions
 export const createDigitalAssetsTable = async (db: Database, address: string): Promise<{tableName: string}> => {
-  const tableName = await createTable(db, TableType.DIGITAL_ASSETS, address);
-  return { tableName };
+  return executeWithRetry(async () => {
+    // Create a real Tableland table with the appropriate schema for digital assets
+    // Digital assets table has a slightly different schema with no key field
+    const { meta: create } = await db.prepare(`
+      CREATE TABLE ${TableType.DIGITAL_ASSETS}_${address.slice(0, 8)} (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    `).run();
+    
+    // Wait for transaction to complete
+    await create.txn?.wait();
+    
+    // Return the actual table name from Tableland
+    return { tableName: create.txn?.name || `${TableType.DIGITAL_ASSETS}_${address.slice(0, 8)}` };
+  }, TableType.DIGITAL_ASSETS);
 };
 
 export const insertDigitalAssetData = async (db: Database, tableName: string, value: string): Promise<void> => {
-  // Digital assets use a different signature, so we use an empty key
-  return insertData(db, TableType.DIGITAL_ASSETS, tableName, '', value);
+  return executeWithRetry(async () => {
+    // Validate inputs to prevent SQL injection
+    if (!value) {
+      throw new Error('Value must not be empty');
+    }
+    
+    // Sanitize inputs using our utility function
+    const sanitizedValue = sanitizeInput(value);
+    const timestamp = new Date().toISOString();
+    
+    // Insert data into the Tableland table (digital assets table has no key field)
+    const { meta: insert } = await db.prepare(`
+      INSERT INTO ${tableName} (value, created_at)
+      VALUES ('${sanitizedValue}', '${timestamp}')
+    `).run();
+    
+    // Wait for transaction to complete
+    await insert.txn?.wait();
+  }, TableType.DIGITAL_ASSETS);
 };
 
 export const getDigitalAssetsData = async (db: Database, tableName: string): Promise<TableData[]> => {
-  return getData(db, TableType.DIGITAL_ASSETS, tableName);
+  try {
+    // Query data from the Tableland table
+    // Digital assets table has a different schema with no key field
+    const { results } = await db.prepare(`
+      SELECT id, '' as key, value, created_at FROM ${tableName} ORDER BY id ASC
+    `).all<TableData>();
+    
+    return results;
+  } catch (error) {
+    console.error(`Error getting data from digital assets table:`, error);
+    // Return empty array instead of throwing to prevent UI crashes
+    return [];
+  }
 };
 
 export const checkDigitalAssetsTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
-  const exists = await checkTableExists(db, TableType.DIGITAL_ASSETS, address);
-  return {
-    exists,
-    tableName: exists ? `${TableType.DIGITAL_ASSETS}_${address.slice(0, 8)}_31337_1` : ''
-  };
+  return checkTableExists(db, TableType.DIGITAL_ASSETS, address);
 };
 
 export const clearDigitalAssetsData = async (db: Database, tableName: string): Promise<void> => {
@@ -331,11 +394,7 @@ export const getChatData = async (db: Database, tableName: string): Promise<Tabl
 };
 
 export const checkChatTableExists = async (db: Database, address: string): Promise<{exists: boolean, tableName: string}> => {
-  const exists = await checkTableExists(db, TableType.CHAT, address);
-  return {
-    exists,
-    tableName: exists ? `${TableType.CHAT}_${address.slice(0, 8)}_31337_1` : ''
-  };
+  return checkTableExists(db, TableType.CHAT, address);
 };
 
 export const clearChatData = async (db: Database, tableName: string): Promise<void> => {
