@@ -9,7 +9,8 @@ import {
   insertPrivateData, 
   getPrivateData,
   checkTableExists,
-  type PrivateData
+  type PrivateData,
+  TableType
 } from '@/utils/tablelandUtils';
 import { Database } from '@tableland/sdk';
 
@@ -65,7 +66,7 @@ export const DocumentsSection = () => {
       setDb(dbInstance);
       
       // Check if table exists
-      const exists = await checkTableExists(dbInstance, address || '');
+      const exists = await checkTableExists(dbInstance, TableType.PRIVATE, address || '');
       
       if (exists) {
         // Get existing table name
