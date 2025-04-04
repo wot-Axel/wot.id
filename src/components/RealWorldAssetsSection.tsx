@@ -1,12 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount } from '@reown/appkit/react';
-import { useCeramic } from '@/context/CeramicContext';
+import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
+import { optimism } from '@reown/appkit/networks';
 import { 
-  DataType,
-  DataRecord
-} from '@/utils/ceramicUtils';
+  createPrivateTable, 
+  insertPrivateData, 
+  getPrivateData,
+  checkPrivateTableExists,
+  type PrivateData
+} from '@/utils/tablelandUtils';
+import { initCeramicWithOptimismWrite } from '@/utils/optimismProvider';
+import { Database } from '@/utils/ceramicUtils';
 
 // Define asset fields
 interface AssetField {
@@ -25,20 +30,23 @@ const assetFields: AssetField[] = [
 
 export const RealWorldAssetsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData } = useCeramic();
+  const { switchNetwork } = useAppKitNetwork();
+  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [collectionId, setCollectionId] = useState<string>('');
-  const [assetsData, setAssetsData] = useState<DataRecord[]>([]);
+  const [db, setDb] = useState<Database | null>(null);
+  const [tableName, setTableName] = useState<string>('');
+  const [assetsData, setAssetsData] = useState<PrivateData[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // Initialize Ceramic when connected
+  // Initialize Tableland when connected
   useEffect(() => {
-    if (isConnected && address && isInitialized) {
-      initCeramicCollection();
+    if (isConnected && address) {
+      // No need to check network - we use cross-chain signing
+      initTablelandDb();
     }
-  }, [isConnected, address, isInitialized]);
+  }, [isConnected, address]);
 
   // No longer needed as we use cross-chain signing
   // Keeping this commented for reference
@@ -49,42 +57,46 @@ export const RealWorldAssetsSection = () => {
   };
   */
 
-  const initCeramicCollection = async () => {
+  const initTablelandDb = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Check if collection exists
-      const collectionCheck = await checkCollectionExists(DataType.REAL_WORLD_ASSETS);
+      // Initialize Tableland with Optimism provider for writing
+      const dbInstance = await initCeramicWithOptimismWrite(address || '');
+      setDb(dbInstance);
       
-      if (collectionCheck.exists) {
-        // Use the collection ID from the check result
-        setCollectionId(collectionCheck.collectionId);
+      // Check if table exists
+      const tableCheck = await checkPrivateTableExists(dbInstance, address || '');
+      
+      if (tableCheck.exists) {
+        // Use the table name from the check result
+        setTableName(tableCheck.tableName);
         
         // Load existing data
-        await loadAssetsData(collectionCheck.collectionId);
+        await loadAssetsData(dbInstance, tableCheck.tableName);
       } else {
-        // Create new collection
-        const result = await createCollection(DataType.REAL_WORLD_ASSETS);
-        setCollectionId(result.collectionId);
+        // Create new table
+        const newTableName = await createPrivateTable(dbInstance, address || '');
+        setTableName(newTableName);
       }
     } catch (err) {
-      console.error('Error initializing Ceramic:', err);
-      setError('Failed to initialize Ceramic. Please try again.');
+      console.error('Error initializing Tableland:', err);
+      setError('Failed to initialize database. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadAssetsData = async (collectionId: string) => {
+  const loadAssetsData = async (dbInstance: Database, tableName: string) => {
     try {
       setLoading(true);
       
-      // Get all assets data
-      const allData = await getData(DataType.REAL_WORLD_ASSETS, collectionId);
+      // Get all private data
+      const allData = await getPrivateData(dbInstance, tableName);
       
       // Filter for asset-related data
-      const assetDataItems = allData.filter((item: DataRecord) => 
+      const assetDataItems = allData.filter(item => 
         assetFields.some(field => field.id === item.key)
       );
       
@@ -113,8 +125,8 @@ export const RealWorldAssetsSection = () => {
   };
 
   const saveAssetsData = async () => {
-    if (!ceramic || !collectionId) {
-      setError('Ceramic not initialized. Please try again.');
+    if (!db || !tableName) {
+      setError('Database not initialized. Please try again.');
       return;
     }
     
@@ -122,7 +134,7 @@ export const RealWorldAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      // Save each field to the Ceramic collection
+      // Save each field to the database
       for (const field of assetFields) {
         const value = formData[field.id] || '';
         
@@ -131,12 +143,12 @@ export const RealWorldAssetsSection = () => {
         
         // Only save if there's a value or if we're updating an existing value
         if (value || existingItem) {
-          await insertData(DataType.REAL_WORLD_ASSETS, collectionId, { key: field.id, value });
+          await insertPrivateData(db, tableName, field.id, value);
         }
       }
       
       // Reload data to show updated values
-      await loadAssetsData(collectionId);
+      await loadAssetsData(db, tableName);
       setIsEditing(false);
     } catch (err) {
       console.error('Error saving assets data:', err);
@@ -158,9 +170,9 @@ export const RealWorldAssetsSection = () => {
         <div className="section-content">
           <div className="info-box" style={{ marginBottom: '1rem' }}>
             <p>
-              <strong>Ceramic Network:</strong> Your real world assets data is securely stored on the Ceramic Network, 
-              a decentralized data network built specifically for Web3 applications. Ceramic provides better 
-              performance, lower costs, and enhanced privacy for your asset information.
+              <strong>Multi-Chain Support:</strong> Your real world assets data is securely stored on Optimism for cost efficiency, 
+              while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
+              interactions behind the scenes - no network switching required.
             </p>
           </div>
           {loading ? (
@@ -168,7 +180,7 @@ export const RealWorldAssetsSection = () => {
           ) : error ? (
             <div className="error-message">
               <p>{error}</p>
-              <button onClick={initCeramicCollection} className="button-primary logged-in-button">
+              <button onClick={initTablelandDb} className="button-primary logged-in-button">
                 Try Again
               </button>
             </div>
