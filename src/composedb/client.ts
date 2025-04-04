@@ -4,13 +4,14 @@
  */
 
 import { CeramicClient } from '@ceramicnetwork/http-client';
+import { TileDocument } from '@ceramicnetwork/stream-tile';
 import { ComposeClient } from '@composedb/client';
 import { RuntimeCompositeDefinition } from '@composedb/types';
 import { DID } from 'dids';
 import { Ed25519Provider } from 'key-did-provider-ed25519';
 import { getResolver } from 'key-did-resolver';
 import { monitorAsync } from '@/utils/performanceMonitor';
-import { getCeramicNodeUrl } from './config';
+import { getCeramicNodeUrl, markNodeAsFailed, CERAMIC_NODES, isProduction } from './config';
 import { DataTypeToModelMap } from './models';
 import { DataType } from '@/utils/ceramicUtils';
 import type { 
@@ -28,20 +29,76 @@ const mockDefinition: RuntimeCompositeDefinition = {
   accountData: {}
 };
 
-// Storage key for DID seed
+// Storage keys
 const DID_SEED_STORAGE_KEY = 'wot-id-did-seed';
+const CERAMIC_CONNECTION_STATUS_KEY = 'wot-id-ceramic-connection-status';
+
+// Connection status tracking
+interface ConnectionStatus {
+  lastSuccessfulNode?: string;
+  lastConnectedAt?: string;
+  failedNodes: string[];
+}
+
+// Get stored connection status
+const getConnectionStatus = (): ConnectionStatus => {
+  if (typeof window === 'undefined') {
+    return { failedNodes: [] };
+  }
+  
+  try {
+    const stored = localStorage.getItem(CERAMIC_CONNECTION_STATUS_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error parsing connection status:', error);
+  }
+  
+  return { failedNodes: [] };
+};
+
+// Save connection status
+const saveConnectionStatus = (status: ConnectionStatus): void => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(CERAMIC_CONNECTION_STATUS_KEY, JSON.stringify(status));
+  } catch (error) {
+    console.error('Error saving connection status:', error);
+  }
+};
 
 // ComposeDB client singleton
 let composeClient: any = null;
 
 /**
  * Generate or retrieve a persistent DID seed
+ * This function ensures that the same DID is used across sessions
+ * @param forceNew If true, generates a new seed regardless of existing one
  * @returns Uint8Array seed for DID generation
  */
-const getPersistentDIDSeed = (): Uint8Array => {
+const getPersistentDIDSeed = (forceNew = false): Uint8Array => {
   if (typeof window === 'undefined') {
-    // Server-side, generate a temporary seed
-    return crypto.getRandomValues(new Uint8Array(32));
+    // Server-side, generate a deterministic seed based on a fixed value
+    // This is for SSR compatibility - in real usage the client-side seed will be used
+    const serverSeed = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) {
+      serverSeed[i] = i % 256; // Deterministic pattern
+    }
+    return serverSeed;
+  }
+  
+  // Force new seed generation if requested
+  if (forceNew) {
+    const newSeed = crypto.getRandomValues(new Uint8Array(32));
+    try {
+      localStorage.setItem(DID_SEED_STORAGE_KEY, JSON.stringify(Array.from(newSeed)));
+      console.log('Generated and stored new DID seed (forced refresh)');
+    } catch (error) {
+      console.error('Error storing forced new DID seed:', error);
+    }
+    return newSeed;
   }
   
   // Check if we have a stored seed
@@ -49,9 +106,11 @@ const getPersistentDIDSeed = (): Uint8Array => {
   
   if (storedSeed) {
     try {
-      // Convert stored hex string back to Uint8Array
+      // Convert stored JSON array back to Uint8Array
       const seedArray = JSON.parse(storedSeed);
-      return new Uint8Array(seedArray);
+      const seed = new Uint8Array(seedArray);
+      console.log('Using existing persistent DID seed');
+      return seed;
     } catch (error) {
       console.error('Error parsing stored DID seed, generating new one:', error);
     }
@@ -72,6 +131,28 @@ const getPersistentDIDSeed = (): Uint8Array => {
 };
 
 /**
+ * Get the current DID from storage or create a new one
+ * @param seed Optional seed to use for DID creation
+ * @returns Promise resolving to authenticated DID
+ */
+const getOrCreateDID = async (seed?: Uint8Array): Promise<DID> => {
+  // Get the persistent seed or use the provided seed
+  const didSeed = seed || getPersistentDIDSeed();
+  
+  // Set up DID authentication with the seed
+  const provider = new Ed25519Provider(didSeed);
+  const did = new DID({
+    provider,
+    resolver: getResolver(),
+  });
+  
+  // Authenticate the DID
+  await did.authenticate();
+  
+  return did;
+};
+
+/**
  * Initialize the ComposeDB client
  * @param forceSeed Optional seed to force for DID authentication (overrides stored seed)
  * @returns Initialized ComposeDB client
@@ -82,29 +163,164 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
       return composeClient;
     }
 
-    // Create a Ceramic client
-    const ceramic = new CeramicClient(getCeramicNodeUrl());
-
-    // Get the persistent seed or use the forced seed if provided
-    const seed = forceSeed || getPersistentDIDSeed();
+    // Get connection status and determine best node to use
+    const connectionStatus = getConnectionStatus();
+    let ceramicUrl = '';
+    let ceramic: CeramicClient | null = null;
     
-    // Set up DID authentication with the persistent seed
-    const provider = new Ed25519Provider(seed);
-    const did = new DID({
-      provider,
-      resolver: getResolver(),
-    });
+    // Check for environment variable override
+    if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_CERAMIC_NODE) {
+      ceramicUrl = process.env.NEXT_PUBLIC_CERAMIC_NODE;
+      console.log(`Using environment-specified Ceramic node: ${ceramicUrl}`);
+      ceramic = new CeramicClient(ceramicUrl);
+    } else {
+      // Try the nodes in order of preference until one works
+      const nodesToTry = [];
+      
+      // If we have a previously successful node, try that first
+      if (connectionStatus.lastSuccessfulNode) {
+        nodesToTry.push(connectionStatus.lastSuccessfulNode);
+      }
+      
+      // Use the nodes from our configuration
+      // This will automatically handle development vs production environments
+      nodesToTry.push(...CERAMIC_NODES);
+      
+      // Try each node until one works
+      for (const nodeUrl of nodesToTry) {
+        if (connectionStatus.failedNodes.includes(nodeUrl)) {
+          console.log(`Skipping known failed node: ${nodeUrl}`);
+          continue;
+        }
+        
+        try {
+          console.log(`Attempting to connect to Ceramic node at: ${nodeUrl}`);
+          
+          // Test the node with a health check first
+          try {
+            const response = await fetch(`${nodeUrl}/api/v0/node/healthcheck`, {
+              method: 'GET',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Origin': typeof window !== 'undefined' ? window.location.origin : 'https://wot.id'
+              },
+              signal: AbortSignal.timeout(isProduction ? 2000 : 3000) // shorter timeout in production
+            });
+            
+            if (!response.ok) {
+              console.warn(`Node health check failed for ${nodeUrl}: ${response.status}`);
+              continue;
+            }
+          } catch (error) {
+            console.warn(`Node health check failed for ${nodeUrl}:`, error);
+            continue;
+          }
+          
+          // Create a Ceramic client with proper configuration
+          ceramic = new CeramicClient(nodeUrl);
+          ceramicUrl = nodeUrl;
+          break;
+        } catch (error) {
+          console.warn(`Failed to connect to ${nodeUrl}:`, error);
+          connectionStatus.failedNodes.push(nodeUrl);
+        }
+      }
+    }
     
-    await did.authenticate();
+    if (!ceramic) {
+      throw new Error('Failed to connect to any Ceramic node');
+    }
+    
+    console.log(`Successfully connected to Ceramic node at: ${ceramicUrl}`);
+    
+    // Note: Different versions of CeramicClient have different APIs
+    // We'll use a try-catch to handle potential compatibility issues
+    try {
+      // Use type assertion to handle the method that might not be in the type definitions
+      const ceramicWithOptions = ceramic as any;
+      if (typeof ceramicWithOptions.setClientOptions === 'function') {
+        ceramicWithOptions.setClientOptions({
+          syncInterval: 5000, // 5 seconds
+          syncTimeoutRetries: 3,
+          cacheLimit: 100,
+          concurrentRequests: 10
+        });
+      }
+    } catch (e) {
+      console.warn('Could not set client options, continuing with defaults');
+    }
+    
+    // Get or create an authenticated DID using our helper function
+    // This ensures the same DID is used across sessions
+    let did: DID;
+    
+    try {
+      console.log('Authenticating DID with Ceramic...');
+      // Use our new helper function to get or create a DID
+      // If forceSeed is provided, it will be used instead of the stored seed
+      did = await getOrCreateDID(forceSeed);
+      
+      // Test the connection with a simple operation
+      try {
+        // Create a test document to verify the connection works
+        const testDoc = await TileDocument.create(
+          ceramic,
+          { test: 'connection', timestamp: new Date().toISOString() },
+          { controllers: [did.id], family: 'wot.id-connection-test' }
+        );
+        
+        console.log('Successfully created test document with ID:', testDoc.id.toString());
+        console.log('Using DID:', did.id);
+        
+        // Connection successful, update status
+        connectionStatus.lastSuccessfulNode = ceramicUrl;
+        connectionStatus.lastConnectedAt = new Date().toISOString();
+        // Clear failed nodes on successful connection
+        connectionStatus.failedNodes = [];
+        saveConnectionStatus(connectionStatus);
+      } catch (testError: unknown) {
+        const error = testError instanceof Error ? testError : new Error(String(testError));
+        console.error('Failed to create test document:', error);
+        // Mark this node as failed
+        if (!connectionStatus.failedNodes.includes(ceramicUrl)) {
+          connectionStatus.failedNodes.push(ceramicUrl);
+          saveConnectionStatus(connectionStatus);
+        }
+        throw new Error(`Failed to verify Ceramic connection: ${error.message}`);
+      }
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error(`Error authenticating with Ceramic node at ${ceramicUrl}:`, error);
+      
+      // Mark this node as failed
+      if (!connectionStatus.failedNodes.includes(ceramicUrl)) {
+        connectionStatus.failedNodes.push(ceramicUrl);
+        saveConnectionStatus(connectionStatus);
+      }
+      
+      // Try to connect with a different node
+      const remainingNodes = CERAMIC_NODES.filter((node: string) => !connectionStatus.failedNodes.includes(node));
+      if (remainingNodes.length > 0) {
+        console.log(`Trying alternative Ceramic node from remaining ${remainingNodes.length} nodes...`);
+        // Recursively try with a different node
+        return initComposeDB(forceSeed);
+      }
+      
+      throw new Error(`Failed to connect to any Ceramic node: ${error.message}`);
+    }
     ceramic.did = did;
     
     console.log('Connected to Ceramic network with DID:', did.id);
 
     // Create a real ComposeDB client with our definition
+    console.log('Creating ComposeDB client with Ceramic instance');
     const realComposeClient = new ComposeClient({
       ceramic: ceramic as any, // Type assertion to avoid compatibility issues
       definition: mockDefinition
     });
+    
+    // Add additional error handling for ComposeDB operations
+    // We'll handle errors at the query call sites instead of modifying the executeQuery method
 
     // Create a client that uses the Ceramic network for data storage
     composeClient = {
@@ -141,43 +357,49 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
         }
       },
       
-      // Create a new model instance
-      create: async (modelName: string, data: any) => {
+      // Create a new model instance using TileDocument directly
+      create: async (modelName: string, data: Record<string, any>) => {
         try {
-          // Use ComposeDB to create a new document
-          const mutation = `
-            mutation {
-              create${modelName}(
-                input: {
-                  content: ${JSON.stringify({
-                    ...data,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                  })}
-                }
-              ) {
-                document {
-                  id
-                  content
-                }
-              }
-            }
-          `;
+          console.log(`Creating ${modelName} with data:`, data);
           
-          const result = await realComposeClient.executeQuery(mutation);
-          const resultData = result?.data as Record<string, any> || {};
-          const createResult = resultData[`create${modelName}`] as Record<string, any> || {};
-          const document = createResult.document as { id: string; content: any } | undefined;
+          // Create a TileDocument directly with the Ceramic client
+          // This bypasses ComposeDB and works with any Ceramic node
+          const content = {
+            ...data,
+            modelName, // Store the model name in the document
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
           
-          if (!document) {
-            throw new Error(`Failed to create ${modelName}`);
+          // Store in a deterministic way based on DID and content hash
+          const controller = ceramic.did?.id;
+          if (!controller) {
+            throw new Error('No authenticated DID available');
+          }
+          
+          // Create the document using the TileDocument API
+          // We already imported TileDocument at the top of the file
+          const doc = await TileDocument.create(ceramic, content as Record<string, any>, {
+            controllers: [controller],
+            family: `wot.id-${modelName}` // Use a consistent family for each model type
+          });
+          
+          console.log(`Successfully created ${modelName} document:`, doc.id.toString());
+          
+          // Store the document ID in localStorage for easy retrieval
+          // This is in addition to the network storage
+          if (typeof window !== 'undefined') {
+            const storageKey = `ceramic-docs-${modelName}`;
+            const existingIds = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            existingIds.push(doc.id.toString());
+            localStorage.setItem(storageKey, JSON.stringify(existingIds));
           }
           
           // Return the created document with our expected format
           return {
-            documentId: document.id,
-            streamId: document.id,
-            ...document.content
+            documentId: doc.id.toString(),
+            streamId: doc.id.toString(),
+            ...content
           };
         } catch (error) {
           console.error(`Error creating ${modelName}:`, error);
@@ -185,66 +407,107 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
         }
       },
       
-      // Update an existing model
-      update: async (modelName: string, id: string, data: any) => {
+      // Update an existing model using TileDocument directly
+      update: async (modelName: string, id: string, data: Record<string, any>) => {
         try {
-          // Use ComposeDB to update the document
-          const mutation = `
-            mutation {
-              update${modelName}(
-                input: {
-                  id: "${id}"
-                  content: ${JSON.stringify({
-                    ...data,
-                    updatedAt: new Date().toISOString()
-                  })}
+          console.log(`Updating ${modelName} document ${id} with data:`, data);
+          
+          // Load the existing document
+          // We already imported TileDocument at the top of the file
+          try {
+            console.log(`Attempting to load document with ID: ${id}`);
+            // Add retry logic for document loading
+            let retries = 3;
+            let doc: any = null;
+            
+            while (retries > 0) {
+              try {
+                doc = await TileDocument.load(ceramic, id);
+                break; // Successfully loaded
+              } catch (loadError) {
+                console.warn(`Load attempt failed (${retries} retries left):`, loadError);
+                retries--;
+                
+                // Mark the current node as failed if we've exhausted retries
+                if (retries === 0) {
+                  // Use the URL we connected with since apiUrl may not be available
+                  markNodeAsFailed(ceramicUrl);
+                  throw loadError;
                 }
-              ) {
-                document {
-                  id
-                  content
-                }
+                
+                // Wait before retrying
+                await new Promise(resolve => setTimeout(resolve, 1000));
               }
             }
-          `;
-          
-          const result = await realComposeClient.executeQuery(mutation);
-          const resultData = result?.data as Record<string, any> || {};
-          const updateResult = resultData[`update${modelName}`] as Record<string, any> || {};
-          const document = updateResult.document as { id: string; content: any } | undefined;
-          
-          if (!document) {
+            
+            // Safety check - if doc is still null after retries, throw an error
+            if (!doc) {
+              throw new Error(`Failed to load document ${id} after multiple attempts`);
+            }
+            
+            // Get the current content
+            const currentContent = doc.content || {};
+            
+            // Update the document
+            await doc.update({
+              ...(currentContent as Record<string, any>),
+              ...(data as Record<string, any>),
+              updatedAt: new Date().toISOString()
+            });
+            
+            return {
+              documentId: id,
+              streamId: id,
+              ...(doc.content as Record<string, any>)
+            };
+          } catch (e) {
+            console.error(`Document ${id} not found or could not be loaded`, e);
             return null;
           }
           
-          // Return the updated document
-          return {
-            documentId: document.id,
-            streamId: document.id,
-            ...document.content
-          };
+          console.log(`Successfully updated ${modelName} document:`, id);
+          
+
         } catch (error) {
           console.error(`Error updating ${modelName}:`, error);
           return null;
         }
       },
       
-      // Query for models
-      query: async ({ query }: { query: string }) => {
+      // Query for models by retrieving all documents of a specific model type
+      query: async ({ query, modelName }: { query: string; modelName?: string }) => {
         try {
-          // Execute the query directly using the ComposeDB client
-          return await realComposeClient.executeQuery(query);
+          // Extract model name from query if not provided
+          if (!modelName) {
+            const modelNameMatch = query.match(/viewer\s*{\s*(\w+)\s*{/i);
+            modelName = modelNameMatch ? modelNameMatch[1].replace(/Index$/, '') : 'Generic';
+          }
+          
+          console.log(`Querying for ${modelName} documents`);
+          
+          // Get all documents of this model type
+          const documents = await composeClient.list(modelName);
+          
+          // Format the result to match the expected ComposeDB response format
+          return {
+            data: {
+              viewer: {
+                [`${modelName}Index`]: {
+                  edges: documents.map((doc: Record<string, any>) => ({
+                    node: doc
+                  }))
+                }
+              }
+            }
+          };
         } catch (error) {
           console.error('Error executing query:', error);
           
           // Return empty result on error
-          const modelNameMatch = query.match(/viewer\s*{\s*(\w+)\s*{/i);
-          const modelName = modelNameMatch ? modelNameMatch[1] : 'GenericIndex';
-          
           return {
             data: {
               viewer: {
-                [modelName]: {
+                [`${modelName || 'Generic'}Index`]: {
                   edges: []
                 }
               }
@@ -254,36 +517,87 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
       },
       
       // List all documents of a model type
-      list: async (modelName: string) => {
+      list: async (modelName: string): Promise<Array<Record<string, any>>> => {
         try {
-          // Query for all documents of this model type
-          const result = await realComposeClient.executeQuery(`
-            query {
-              viewer {
-                ${modelName}Index(first: 100) {
-                  edges {
-                    node {
-                      id
-                      content
-                    }
-                  }
-                }
-              }
+          console.log(`Listing all ${modelName} documents`);
+          
+          // First try to get document IDs from localStorage for quick access
+          let docIds: string[] = [];
+          if (typeof window !== 'undefined') {
+            const storageKey = `ceramic-docs-${modelName}`;
+            const storedIds = localStorage.getItem(storageKey);
+            if (storedIds) {
+              docIds = JSON.parse(storedIds);
             }
-          `);
+          }
           
-          const viewerData = result?.data?.viewer as Record<string, any> || {};
-          const modelData = viewerData[`${modelName}Index`] as { edges: any[] } | undefined;
-          const edges = modelData?.edges || [];
+          console.log(`Found ${docIds.length} stored document IDs for ${modelName}`);
           
-          return edges.map((edge: any) => ({
-            documentId: edge.node.id,
-            streamId: edge.node.id,
-            ...edge.node.content
-          }));
+          // Load each document
+          const documents: Array<Record<string, any>> = [];
+          for (const id of docIds) {
+            try {
+              console.log(`Attempting to load document in list with ID: ${id}`);
+              let doc: any;
+              try {
+                doc = await TileDocument.load(ceramic, id);
+              } catch (loadError) {
+                console.warn(`Failed to load document in list: ${id}`, loadError);
+                // Mark the node as potentially failed
+                const error = loadError as Error;
+                if (error.message && error.message.includes('Load failed')) {
+                  // Use the URL we connected with since apiUrl may not be available
+                  markNodeAsFailed(ceramicUrl);
+                }
+                continue; // Skip this document and move to the next one
+              }
+              // Type-safe check for the deleted property
+              const content = doc.content as Record<string, any>;
+              if (doc && content && content.deleted !== true) {
+                documents.push({
+                  documentId: id,
+                  streamId: id,
+                  ...(doc.content as Record<string, any>)
+                });
+              }
+            } catch (e) {
+              console.warn(`Failed to load document ${id}:`, e);
+            }
+          }
+          
+          console.log(`Successfully loaded ${documents.length} ${modelName} documents`);
+          return documents;
         } catch (error) {
           console.error(`Error listing ${modelName}:`, error);
           return [];
+        }
+      },
+      
+      // Delete a document (mark as deleted)
+      delete: async (modelName: string, id: string) => {
+        try {
+          // Load the document
+          // We already imported TileDocument at the top of the file
+          try {
+            const doc = await TileDocument.load(ceramic, id);
+            
+            // Mark as deleted
+            await doc.update({
+              ...(doc.content as Record<string, any>),
+              deleted: true,
+              updatedAt: new Date().toISOString()
+            });
+            
+            return true;
+          } catch (e) {
+            console.error(`Document ${id} not found or could not be loaded`, e);
+            return false;
+          }
+          
+
+        } catch (error) {
+          console.error(`Error deleting ${modelName} document ${id}:`, error);
+          return false;
         }
       }
     };
