@@ -3,11 +3,31 @@
  * This script runs the Ceramic integration tests
  */
 
+// Mock localStorage for Node.js environment
+if (typeof global.localStorage === 'undefined') {
+  global.localStorage = {
+    _data: {},
+    getItem(key) {
+      return this._data[key];
+    },
+    setItem(key, value) {
+      this._data[key] = value;
+    },
+    removeItem(key) {
+      delete this._data[key];
+    },
+    clear() {
+      this._data = {};
+    }
+  };
+  console.log('✅ localStorage mock initialized');
+}
+
 // Import the test utilities
-const ceramicUtils = require('./src/utils/ceramicUtils');
-const schemaValidation = require('./src/utils/schemaValidation');
-const dataExportImport = require('./src/utils/dataExportImport');
-const encryptionUtils = require('./src/utils/encryptionUtils');
+import * as ceramicUtils from './src/utils/ceramicUtils.js';
+import * as schemaValidation from './src/utils/schemaValidation.js';
+import * as dataExportImport from './src/utils/dataExportImport.js';
+import * as encryptionUtils from './src/utils/encryptionUtils.js';
 
 async function runTests() {
   console.log('🧪 Starting Ceramic Integration Tests...');
