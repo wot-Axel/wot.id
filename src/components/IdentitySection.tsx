@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import dynamic from 'next/dynamic';
 import { useCeramic } from '@/context/CeramicContext';
-import { DataType, DataRecord } from '@/utils/ceramicUtils';
+import { 
+  DataType, 
+  TableData,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
+} from '@/utils/ceramicUtils';
 
 // Dynamically import the ScannerModal component with no SSR
 const ScannerModal = dynamic(() => import('./ScannerModal'), {
@@ -33,29 +41,28 @@ const identityFields: IdentityField[] = [
 
 export const IdentitySection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData } = useCeramic();
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, error: ceramicError } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [collectionId, setCollectionId] = useState<string>('');
-  const [identityData, setIdentityData] = useState<DataRecord[]>([]);
+  const [identityData, setIdentityData] = useState<TableData[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
 
-  // Initialize Ceramic when connected
-  useEffect(() => {
-    if (isConnected && address && isInitialized && !loading && !ceramicLoading) {
-      initCeramicCollection();
-    }
-  }, [isConnected, address, isInitialized, loading, ceramicLoading]);
-
-  const initCeramicCollection = async () => {
+  // Define initCeramicCollection with useCallback to avoid dependency issues
+  const initCeramicCollection = useCallback(async () => {
     try {
+      if (!ceramic || !did) {
+        setError('Ceramic not initialized or no DID available.');
+        return;
+      }
+
       setLoading(true);
       setError('');
       
       // Check if collection exists
-      const collectionCheck = await checkCollectionExists(DataType.PROFILE);
+      const collectionCheck = await checkCollectionExists(ceramic, DataType.PROFILE, did);
       
       if (collectionCheck.exists) {
         // Use the collection ID from the check result
@@ -65,7 +72,7 @@ export const IdentitySection = () => {
         await loadIdentityData(collectionCheck.collectionId);
       } else {
         // Create new collection
-        const result = await createCollection(DataType.PROFILE);
+        const result = await createCollection(ceramic, DataType.PROFILE, did);
         setCollectionId(result.collectionId);
       }
     } catch (err) {
@@ -74,26 +81,48 @@ export const IdentitySection = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ceramic, did, setError, setLoading, setCollectionId]);
+  
+  // Initialize Ceramic when connected
+  useEffect(() => {
+    if (isConnected && address && isInitialized && !loading && !ceramicLoading) {
+      initCeramicCollection();
+    }
+  }, [isConnected, address, isInitialized, loading, ceramicLoading, initCeramicCollection]);
 
-  const loadIdentityData = async (collectionId: string) => {
+
+
+  const loadIdentityData = useCallback(async (collectionId: string) => {
     try {
+      if (!ceramic) {
+        setError('Ceramic not initialized.');
+        return;
+      }
+      
       setLoading(true);
       
       // Get all profile data
-      const allData = await getData(DataType.PROFILE, collectionId);
+      const records = await getRecords(ceramic, DataType.PROFILE, collectionId);
       
-      // Filter for identity-related data
-      const identityDataItems = allData.filter((item: DataRecord) => 
-        identityFields.some(field => field.id === item.key)
-      );
+      // Convert records to the format expected by the component
+      const formattedData: TableData[] = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: typeof record.content === 'string' ? record.content : JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
       
-      setIdentityData(identityDataItems);
+      setIdentityData(formattedData);
       
       // Populate form data from existing data
       const initialFormData: Record<string, string> = {};
-      identityDataItems.forEach((item: DataRecord) => {
-        initialFormData[item.key] = item.value;
+      records.forEach(record => {
+        const content = record.content as Record<string, string>;
+        if (content) {
+          Object.keys(content).forEach(key => {
+            initialFormData[key] = content[key];
+          });
+        }
       });
       
       setFormData(initialFormData);
@@ -103,7 +132,7 @@ export const IdentitySection = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ceramic, setLoading, setError, setIdentityData, setFormData]);
 
   const handleInputChange = (fieldId: string, value: string) => {
     setFormData(prev => ({
@@ -192,17 +221,20 @@ export const IdentitySection = () => {
       setLoading(true);
       setError('');
       
-      // Save each field to the Ceramic collection
-      for (const field of identityFields) {
-        const value = formData[field.id] || '';
-        
-        // Check if this field already exists in the data
-        const existingItem = identityData.find(item => item.key === field.id);
-        
-        // Only save if there's a value or if we're updating an existing value
-        if (value || existingItem) {
-          await insertData(DataType.PROFILE, collectionId, { key: field.id, value });
+      // Clear existing collection
+      await clearCollection(ceramic, DataType.PROFILE, collectionId);
+      
+      // Combine all field values into a single document record
+      const identityDataObj: Record<string, string> = {};
+      Object.keys(formData).forEach(key => {
+        if (formData[key]) {
+          identityDataObj[key] = formData[key];
         }
+      });
+      
+      // Create a new record with all identity data
+      if (Object.keys(identityDataObj).length > 0) {
+        await createRecord(ceramic, DataType.PROFILE, collectionId, identityDataObj, ['identity']);
       }
       
       // Reload data to show updated values

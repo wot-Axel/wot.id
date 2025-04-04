@@ -42,7 +42,10 @@ export enum DataType {
   DIGITAL_ASSETS = 'digital_assets', // Digital assets and NFTs
   CREDENTIALS = 'credentials',   // Verifiable credentials
   CONNECTIONS = 'connections',   // Social connections and contacts
-  PREFERENCES = 'preferences'    // User preferences and settings
+  PREFERENCES = 'preferences',   // User preferences and settings
+  ORGANIZATIONS = 'organizations', // Organizational affiliations
+  REAL_ASSETS = 'real_assets',   // Real-world assets
+  DOCUMENTS = 'documents'        // Legal documents and identification
 }
 
 /**
@@ -432,9 +435,12 @@ export const initCeramic = async (
   }
 };
 
+// In-memory storage for testing
+const inMemoryStorage: Record<string, ContentRecord[]> = {};
+
 /**
  * Check if a collection exists for a given data type and DID
- * Placeholder implementation
+ * Simple in-memory implementation for testing
  * @param ceramic The Ceramic client instance
  * @param dataType The type of data
  * @param did The user's DID (Decentralized Identifier)
@@ -445,14 +451,15 @@ export const checkCollectionExists = async (
   dataType: DataType,
   did: string
 ): Promise<{ exists: boolean; collectionId: string }> => {
-  // Simplified placeholder implementation
   const collectionId = `${dataType}-${did.split(':').pop()}`;
-  return { exists: false, collectionId };
+  const exists = !!inMemoryStorage[collectionId] && inMemoryStorage[collectionId].length > 0;
+  console.log(`Checking if collection exists: ${collectionId}, result: ${exists}`);
+  return { exists, collectionId };
 };
 
 /**
  * Create a collection for a given data type
- * Placeholder implementation
+ * Simple in-memory implementation for testing
  * @param ceramic The Ceramic client instance
  * @param dataType The type of data
  * @param did The user's DID (Decentralized Identifier)
@@ -463,14 +470,20 @@ export const createCollection = async (
   dataType: DataType,
   did: string
 ): Promise<{ collectionId: string }> => {
-  // Simplified placeholder implementation
   const collectionId = `${dataType}-${did.split(':').pop()}`;
+  
+  // Initialize the collection if it doesn't exist
+  if (!inMemoryStorage[collectionId]) {
+    inMemoryStorage[collectionId] = [];
+  }
+  
+  console.log(`Created collection: ${collectionId}`);
   return { collectionId };
 };
 
 /**
  * Create a new record in a collection
- * Placeholder implementation
+ * Simple in-memory implementation for testing
  * @param ceramic The Ceramic client instance
  * @param dataType The type of data
  * @param collectionId The collection ID
@@ -485,11 +498,16 @@ export const createRecord = async (
   content: any,
   tags?: string[]
 ): Promise<ContentRecord> => {
-  // Simplified placeholder implementation
+  // Initialize the collection if it doesn't exist
+  if (!inMemoryStorage[collectionId]) {
+    inMemoryStorage[collectionId] = [];
+  }
+  
   const timestamp = new Date().toISOString();
   const did = ceramic.did?.id || 'unknown';
   
-  return {
+  // Create a new record
+  const record: ContentRecord = {
     id: Math.random().toString(36).substring(2, 15),
     streamId: Math.random().toString(36).substring(2, 15),
     controller: did,
@@ -498,11 +516,17 @@ export const createRecord = async (
     content,
     tags
   };
+  
+  // Add the record to the collection
+  inMemoryStorage[collectionId].push(record);
+  
+  console.log(`Created record in ${collectionId}:`, record);
+  return record;
 };
 
 /**
  * Get all records from a collection
- * Placeholder implementation
+ * Simple in-memory implementation for testing
  * @param ceramic The Ceramic client instance
  * @param dataType The type of data
  * @param collectionId The collection ID
@@ -513,8 +537,13 @@ export const getRecords = async (
   dataType: DataType,
   collectionId: string
 ): Promise<ContentRecord[]> => {
-  // Simplified placeholder implementation
-  return [];
+  // Return an empty array if the collection doesn't exist
+  if (!inMemoryStorage[collectionId]) {
+    return [];
+  }
+  
+  console.log(`Retrieved ${inMemoryStorage[collectionId].length} records from ${collectionId}`);
+  return [...inMemoryStorage[collectionId]];
 };
 
 /**
@@ -568,7 +597,7 @@ export const deleteRecord = async (
 
 /**
  * Clear all records from a collection
- * Placeholder implementation
+ * Simple in-memory implementation for testing
  * @param ceramic The Ceramic client instance
  * @param dataType The type of data
  * @param collectionId The collection ID
@@ -579,8 +608,15 @@ export const clearCollection = async (
   dataType: DataType,
   collectionId: string
 ): Promise<void> => {
-  // Simplified placeholder implementation
-  console.log(`Would clear all records from ${collectionId}`);
+  // Initialize the collection if it doesn't exist
+  if (!inMemoryStorage[collectionId]) {
+    inMemoryStorage[collectionId] = [];
+    return;
+  }
+  
+  // Clear all records from the collection
+  inMemoryStorage[collectionId] = [];
+  console.log(`Cleared all records from ${collectionId}`);
 };
 
 /**

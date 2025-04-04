@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  createPrivateTable, 
-  insertPrivateData, 
-  getPrivateData,
-  checkPrivateTableExists,
-  type PrivateData
-} from '@/utils/tablelandUtils';
-import { initCeramicWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@/utils/ceramicUtils';
+  Database,
+  DataType,
+  PrivateData,
+  initCeramic,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
+} from '@/utils/ceramicUtils';
+import { useCeramic } from '@/context/CeramicContext';
 
 // Define asset fields
 interface AssetField {
@@ -30,8 +32,6 @@ const assetFields: AssetField[] = [
 
 export const RealWorldAssetsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [db, setDb] = useState<Database | null>(null);
@@ -40,79 +40,105 @@ export const RealWorldAssetsSection = () => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // Initialize Tableland when connected
+  // Use the Ceramic context
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+
+  // Initialize Ceramic connection
   useEffect(() => {
-    if (isConnected && address) {
-      // No need to check network - we use cross-chain signing
-      initTablelandDb();
+    const init = async () => {
+      try {
+        if (isConnected && address && !isInitialized && !ceramicLoading) {
+          setLoading(true);
+          setError('');
+          
+          // Connect to Ceramic network
+          await connect();
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error initializing Ceramic:', err);
+        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    init();
+  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+
+    // Load assets data when Ceramic is initialized
+  useEffect(() => {
+    const loadAssetsData = async () => {
+      try {
+        if (isInitialized && ceramic && did) {
+          setLoading(true);
+          
+          // Check if collection exists
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.REAL_ASSETS, did);
+          
+          if (exists) {
+            setTableName(collectionId);
+            
+            // Get existing data
+            const records = await getRecords(ceramic, DataType.REAL_ASSETS, collectionId);
+            
+            // Convert records to the format expected by the component
+            const formattedData = records.map((record, index) => ({
+              id: index,
+              key: record.id,
+              value: JSON.stringify(record.content),
+              created_at: new Date().toISOString()
+            }));
+            
+            setAssetsData(formattedData);
+            
+            // Populate form data from existing records
+            const initialFormData: Record<string, string> = {};
+            records.forEach(record => {
+              const content = record.content as Record<string, string>;
+              Object.keys(content).forEach(key => {
+                initialFormData[key] = content[key];
+              });
+            });
+            
+            setFormData(initialFormData);
+          } else {
+            // Create a new collection if it doesn't exist
+            console.log('Creating new collection for real world assets');
+            const result = await createCollection(ceramic, DataType.REAL_ASSETS, did);
+            setTableName(result.collectionId);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error loading real world assets data:', err);
+        setError(err.message || 'Failed to load real world assets data. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    loadAssetsData();
+  }, [isInitialized, ceramic, did]);
+
+  const handleCreateTable = async () => {
+    if (!ceramic || !did) {
+      setError('Ceramic not initialized or no DID available.');
+      return;
     }
-  }, [isConnected, address]);
-
-  // No longer needed as we use cross-chain signing
-  // Keeping this commented for reference
-  /*
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-  */
-
-  const initTablelandDb = async () => {
+    
     try {
       setLoading(true);
       setError('');
       
-      // Initialize Tableland with Optimism provider for writing
-      const dbInstance = await initCeramicWithOptimismWrite(address || '');
-      setDb(dbInstance);
+      // Create a new collection for real world assets data
+      const { collectionId } = await createCollection(ceramic, DataType.REAL_ASSETS, did);
+      setTableName(collectionId);
       
-      // Check if table exists
-      const tableCheck = await checkPrivateTableExists(dbInstance, address || '');
-      
-      if (tableCheck.exists) {
-        // Use the table name from the check result
-        setTableName(tableCheck.tableName);
-        
-        // Load existing data
-        await loadAssetsData(dbInstance, tableCheck.tableName);
-      } else {
-        // Create new table
-        const newTableName = await createPrivateTable(dbInstance, address || '');
-        setTableName(newTableName);
-      }
-    } catch (err) {
-      console.error('Error initializing Tableland:', err);
-      setError('Failed to initialize database. Please try again.');
-    } finally {
       setLoading(false);
-    }
-  };
-
-  const loadAssetsData = async (dbInstance: Database, tableName: string) => {
-    try {
-      setLoading(true);
-      
-      // Get all private data
-      const allData = await getPrivateData(dbInstance, tableName);
-      
-      // Filter for asset-related data
-      const assetDataItems = allData.filter(item => 
-        assetFields.some(field => field.id === item.key)
-      );
-      
-      setAssetsData(assetDataItems);
-      
-      // Populate form data from existing data
-      const initialFormData: Record<string, string> = {};
-      assetDataItems.forEach(item => {
-        initialFormData[item.key] = item.value;
-      });
-      
-      setFormData(initialFormData);
-    } catch (err) {
-      console.error('Error loading assets data:', err);
-      setError('Failed to load assets data. Please try again.');
-    } finally {
+    } catch (err: any) {
+      console.error('Error creating collection:', err);
+      setError(err.message || 'Failed to create collection. Please try again.');
       setLoading(false);
     }
   };
@@ -125,8 +151,8 @@ export const RealWorldAssetsSection = () => {
   };
 
   const saveAssetsData = async () => {
-    if (!db || !tableName) {
-      setError('Database not initialized. Please try again.');
+    if (!ceramic || !did) {
+      setError('Ceramic not initialized or no DID available.');
       return;
     }
     
@@ -134,26 +160,78 @@ export const RealWorldAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      // Save each field to the database
-      for (const field of assetFields) {
-        const value = formData[field.id] || '';
-        
-        // Check if this field already exists in the data
-        const existingItem = assetsData.find(item => item.key === field.id);
-        
-        // Only save if there's a value or if we're updating an existing value
-        if (value || existingItem) {
-          await insertPrivateData(db, tableName, field.id, value);
-        }
+      // Check if we have a table name, if not create a collection
+      let currentTableName = tableName;
+      if (!currentTableName) {
+        console.log('No collection found, creating a new one');
+        const result = await createCollection(ceramic, DataType.REAL_ASSETS, did);
+        currentTableName = result.collectionId;
+        setTableName(currentTableName);
       }
       
-      // Reload data to show updated values
-      await loadAssetsData(db, tableName);
+      // Create a record with all asset data
+      const assetData: Record<string, string> = {};
+      
+      // Only include fields that have values
+      assetFields.forEach(field => {
+        const value = formData[field.id];
+        if (value) {
+          assetData[field.id] = value;
+        }
+      });
+      
+      // Clear existing collection
+      await clearCollection(ceramic, DataType.REAL_ASSETS, currentTableName);
+      
+      // Create a new record with all asset data
+      if (Object.keys(assetData).length > 0) {
+        console.log('Creating record with data:', assetData);
+        await createRecord(ceramic, DataType.REAL_ASSETS, currentTableName, assetData, ['asset']);
+      }
+      
+      // Refresh data
+      const records = await getRecords(ceramic, DataType.REAL_ASSETS, currentTableName);
+      console.log('Retrieved records after save:', records);
+      
+      // Convert records to the format expected by the component
+      const formattedData = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
+      
+      setAssetsData(formattedData);
       setIsEditing(false);
-    } catch (err) {
+      setLoading(false);
+    } catch (err: any) {
       console.error('Error saving assets data:', err);
-      setError('Failed to save assets data. Please try again.');
-    } finally {
+      setError(err.message || 'Failed to save assets data. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleClearAssets = async () => {
+    if (!ceramic || !tableName) {
+      setError('Ceramic not initialized or no collection available.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Clear the collection
+      await clearCollection(ceramic, DataType.REAL_ASSETS, tableName);
+      
+      // Reset data
+      setAssetsData([]);
+      setFormData({});
+      
+      setLoading(false);
+    } catch (err: any) {
+      console.error('Error clearing assets data:', err);
+      setError(err.message || 'Failed to clear assets data. Please try again.');
       setLoading(false);
     }
   };
@@ -170,9 +248,9 @@ export const RealWorldAssetsSection = () => {
         <div className="section-content">
           <div className="info-box" style={{ marginBottom: '1rem' }}>
             <p>
-              <strong>Multi-Chain Support:</strong> Your real world assets data is securely stored on Optimism for cost efficiency, 
-              while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
-              interactions behind the scenes - no network switching required.
+              <strong>Ceramic Network Integration:</strong> Your real-world assets data is securely stored on the Ceramic Network, 
+              a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
+              and user experience compared to our previous implementation.
             </p>
           </div>
           {loading ? (
@@ -180,7 +258,7 @@ export const RealWorldAssetsSection = () => {
           ) : error ? (
             <div className="error-message">
               <p>{error}</p>
-              <button onClick={initTablelandDb} className="button-primary logged-in-button">
+              <button onClick={() => connect()} className="button-primary logged-in-button">
                 Try Again
               </button>
             </div>

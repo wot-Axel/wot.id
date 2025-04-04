@@ -1,18 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { DataRecord } from '@/utils/ceramicUtils';
+import { TableData } from '@/utils/ceramicUtils';
 
 interface MedicalDataTableProps {
   sectionTitle: string;
-  data: DataRecord[];
+  data: TableData[];
 }
 
 export const MedicalDataTable: React.FC<MedicalDataTableProps> = ({ sectionTitle, data }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Group data by parameter
-  const parameterGroups: Record<string, DataRecord[]> = {};
+  const parameterGroups: Record<string, TableData[]> = {};
   data.forEach(item => {
     const parameter = item.key.split('|')[0]; // Format: "Parameter|Date"
     if (!parameterGroups[parameter]) {

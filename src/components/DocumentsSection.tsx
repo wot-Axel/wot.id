@@ -1,11 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { useCeramic } from '@/context/CeramicContext';
 import { 
   DataType,
-  DataRecord
+  PrivateData,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection,
+  TableData
 } from '@/utils/ceramicUtils';
 
 // Define document fields
@@ -25,28 +31,27 @@ const documentFields: DocumentField[] = [
 
 export const DocumentsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData } = useCeramic();
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, error: ceramicError } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [collectionId, setCollectionId] = useState<string>('');
-  const [documentsData, setDocumentsData] = useState<DataRecord[]>([]);
+  const [documentsData, setDocumentsData] = useState<TableData[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // Initialize Ceramic when connected
-  useEffect(() => {
-    if (isConnected && address && isInitialized) {
-      initCeramicCollection();
-    }
-  }, [isConnected, address, isInitialized]);
-
-  const initCeramicCollection = async () => {
+  // Define initCeramicCollection with useCallback to avoid dependency issues
+  const initCeramicCollection = useCallback(async () => {
     try {
+      if (!ceramic || !did) {
+        setError('Ceramic not initialized or no DID available.');
+        return;
+      }
+
       setLoading(true);
       setError('');
       
       // Check if collection exists
-      const collectionCheck = await checkCollectionExists(DataType.DOCUMENTS);
+      const collectionCheck = await checkCollectionExists(ceramic, DataType.DOCUMENTS, did);
       
       if (collectionCheck.exists) {
         // Use the collection ID from the check result
@@ -56,7 +61,7 @@ export const DocumentsSection = () => {
         await loadDocumentsData(collectionCheck.collectionId);
       } else {
         // Create new collection
-        const result = await createCollection(DataType.DOCUMENTS);
+        const result = await createCollection(ceramic, DataType.DOCUMENTS, did);
         setCollectionId(result.collectionId);
       }
     } catch (err) {
@@ -65,26 +70,49 @@ export const DocumentsSection = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ceramic, did, setError, setLoading, setCollectionId]);
+  
+  // Initialize Ceramic when connected
+  useEffect(() => {
+    if (isConnected && address && isInitialized) {
+      initCeramicCollection();
+    }
+  }, [isConnected, address, isInitialized, initCeramicCollection]);
 
-  const loadDocumentsData = async (collectionId: string) => {
+
+
+  // Define loadDocumentsData function to load document data from Ceramic
+  const loadDocumentsData = useCallback(async (collectionId: string) => {
     try {
+      if (!ceramic) {
+        setError('Ceramic not initialized.');
+        return;
+      }
+      
       setLoading(true);
       
       // Get all documents data
-      const allData = await getData(DataType.DOCUMENTS, collectionId);
+      const records = await getRecords(ceramic, DataType.DOCUMENTS, collectionId);
       
-      // Filter for document-related data
-      const documentDataItems = allData.filter((item: DataRecord) => 
-        documentFields.some(field => field.id === item.key)
-      );
+      // Convert records to the format expected by the component
+      const formattedData: TableData[] = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: typeof record.content === 'string' ? record.content : JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
       
-      setDocumentsData(documentDataItems);
+      setDocumentsData(formattedData);
       
       // Populate form data from existing data
       const initialFormData: Record<string, string> = {};
-      documentDataItems.forEach(item => {
-        initialFormData[item.key] = item.value;
+      records.forEach(record => {
+        const content = record.content as Record<string, string>;
+        if (content) {
+          Object.keys(content).forEach(key => {
+            initialFormData[key] = content[key];
+          });
+        }
       });
       
       setFormData(initialFormData);
@@ -94,7 +122,7 @@ export const DocumentsSection = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ceramic, setLoading, setError, setDocumentsData, setFormData]);
 
   const handleInputChange = (fieldId: string, value: string) => {
     setFormData(prev => ({
@@ -113,17 +141,20 @@ export const DocumentsSection = () => {
       setLoading(true);
       setError('');
       
-      // Save each field to the Ceramic collection
-      for (const field of documentFields) {
-        const value = formData[field.id] || '';
-        
-        // Check if this field already exists in the data
-        const existingItem = documentsData.find(item => item.key === field.id);
-        
-        // Only save if there's a value or if we're updating an existing value
-        if (value || existingItem) {
-          await insertData(DataType.DOCUMENTS, collectionId, { key: field.id, value });
+      // Clear existing collection
+      await clearCollection(ceramic, DataType.DOCUMENTS, collectionId);
+      
+      // Combine all field values into a single document record
+      const documentData: Record<string, string> = {};
+      Object.keys(formData).forEach(key => {
+        if (formData[key]) {
+          documentData[key] = formData[key];
         }
+      });
+      
+      // Create a new record with all document data
+      if (Object.keys(documentData).length > 0) {
+        await createRecord(ceramic, DataType.DOCUMENTS, collectionId, documentData, ['document']);
       }
       
       // Reload data to show updated values
