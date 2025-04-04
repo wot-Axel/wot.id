@@ -2,76 +2,126 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
+import { 
+  Database,
+  DataType,
+  PrivateData,
+  initCeramic,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
+} from '@/utils/ceramicUtils';
 import { useCeramic } from '@/context/CeramicContext';
-import { DataType, DataRecord } from '@/utils/ceramicUtils';
 import { MedicalDataTable } from './MedicalDataTable';
 
 export const MedicalDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [collectionId, setCollectionId] = useState<string>('');
-  const [privateData, setPrivateData] = useState<DataRecord[]>([]);
-  const [medicalDataSections, setMedicalDataSections] = useState<Record<string, DataRecord[]>>({});
+  const [db, setDb] = useState<Database | null>(null);
+  const [tableName, setTableName] = useState<string>('');
+  const [privateData, setPrivateData] = useState<PrivateData[]>([]);
+  const [medicalDataSections, setMedicalDataSections] = useState<Record<string, PrivateData[]>>({});
   const [importedData, setImportedData] = useState<boolean>(false);
 
-  // Initialize Ceramic and check for existing collection when connected
+  // Use the Ceramic context
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+
+  // Initialize Ceramic connection
   useEffect(() => {
-    if (isConnected && isInitialized && !loading && !ceramicLoading) {
-      checkMedicalCollection();
-    }
-  }, [isConnected, isInitialized, loading, ceramicLoading]);
-
-  // Check if medical collection exists
-  const checkMedicalCollection = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Check if medical collection exists
-      const collectionCheck = await checkCollectionExists(DataType.MEDICAL);
-      
-      if (collectionCheck.exists) {
-        setCollectionId(collectionCheck.collectionId);
-        // Load existing data
-        const data = await getData(DataType.MEDICAL, collectionCheck.collectionId);
-        setPrivateData(data);
-        
-        // Check if medical data is already imported
-        const hasMedicalData = data.some(item => item.key.includes('|'));
-        if (hasMedicalData) {
-          setImportedData(true);
-          organizeMedicalData(data);
+    const init = async () => {
+      try {
+        if (isConnected && address && !isInitialized && !ceramicLoading) {
+          setLoading(true);
+          setError('');
+          
+          // Connect to Ceramic network
+          await connect();
+          
+          setLoading(false);
         }
+      } catch (err: any) {
+        console.error('Error initializing Ceramic:', err);
+        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        setLoading(false);
       }
-      
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message || 'Error checking Ceramic collection');
-      setLoading(false);
-    }
-  };
+    };
+    
+    init();
+  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  
+  // Load medical data when Ceramic is initialized
+  useEffect(() => {
+    const loadMedicalData = async () => {
+      try {
+        if (isInitialized && ceramic && did) {
+          setLoading(true);
+          
+          // Check if collection exists
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.MEDICAL, did);
+          
+          if (exists) {
+            setTableName(collectionId);
+            
+            // Get existing data
+            const records = await getRecords(ceramic, DataType.MEDICAL, collectionId);
+            
+            // Convert records to the format expected by the component
+            const formattedData = records.map((record, index) => ({
+              id: index,
+              key: record.id,
+              value: JSON.stringify(record.content),
+              created_at: new Date().toISOString()
+            }));
+            
+            setPrivateData(formattedData);
+            
+            // Check if medical data is already imported
+            const hasMedicalData = formattedData.some(item => item.key.includes('|'));
+            if (hasMedicalData) {
+              setImportedData(true);
+              organizeMedicalData(formattedData);
+            }
+          }
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error loading medical data:', err);
+        setError(err.message || 'Failed to load medical data. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    loadMedicalData();
+  }, [isInitialized, ceramic, did]);
 
-  const handleCreateCollection = async () => {
-    if (!isInitialized || !ceramic) return;
+  const handleCreateTable = async () => {
+    if (!ceramic || !did) {
+      setError('Ceramic not initialized or no DID available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      const result = await createCollection(DataType.MEDICAL);
-      setCollectionId(result.collectionId);
+      // Create a new collection for medical data
+      const { collectionId } = await createCollection(ceramic, DataType.MEDICAL, did);
+      setTableName(collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating medical collection');
+      console.error('Error creating collection:', err);
+      setError(err.message || 'Failed to create collection. Please try again.');
       setLoading(false);
     }
   };
 
-  const organizeMedicalData = (data: DataRecord[]) => {
-    const sections: Record<string, DataRecord[]> = {};
+  const organizeMedicalData = (data: PrivateData[]) => {
+    const sections: Record<string, PrivateData[]> = {};
     
     data.forEach(item => {
       if (item.key.includes('|')) {
@@ -87,7 +137,10 @@ export const MedicalDataSection = () => {
   };
 
   const handleImportMedicalData = async () => {
-    if (!ceramic || !collectionId) return;
+    if (!ceramic || !tableName) {
+      setError('Ceramic not initialized or no collection available.');
+      return;
+    }
     
     try {
       setLoading(true);
@@ -96,24 +149,39 @@ export const MedicalDataSection = () => {
       // Parse the CSV data
       const medicalData = parseMedicalData();
       
-      // Store each data point in the Ceramic collection
+      // Store each data point in the medical collection
       for (const section in medicalData) {
         for (const entry of medicalData[section]) {
           const key = `${section}.${entry.parameter}|${entry.date}`;
-          const value = `${entry.unit}|${entry.referenceRange}|${entry.value}`;
-          await insertData(DataType.MEDICAL, collectionId, { key, value });
+          const content = {
+            key,
+            unit: entry.unit,
+            referenceRange: entry.referenceRange,
+            value: entry.value
+          };
+          await createRecord(ceramic, DataType.MEDICAL, tableName, content, ['medical']);
         }
       }
       
       // Refresh data
-      const data = await getData(DataType.MEDICAL, collectionId);
-      setPrivateData(data);
-      organizeMedicalData(data);
+      const records = await getRecords(ceramic, DataType.MEDICAL, tableName);
+      
+      // Convert records to the format expected by the component
+      const formattedData = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
+      
+      setPrivateData(formattedData);
+      organizeMedicalData(formattedData);
       setImportedData(true);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error importing medical data');
+      console.error('Error importing medical data:', err);
+      setError(err.message || 'Failed to import medical data. Please try again.');
       setLoading(false);
     }
   };
@@ -264,23 +332,23 @@ export const MedicalDataSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Ceramic Network:</strong> Your medical data is securely stored on the Ceramic Network, 
-            a decentralized data network built specifically for Web3 applications. Ceramic provides better 
-            performance, lower costs, and enhanced privacy for your sensitive medical information.
+            <strong>Ceramic Network Integration:</strong> Your medical data is securely stored on the Ceramic Network, 
+            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
+            and user experience compared to our previous implementation.
           </p>
         </div>
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!collectionId ? (
+            {!tableName ? (
               <div>
-                <p>You don't have a medical data collection yet. Create one to store your lab results securely.</p>
+                <p>You don't have a medical data table yet. Create one to store your lab results securely.</p>
                 <button 
                   className="button-primary logged-in-button" 
-                  onClick={handleCreateCollection}
-                  disabled={loading || ceramicLoading}
+                  onClick={handleCreateTable}
+                  disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create Medical Collection'}
+                  {loading ? 'Creating...' : 'Create Medical Table'}
                 </button>
               </div>
             ) : (

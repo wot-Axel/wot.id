@@ -2,100 +2,151 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { useCeramic } from '@/context/CeramicContext';
 import { 
+  Database,
   DataType,
-  DataRecord
+  PrivateData,
+  initCeramic,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
 } from '@/utils/ceramicUtils';
+import { useCeramic } from '@/context/CeramicContext';
 
 export const HumanRelationshipsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData, clearData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [collectionId, setCollectionId] = useState<string>('');
-  const [contactsData, setContactsData] = useState<DataRecord[]>([]);
+  const [db, setDb] = useState<Database | null>(null);
+  const [tableName, setTableName] = useState<string>('');
+  const [contactsData, setContactsData] = useState<PrivateData[]>([]);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
-  // Initialize Ceramic when connected
+  // Use the Ceramic context
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+
+  // Initialize Ceramic connection
   useEffect(() => {
-    if (isConnected && address && isInitialized) {
-      initCeramicCollection();
-    }
-  }, [isConnected, address, isInitialized]);
-
-  // No longer needed as we use cross-chain signing
-  // Keeping this commented for reference
-  /*
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-  */
-
-  const initCeramicCollection = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Check if collection exists
-      const collectionCheck = await checkCollectionExists(DataType.CONTACTS);
-      
-      if (collectionCheck.exists) {
-        setCollectionId(collectionCheck.collectionId);
-        // Load existing data
-        const data = await getData(DataType.CONTACTS, collectionCheck.collectionId);
-        setContactsData(data);
+    const init = async () => {
+      try {
+        if (isConnected && address && !isInitialized && !ceramicLoading) {
+          setLoading(true);
+          setError('');
+          
+          // Connect to Ceramic network
+          await connect();
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error initializing Ceramic:', err);
+        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        setLoading(false);
       }
-      
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message || 'Error initializing Ceramic');
-      setLoading(false);
-    }
-  };
+    };
+    
+    init();
+  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  
+  // Load contacts data when Ceramic is initialized
+  useEffect(() => {
+    const loadContactsData = async () => {
+      try {
+        if (isInitialized && ceramic && did) {
+          setLoading(true);
+          
+          // Check if collection exists
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.CONNECTIONS, did);
+          
+          if (exists) {
+            setTableName(collectionId);
+            
+            // Get existing data
+            const records = await getRecords(ceramic, DataType.CONNECTIONS, collectionId);
+            
+            // Convert records to the format expected by the component
+            const formattedData = records.map((record, index) => ({
+              id: index,
+              key: record.id,
+              value: JSON.stringify(record.content),
+              created_at: new Date().toISOString()
+            }));
+            
+            setContactsData(formattedData);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error loading contacts data:', err);
+        setError(err.message || 'Failed to load contacts data. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    loadContactsData();
+  }, [isInitialized, ceramic, did]);
 
-  const handleCreateCollection = async () => {
-    if (!ceramic || !isInitialized) return;
+  const handleCreateTable = async () => {
+    if (!ceramic || !did) {
+      setError('Ceramic not initialized or no DID available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      const result = await createCollection(DataType.CONTACTS);
-      setCollectionId(result.collectionId);
+      // Create a new collection for contacts data
+      const { collectionId } = await createCollection(ceramic, DataType.CONNECTIONS, did);
+      setTableName(collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating collection');
+      console.error('Error creating collection:', err);
+      setError(err.message || 'Failed to create collection. Please try again.');
       setLoading(false);
     }
   };
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ceramic || !collectionId || !name) return;
+    if (!ceramic || !tableName || !name) {
+      setError('Missing required information. Please check all fields.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      // Format the data as JSON to store all fields together
-      const contactData = JSON.stringify({
+      // Create a record in the collection
+      const content = {
         name,
         email,
         phone,
         notes
-      });
+      };
       
-      await insertData(DataType.CONTACTS, collectionId, { key: name, value: contactData });
+      await createRecord(ceramic, DataType.CONNECTIONS, tableName, content, ['contact']);
       
       // Refresh data
-      const data = await getData(DataType.CONTACTS, collectionId);
-      setContactsData(data);
+      const records = await getRecords(ceramic, DataType.CONNECTIONS, tableName);
+      
+      // Convert records to the format expected by the component
+      const formattedData = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
+      
+      setContactsData(formattedData);
       
       // Clear form
       setName('');
@@ -104,27 +155,32 @@ export const HumanRelationshipsSection = () => {
       setNotes('');
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error adding contact data');
+      console.error('Error adding contact data:', err);
+      setError(err.message || 'Failed to add contact data. Please try again.');
       setLoading(false);
     }
   };
 
   const handleClearContactsData = async () => {
-    if (!ceramic || !collectionId) return;
+    if (!ceramic || !tableName) {
+      setError('Ceramic not initialized or no collection available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      await clearData(DataType.CONTACTS, collectionId);
+      // Clear the collection
+      await clearCollection(ceramic, DataType.CONNECTIONS, tableName);
       
-      // Refresh data
-      const data = await getData(DataType.CONTACTS, collectionId);
-      setContactsData(data);
+      // Reset data
+      setContactsData([]);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error clearing contacts data');
+      console.error('Error clearing contacts data:', err);
+      setError(err.message || 'Failed to clear contacts data. Please try again.');
       setLoading(false);
     }
   };
@@ -148,28 +204,28 @@ export const HumanRelationshipsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Multi-Chain Support:</strong> Your relationships data is securely stored on Optimism for cost efficiency, 
-            while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
-            interactions behind the scenes - no network switching required.
+            <strong>Ceramic Network Integration:</strong> Your relationships data is securely stored on the Ceramic Network, 
+            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
+            and user experience compared to our previous implementation.
           </p>
         </div>
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!collectionId ? (
+            {!tableName ? (
               <div>
-                <p>You don't have a relationships collection yet. Create one to store your human relationships securely on Ceramic.</p>
+                <p>You don't have a relationships collection yet. Create one to store your human relationships securely on Ceramic Network.</p>
                 <button 
                   className="button-primary" 
-                  onClick={handleCreateCollection}
-                  disabled={loading || ceramicLoading}
+                  onClick={handleCreateTable}
+                  disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create Relationships Collection'}
+                  {loading ? 'Creating...' : 'Create Relationships Table'}
                 </button>
               </div>
             ) : (
               <div>
-                <p>Your relationship information is stored securely on Ceramic.</p>
+                <p>Your relationship information is stored securely on the Ceramic Network.</p>
                 
                 <form onSubmit={handleAddContact} className="private-data-form">
                   <div className="form-group">
@@ -264,7 +320,7 @@ export const HumanRelationshipsSection = () => {
                               <td>{contactInfo.email || '-'}</td>
                               <td>{contactInfo.phone || '-'}</td>
                               <td>{contactInfo.notes || '-'}</td>
-                              <td>{new Date().toLocaleString()}</td>
+                              <td>{new Date(item.created_at).toLocaleString()}</td>
                             </tr>
                           );
                         })}

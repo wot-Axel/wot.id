@@ -2,99 +2,150 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { useCeramic } from '@/context/CeramicContext';
 import { 
+  Database,
   DataType,
-  DataRecord
+  PrivateData,
+  initCeramic,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
 } from '@/utils/ceramicUtils';
+import { useCeramic } from '@/context/CeramicContext';
 
 export const AccountsPasswordsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { ceramic, isInitialized, isLoading: ceramicLoading, error: ceramicError, checkCollectionExists, createCollection, getData, insertData, clearData } = useCeramic();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [collectionId, setCollectionId] = useState<string>('');
-  const [accountsData, setAccountsData] = useState<DataRecord[]>([]);
+  const [db, setDb] = useState<Database | null>(null);
+  const [tableName, setTableName] = useState<string>('');
+  const [accountsData, setAccountsData] = useState<PrivateData[]>([]);
   const [website, setWebsite] = useState<string>('');
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPasswords, setShowPasswords] = useState<boolean>(false);
 
-  // Initialize Ceramic when connected
+  // Use the Ceramic context
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+
+  // Initialize Ceramic connection
   useEffect(() => {
-    if (isConnected && address && isInitialized) {
-      initCeramicCollection();
-    }
-  }, [isConnected, address, isInitialized]);
-
-  // No longer needed as we use cross-chain signing
-  // Keeping this commented for reference
-  /*
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-  */
-
-  const initCeramicCollection = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Check if collection exists
-      const collectionCheck = await checkCollectionExists(DataType.ACCOUNTS);
-      
-      if (collectionCheck.exists) {
-        setCollectionId(collectionCheck.collectionId);
-        // Load existing data
-        const data = await getData(DataType.ACCOUNTS, collectionCheck.collectionId);
-        setAccountsData(data);
+    const init = async () => {
+      try {
+        if (isConnected && address && !isInitialized && !ceramicLoading) {
+          setLoading(true);
+          setError('');
+          
+          // Connect to Ceramic network
+          await connect();
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error initializing Ceramic:', err);
+        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        setLoading(false);
       }
-      
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message || 'Error initializing Ceramic');
-      setLoading(false);
-    }
-  };
+    };
+    
+    init();
+  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  
+  // Load accounts data when Ceramic is initialized
+  useEffect(() => {
+    const loadAccountsData = async () => {
+      try {
+        if (isInitialized && ceramic && did) {
+          setLoading(true);
+          
+          // Check if collection exists
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.PROFILE, did);
+          
+          if (exists) {
+            setTableName(collectionId);
+            
+            // Get existing data
+            const records = await getRecords(ceramic, DataType.PROFILE, collectionId);
+            
+            // Convert records to the format expected by the component
+            const formattedData = records.map((record, index) => ({
+              id: index,
+              key: record.id,
+              value: JSON.stringify(record.content),
+              created_at: new Date().toISOString()
+            }));
+            
+            setAccountsData(formattedData);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error loading accounts data:', err);
+        setError(err.message || 'Failed to load accounts data. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    loadAccountsData();
+  }, [isInitialized, ceramic, did]);
 
-  const handleCreateCollection = async () => {
-    if (!ceramic || !isInitialized) return;
+  const handleCreateTable = async () => {
+    if (!ceramic || !did) {
+      setError('Ceramic not initialized or no DID available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      const result = await createCollection(DataType.ACCOUNTS);
-      setCollectionId(result.collectionId);
+      // Create a new collection for accounts data
+      const { collectionId } = await createCollection(ceramic, DataType.PROFILE, did);
+      setTableName(collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating collection');
+      console.error('Error creating collection:', err);
+      setError(err.message || 'Failed to create collection. Please try again.');
       setLoading(false);
     }
   };
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ceramic || !collectionId || !website || !username || !password) return;
+    if (!ceramic || !tableName || !website || !username || !password) {
+      setError('Missing required information. Please check all fields.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      // Format the data as JSON to store all fields together
-      const accountData = JSON.stringify({
+      // Create a record in the collection
+      const content = {
         website,
         username,
         password
-      });
+      };
       
-      await insertData(DataType.ACCOUNTS, collectionId, { key: website, value: accountData });
+      await createRecord(ceramic, DataType.PROFILE, tableName, content, ['accounts']);
       
       // Refresh data
-      const data = await getData(DataType.ACCOUNTS, collectionId);
-      setAccountsData(data);
+      const records = await getRecords(ceramic, DataType.PROFILE, tableName);
+      
+      // Convert records to the format expected by the component
+      const formattedData = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
+      
+      setAccountsData(formattedData);
       
       // Clear form
       setWebsite('');
@@ -102,27 +153,32 @@ export const AccountsPasswordsSection = () => {
       setPassword('');
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error adding account data');
+      console.error('Error adding account data:', err);
+      setError(err.message || 'Failed to add account data. Please try again.');
       setLoading(false);
     }
   };
 
   const handleClearAccountsData = async () => {
-    if (!ceramic || !collectionId) return;
+    if (!ceramic || !tableName) {
+      setError('Ceramic not initialized or no collection available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      await clearData(DataType.ACCOUNTS, collectionId);
+      // Clear the collection
+      await clearCollection(ceramic, DataType.PROFILE, tableName);
       
-      // Refresh data
-      const data = await getData(DataType.ACCOUNTS, collectionId);
-      setAccountsData(data);
+      // Reset data
+      setAccountsData([]);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error clearing accounts data');
+      console.error('Error clearing accounts data:', err);
+      setError(err.message || 'Failed to clear accounts data. Please try again.');
       setLoading(false);
     }
   };
@@ -146,23 +202,23 @@ export const AccountsPasswordsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Multi-Chain Support:</strong> Your accounts and passwords data is securely stored on Optimism for cost efficiency, 
-            while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
-            interactions behind the scenes - no network switching required.
+            <strong>Ceramic Network Integration:</strong> Your accounts and passwords data is securely stored on the Ceramic Network, 
+            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
+            and user experience compared to our previous implementation.
           </p>
         </div>
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!collectionId ? (
+            {!tableName ? (
               <div>
-                <p>You don't have an accounts collection yet. Create one to store your account information securely on Ceramic.</p>
+                <p>You don't have an accounts collection yet. Create one to store your account information securely on Ceramic Network.</p>
                 <button 
                   className="button-primary" 
-                  onClick={handleCreateCollection}
-                  disabled={loading || ceramicLoading}
+                  onClick={handleCreateTable}
+                  disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create Accounts Collection'}
+                  {loading ? 'Creating...' : 'Create Accounts Table'}
                 </button>
               </div>
             ) : (
@@ -267,7 +323,7 @@ export const AccountsPasswordsSection = () => {
                                   ? accountInfo.password 
                                   : '••••••••'}
                               </td>
-                              <td>{new Date().toLocaleString()}</td>
+                              <td>{new Date(item.created_at).toLocaleString()}</td>
                             </tr>
                           );
                         })}
