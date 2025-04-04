@@ -1,23 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  createAccountsTable, 
-  insertAccountData, 
-  getAccountsData,
-  checkAccountsTableExists,
-  clearAccountsData,
-  type PrivateData
-} from '@/utils/tablelandUtils';
-import { initCeramicWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@/utils/ceramicUtils';
+  Database,
+  DataType,
+  PrivateData,
+  initCeramic,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
+} from '@/utils/ceramicUtils';
+import { useCeramic } from '@/context/CeramicContext';
 
 export const AccountsPasswordsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [db, setDb] = useState<Database | null>(null);
@@ -28,86 +27,125 @@ export const AccountsPasswordsSection = () => {
   const [password, setPassword] = useState<string>('');
   const [showPasswords, setShowPasswords] = useState<boolean>(false);
 
-  // Initialize Tableland when connected
+  // Use the Ceramic context
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+
+  // Initialize Ceramic connection
   useEffect(() => {
-    if (isConnected && address) {
-      // No need to check network - we use cross-chain signing
-      initTablelandDb();
-    }
-  }, [isConnected, address]);
-
-  // No longer needed as we use cross-chain signing
-  // Keeping this commented for reference
-  /*
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-  */
-
-  const initTablelandDb = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Initialize Tableland with Optimism provider for writing
-      const tablelandDb = await initCeramicWithOptimismWrite(address || '');
-      setDb(tablelandDb);
-      
-      // Check if table exists
-      const tableCheck = await checkAccountsTableExists(tablelandDb, address as string);
-      
-      if (tableCheck.exists) {
-        setTableName(tableCheck.tableName);
-        // Load existing data
-        const data = await getAccountsData(tablelandDb, tableCheck.tableName);
-        setAccountsData(data);
+    const init = async () => {
+      try {
+        if (isConnected && address && !isInitialized && !ceramicLoading) {
+          setLoading(true);
+          setError('');
+          
+          // Connect to Ceramic network
+          await connect();
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error initializing Ceramic:', err);
+        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        setLoading(false);
       }
-      
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message || 'Error initializing Tableland');
-      setLoading(false);
-    }
-  };
+    };
+    
+    init();
+  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  
+  // Load accounts data when Ceramic is initialized
+  useEffect(() => {
+    const loadAccountsData = async () => {
+      try {
+        if (isInitialized && ceramic && did) {
+          setLoading(true);
+          
+          // Check if collection exists
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.PROFILE, did);
+          
+          if (exists) {
+            setTableName(collectionId);
+            
+            // Get existing data
+            const records = await getRecords(ceramic, DataType.PROFILE, collectionId);
+            
+            // Convert records to the format expected by the component
+            const formattedData = records.map((record, index) => ({
+              id: index,
+              key: record.id,
+              value: JSON.stringify(record.content),
+              created_at: new Date().toISOString()
+            }));
+            
+            setAccountsData(formattedData);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error loading accounts data:', err);
+        setError(err.message || 'Failed to load accounts data. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    loadAccountsData();
+  }, [isInitialized, ceramic, did]);
 
   const handleCreateTable = async () => {
-    if (!db || !address) return;
+    if (!ceramic || !did) {
+      setError('Ceramic not initialized or no DID available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      const name = await createAccountsTable(db, address);
-      setTableName(name);
+      // Create a new collection for accounts data
+      const { collectionId } = await createCollection(ceramic, DataType.PROFILE, did);
+      setTableName(collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating table');
+      console.error('Error creating collection:', err);
+      setError(err.message || 'Failed to create collection. Please try again.');
       setLoading(false);
     }
   };
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !tableName || !website || !username || !password) return;
+    if (!ceramic || !tableName || !website || !username || !password) {
+      setError('Missing required information. Please check all fields.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      // Format the data as JSON to store all fields together
-      const accountData = JSON.stringify({
+      // Create a record in the collection
+      const content = {
         website,
         username,
         password
-      });
+      };
       
-      await insertAccountData(db, tableName, website, accountData);
+      await createRecord(ceramic, DataType.PROFILE, tableName, content, ['accounts']);
       
       // Refresh data
-      const data = await getAccountsData(db, tableName);
-      setAccountsData(data);
+      const records = await getRecords(ceramic, DataType.PROFILE, tableName);
+      
+      // Convert records to the format expected by the component
+      const formattedData = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
+      
+      setAccountsData(formattedData);
       
       // Clear form
       setWebsite('');
@@ -115,27 +153,32 @@ export const AccountsPasswordsSection = () => {
       setPassword('');
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error adding account data');
+      console.error('Error adding account data:', err);
+      setError(err.message || 'Failed to add account data. Please try again.');
       setLoading(false);
     }
   };
 
   const handleClearAccountsData = async () => {
-    if (!db || !tableName) return;
+    if (!ceramic || !tableName) {
+      setError('Ceramic not initialized or no collection available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      await clearAccountsData(db, tableName);
+      // Clear the collection
+      await clearCollection(ceramic, DataType.PROFILE, tableName);
       
-      // Refresh data
-      const data = await getAccountsData(db, tableName);
-      setAccountsData(data);
+      // Reset data
+      setAccountsData([]);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error clearing accounts data');
+      console.error('Error clearing accounts data:', err);
+      setError(err.message || 'Failed to clear accounts data. Please try again.');
       setLoading(false);
     }
   };
@@ -159,9 +202,9 @@ export const AccountsPasswordsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Multi-Chain Support:</strong> Your accounts and passwords data is securely stored on Optimism for cost efficiency, 
-            while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
-            interactions behind the scenes - no network switching required.
+            <strong>Ceramic Network Integration:</strong> Your accounts and passwords data is securely stored on the Ceramic Network, 
+            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
+            and user experience compared to our previous implementation.
           </p>
         </div>
           <>
@@ -169,7 +212,7 @@ export const AccountsPasswordsSection = () => {
             
             {!tableName ? (
               <div>
-                <p>You don't have an accounts table yet. Create one to store your account information securely on Tableland.</p>
+                <p>You don't have an accounts collection yet. Create one to store your account information securely on Ceramic Network.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
@@ -180,7 +223,7 @@ export const AccountsPasswordsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your account information is stored securely on Tableland on the Optimism network.</p>
+                <p>Your account information is stored securely on the Ceramic Network.</p>
                 
                 <form onSubmit={handleAddData} className="private-data-form">
                   <div className="form-group">

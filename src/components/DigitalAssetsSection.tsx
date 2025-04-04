@@ -3,19 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  checkDigitalAssetsTableExists,
-  createDigitalAssetsTable,
-  getDigitalAssetsData,
-  insertDigitalAssetData,
-  clearDigitalAssetsData,
-  PrivateData
-} from '../utils/tablelandUtils';
-import { 
-  initCeramicWithOptimismWrite,
-  initCeramicWithOptimism,
-  isUserOnOptimism
-} from '../utils/optimismProvider';
-import { Database } from '@/utils/ceramicUtils';
+  Database,
+  DataType,
+  PrivateData,
+  initCeramic,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
+} from '@/utils/ceramicUtils';
+import { useCeramic } from '@/context/CeramicContext';
 
 // Types for digital assets
 interface DigitalAsset {
@@ -256,16 +254,11 @@ export const DigitalAssetsSection = () => {
   const [attributes, setAttributes] = useState<string>('');
   const [acquiredDate, setAcquiredDate] = useState<string>('');
 
-  // Check if user is on Optimism (for informational purposes only)
+  // Set network information for display purposes
   useEffect(() => {
-    const checkNetwork = async () => {
-      const onOptimism = await isUserOnOptimism();
-      setIsOptimismNetwork(onOptimism);
-    };
-    
-    if (isConnected) {
-      checkNetwork();
-    }
+    // We're using Ceramic now, so we don't need to check the network
+    // Just set to false as we're not specifically using Optimism anymore
+    setIsOptimismNetwork(false);
   }, [isConnected]);
   
   // Display a message about multi-chain support
@@ -282,80 +275,114 @@ export const DigitalAssetsSection = () => {
     );
   };
 
-  // Initialize Tableland connection with our dedicated Optimism provider
+  // Use the Ceramic context
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+  
+  // Initialize Ceramic connection
   useEffect(() => {
     const init = async () => {
       try {
-        if (isConnected && address) {
+        if (isConnected && address && !isInitialized && !ceramicLoading) {
           setLoading(true);
           setError('');
           
-          // Use our dedicated Optimism provider for read operations
-          // This doesn't require the user to switch networks
-          const database = await initCeramicWithOptimism(address);
-          setDb(database);
-          
-          // Check if table exists
-          const exists = await checkDigitalAssetsTableExists(database, address);
-          if (exists.exists) {
-            setTableName(exists.tableName);
-            
-            // Get existing data
-            const data = await getDigitalAssetsData(database, exists.tableName);
-            setAssetsData(data);
-          }
+          // Connect to Ceramic network
+          await connect();
           
           setLoading(false);
         }
       } catch (err) {
-        console.error('Error initializing:', err);
-        setError('Failed to initialize. Please try again.');
+        console.error('Error initializing Ceramic:', err);
+        setError('Failed to initialize Ceramic. Please try again.');
         setLoading(false);
       }
     };
     
     init();
-  }, [isConnected, address]);
+  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  
+  // Load digital assets when Ceramic is initialized
+  useEffect(() => {
+    const loadAssets = async () => {
+      try {
+        if (isInitialized && ceramic && did) {
+          setLoading(true);
+          
+          // Check if collection exists
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.DIGITAL_ASSETS, did);
+          
+          if (exists) {
+            setTableName(collectionId);
+            
+            // Get existing data
+            const records = await getRecords(ceramic, DataType.DIGITAL_ASSETS, collectionId);
+            
+            // Convert records to the format expected by the component
+            const formattedData = records.map((record, index) => ({
+              id: index,
+              key: record.id,
+              value: JSON.stringify(record.content),
+              created_at: new Date().toISOString() // Add required created_at field
+            }));
+            
+            setAssetsData(formattedData);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error loading digital assets:', err);
+        setError('Failed to load digital assets. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    loadAssets();
+  }, [isInitialized, ceramic, did]);
 
   // We no longer need to switch networks as we're using a dedicated Optimism provider
   // Instead, we provide information about which network is being used for data storage
 
-  // Handle table creation
+  // Handle collection creation
   const handleCreateTable = async () => {
     try {
       setLoading(true);
       setError('');
       
-      if (!address) {
-        setError('No wallet address.');
+      if (!ceramic || !did) {
+        setError('Ceramic not initialized or no DID available.');
         return;
       }
       
-      // For write operations, we need a provider with write capabilities
-      const writeDb = await initCeramicWithOptimismWrite(address);
-      
-      const result = await createDigitalAssetsTable(writeDb, address);
-      setTableName(result.tableName);
+      // Create a new collection for digital assets
+      const { collectionId } = await createCollection(ceramic, DataType.DIGITAL_ASSETS, did);
+      setTableName(collectionId);
       
       // Add mock data for demonstration
       if (process.env.NODE_ENV === 'development') {
         for (const nft of mockNFTs) {
-          await insertDigitalAssetData(writeDb, result.tableName, JSON.stringify(nft));
+          await createRecord(ceramic, DataType.DIGITAL_ASSETS, collectionId, nft, ['nft']);
         }
         for (const gamingAsset of mockGamingAssets) {
-          await insertDigitalAssetData(writeDb, result.tableName, JSON.stringify(gamingAsset));
+          await createRecord(ceramic, DataType.DIGITAL_ASSETS, collectionId, gamingAsset, ['gaming']);
         }
         
-        // For read operations, use the read-only provider
-        const readDb = await initCeramicWithOptimism(address);
-        setDb(readDb);
+        // Get the updated records
+        const records = await getRecords(ceramic, DataType.DIGITAL_ASSETS, collectionId);
         
-        const data = await getDigitalAssetsData(readDb, result.tableName);
-        setAssetsData(data);
+        // Convert records to the format expected by the component
+        const formattedData = records.map((record, index) => ({
+          id: index,
+          key: record.id,
+          value: JSON.stringify(record.content),
+          created_at: new Date().toISOString() // Add required created_at field
+        }));
+        
+        setAssetsData(formattedData);
       }
     } catch (err) {
-      console.error('Error creating table:', err);
-      setError('Failed to create table. Please try again.');
+      console.error('Error creating collection:', err);
+      setError('Failed to create collection. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -369,8 +396,8 @@ export const DigitalAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      if (!address || !tableName) {
-        setError('No wallet address or table.');
+      if (!ceramic || !tableName) {
+        setError('Ceramic not initialized or no collection available.');
         return;
       }
       
@@ -394,17 +421,25 @@ export const DigitalAssetsSection = () => {
         lastUpdated: new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
       };
       
-      // For write operations, we need a provider with write capabilities
-      const writeDb = await initCeramicWithOptimismWrite(address);
+      // Create a record in the collection
+      const tags = [assetType as string];
+      if (chainName) tags.push(chainName.toLowerCase());
+      if (platform) tags.push(platform.toLowerCase());
       
-      // Insert into table
-      await insertDigitalAssetData(writeDb, tableName, JSON.stringify(asset));
+      await createRecord(ceramic, DataType.DIGITAL_ASSETS, tableName, asset, tags);
       
-      // Refresh data using the read-only provider
-      if (db) {
-        const data = await getDigitalAssetsData(db, tableName);
-        setAssetsData(data);
-      }
+      // Refresh data
+      const records = await getRecords(ceramic, DataType.DIGITAL_ASSETS, tableName);
+      
+      // Convert records to the format expected by the component
+      const formattedData = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: JSON.stringify(record.content),
+        created_at: new Date().toISOString() // Add required created_at field
+      }));
+      
+      setAssetsData(formattedData);
       
       // Reset form
       setAssetName('');
@@ -430,15 +465,14 @@ export const DigitalAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      if (!address || !tableName) {
-        setError('No wallet connected or table created.');
+      if (!ceramic || !tableName) {
+        setError('Ceramic not initialized or no collection available.');
         return;
       }
       
-      // For write operations, we need a provider with write capabilities
-      const writeDb = await initCeramicWithOptimismWrite(address);
+      // Clear the collection
+      await clearCollection(ceramic, DataType.DIGITAL_ASSETS, tableName);
       
-      await clearDigitalAssetsData(writeDb, tableName);
       setAssetsData([]);
     } catch (err) {
       console.error('Error clearing assets:', err);

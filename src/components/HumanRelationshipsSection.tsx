@@ -1,23 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  createContactsTable, 
-  insertContactData, 
-  getContactsData,
-  checkContactsTableExists,
-  clearContactsData,
-  type PrivateData
-} from '@/utils/tablelandUtils';
-import { initCeramicWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@/utils/ceramicUtils';
+  Database,
+  DataType,
+  PrivateData,
+  initCeramic,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
+} from '@/utils/ceramicUtils';
+import { useCeramic } from '@/context/CeramicContext';
 
 export const HumanRelationshipsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [db, setDb] = useState<Database | null>(null);
@@ -28,87 +27,126 @@ export const HumanRelationshipsSection = () => {
   const [phone, setPhone] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
-  // Initialize Tableland when connected
+  // Use the Ceramic context
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+
+  // Initialize Ceramic connection
   useEffect(() => {
-    if (isConnected && address) {
-      // No need to check network - we use cross-chain signing
-      initTablelandDb();
-    }
-  }, [isConnected, address]);
-
-  // No longer needed as we use cross-chain signing
-  // Keeping this commented for reference
-  /*
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-  */
-
-  const initTablelandDb = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Initialize Tableland with Optimism provider for writing
-      const tablelandDb = await initCeramicWithOptimismWrite(address || '');
-      setDb(tablelandDb);
-      
-      // Check if table exists
-      const tableCheck = await checkContactsTableExists(tablelandDb, address as string);
-      
-      if (tableCheck.exists) {
-        setTableName(tableCheck.tableName);
-        // Load existing data
-        const data = await getContactsData(tablelandDb, tableCheck.tableName);
-        setContactsData(data);
+    const init = async () => {
+      try {
+        if (isConnected && address && !isInitialized && !ceramicLoading) {
+          setLoading(true);
+          setError('');
+          
+          // Connect to Ceramic network
+          await connect();
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error initializing Ceramic:', err);
+        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        setLoading(false);
       }
-      
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message || 'Error initializing Tableland');
-      setLoading(false);
-    }
-  };
+    };
+    
+    init();
+  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  
+  // Load contacts data when Ceramic is initialized
+  useEffect(() => {
+    const loadContactsData = async () => {
+      try {
+        if (isInitialized && ceramic && did) {
+          setLoading(true);
+          
+          // Check if collection exists
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.CONNECTIONS, did);
+          
+          if (exists) {
+            setTableName(collectionId);
+            
+            // Get existing data
+            const records = await getRecords(ceramic, DataType.CONNECTIONS, collectionId);
+            
+            // Convert records to the format expected by the component
+            const formattedData = records.map((record, index) => ({
+              id: index,
+              key: record.id,
+              value: JSON.stringify(record.content),
+              created_at: new Date().toISOString()
+            }));
+            
+            setContactsData(formattedData);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error loading contacts data:', err);
+        setError(err.message || 'Failed to load contacts data. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    loadContactsData();
+  }, [isInitialized, ceramic, did]);
 
   const handleCreateTable = async () => {
-    if (!db || !address) return;
+    if (!ceramic || !did) {
+      setError('Ceramic not initialized or no DID available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      const name = await createContactsTable(db, address);
-      setTableName(name);
+      // Create a new collection for contacts data
+      const { collectionId } = await createCollection(ceramic, DataType.CONNECTIONS, did);
+      setTableName(collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating table');
+      console.error('Error creating collection:', err);
+      setError(err.message || 'Failed to create collection. Please try again.');
       setLoading(false);
     }
   };
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !tableName || !name) return;
+    if (!ceramic || !tableName || !name) {
+      setError('Missing required information. Please check all fields.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      // Format the data as JSON to store all fields together
-      const contactData = JSON.stringify({
+      // Create a record in the collection
+      const content = {
         name,
         email,
         phone,
         notes
-      });
+      };
       
-      await insertContactData(db, tableName, name, contactData);
+      await createRecord(ceramic, DataType.CONNECTIONS, tableName, content, ['contact']);
       
       // Refresh data
-      const data = await getContactsData(db, tableName);
-      setContactsData(data);
+      const records = await getRecords(ceramic, DataType.CONNECTIONS, tableName);
+      
+      // Convert records to the format expected by the component
+      const formattedData = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
+      
+      setContactsData(formattedData);
       
       // Clear form
       setName('');
@@ -117,27 +155,32 @@ export const HumanRelationshipsSection = () => {
       setNotes('');
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error adding contact data');
+      console.error('Error adding contact data:', err);
+      setError(err.message || 'Failed to add contact data. Please try again.');
       setLoading(false);
     }
   };
 
   const handleClearContactsData = async () => {
-    if (!db || !tableName) return;
+    if (!ceramic || !tableName) {
+      setError('Ceramic not initialized or no collection available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      await clearContactsData(db, tableName);
+      // Clear the collection
+      await clearCollection(ceramic, DataType.CONNECTIONS, tableName);
       
-      // Refresh data
-      const data = await getContactsData(db, tableName);
-      setContactsData(data);
+      // Reset data
+      setContactsData([]);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error clearing contacts data');
+      console.error('Error clearing contacts data:', err);
+      setError(err.message || 'Failed to clear contacts data. Please try again.');
       setLoading(false);
     }
   };
@@ -161,9 +204,9 @@ export const HumanRelationshipsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Multi-Chain Support:</strong> Your relationships data is securely stored on Optimism for cost efficiency, 
-            while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
-            interactions behind the scenes - no network switching required.
+            <strong>Ceramic Network Integration:</strong> Your relationships data is securely stored on the Ceramic Network, 
+            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
+            and user experience compared to our previous implementation.
           </p>
         </div>
           <>
@@ -171,7 +214,7 @@ export const HumanRelationshipsSection = () => {
             
             {!tableName ? (
               <div>
-                <p>You don't have a relationships table yet. Create one to store your human relationships securely on Tableland.</p>
+                <p>You don't have a relationships collection yet. Create one to store your human relationships securely on Ceramic Network.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
@@ -182,7 +225,7 @@ export const HumanRelationshipsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your relationship information is stored securely on Tableland on the Optimism network.</p>
+                <p>Your relationship information is stored securely on the Ceramic Network.</p>
                 
                 <form onSubmit={handleAddContact} className="private-data-form">
                   <div className="form-group">

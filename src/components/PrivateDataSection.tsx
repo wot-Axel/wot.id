@@ -1,22 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
-import { optimism } from '@reown/appkit/networks';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  createPrivateTable, 
-  insertPrivateData, 
-  getPrivateData,
-  checkPrivateTableExists,
-  clearPrivateData,
-  type PrivateData
-} from '@/utils/tablelandUtils';
-import { initCeramicWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@/utils/ceramicUtils';
+  Database,
+  DataType,
+  PrivateData,
+  initCeramic,
+  checkCollectionExists,
+  createCollection,
+  getRecords,
+  createRecord,
+  clearCollection
+} from '@/utils/ceramicUtils';
+import { useCeramic } from '@/context/CeramicContext';
 
 export const PrivateDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { switchNetwork } = useAppKitNetwork();
   const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -26,106 +26,152 @@ export const PrivateDataSection = () => {
   const [newKey, setNewKey] = useState<string>('');
   const [newValue, setNewValue] = useState<string>('');
 
-  // Initialize Tableland when connected
+  // Use the Ceramic context
+  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+
+  // Initialize Ceramic connection
   useEffect(() => {
-    if (isConnected && address) {
-      // No need to check network - we use cross-chain signing
-      initTablelandDb();
-    }
-  }, [isConnected, address]);
-
-  // No longer needed as we use cross-chain signing
-  // Keeping this commented for reference
-  /*
-  const handleSwitchToOptimism = () => {
-    switchNetwork(optimism);
-    setIsOptimismNetwork(true);
-  };
-  */
-
-  const initTablelandDb = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Initialize Tableland with Optimism provider for writing
-      const tablelandDb = await initCeramicWithOptimismWrite(address || '');
-      setDb(tablelandDb);
-      
-      // Check if table exists
-      const tableCheck = await checkPrivateTableExists(tablelandDb, address as string);
-      
-      if (tableCheck.exists) {
-        setTableName(tableCheck.tableName);
-        // Load existing data
-        const data = await getPrivateData(tablelandDb, tableCheck.tableName);
-        setPrivateData(data);
+    const init = async () => {
+      try {
+        if (isConnected && address && !isInitialized && !ceramicLoading) {
+          setLoading(true);
+          setError('');
+          
+          // Connect to Ceramic network
+          await connect();
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error initializing Ceramic:', err);
+        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        setLoading(false);
       }
-      
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message || 'Error initializing Tableland');
-      setLoading(false);
-    }
-  };
+    };
+    
+    init();
+  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  
+  // Load private data when Ceramic is initialized
+  useEffect(() => {
+    const loadPrivateData = async () => {
+      try {
+        if (isInitialized && ceramic && did) {
+          setLoading(true);
+          
+          // Check if collection exists
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.PROFILE, did);
+          
+          if (exists) {
+            setTableName(collectionId);
+            
+            // Get existing data
+            const records = await getRecords(ceramic, DataType.PROFILE, collectionId);
+            
+            // Convert records to the format expected by the component
+            const formattedData = records.map((record, index) => ({
+              id: index,
+              key: record.id,
+              value: JSON.stringify(record.content),
+              created_at: new Date().toISOString()
+            }));
+            
+            setPrivateData(formattedData);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Error loading private data:', err);
+        setError(err.message || 'Failed to load private data. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    loadPrivateData();
+  }, [isInitialized, ceramic, did]);
 
   const handleCreateTable = async () => {
-    if (!db || !address) return;
+    if (!ceramic || !did) {
+      setError('Ceramic not initialized or no DID available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      const name = await createPrivateTable(db, address);
-      setTableName(name);
+      // Create a new collection for private data
+      const { collectionId } = await createCollection(ceramic, DataType.PROFILE, did);
+      setTableName(collectionId);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error creating table');
+      console.error('Error creating collection:', err);
+      setError(err.message || 'Failed to create collection. Please try again.');
       setLoading(false);
     }
   };
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !tableName || !newKey || !newValue) return;
+    if (!ceramic || !tableName || !newKey || !newValue) {
+      setError('Missing required information. Please check all fields.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      await insertPrivateData(db, tableName, newKey, newValue);
+      // Create a record in the collection
+      const content = { key: newKey, value: newValue };
+      await createRecord(ceramic, DataType.PROFILE, tableName, content, ['private']);
       
       // Refresh data
-      const data = await getPrivateData(db, tableName);
-      setPrivateData(data);
+      const records = await getRecords(ceramic, DataType.PROFILE, tableName);
+      
+      // Convert records to the format expected by the component
+      const formattedData = records.map((record, index) => ({
+        id: index,
+        key: record.id,
+        value: JSON.stringify(record.content),
+        created_at: new Date().toISOString()
+      }));
+      
+      setPrivateData(formattedData);
       
       // Clear form
       setNewKey('');
       setNewValue('');
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error adding data');
+      console.error('Error adding data:', err);
+      setError(err.message || 'Failed to add data. Please try again.');
       setLoading(false);
     }
   };
 
   const handleClearPrivateData = async () => {
-    if (!db || !tableName) return;
+    if (!ceramic || !tableName) {
+      setError('Ceramic not initialized or no collection available.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      await clearPrivateData(db, tableName);
+      // Clear the collection
+      await clearCollection(ceramic, DataType.PROFILE, tableName);
       
-      // Refresh data
-      const data = await getPrivateData(db, tableName);
-      setPrivateData(data);
+      // Reset data
+      setPrivateData([]);
       
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Error clearing private data');
+      console.error('Error clearing private data:', err);
+      setError(err.message || 'Failed to clear private data. Please try again.');
       setLoading(false);
     }
   };
@@ -136,13 +182,13 @@ export const PrivateDataSection = () => {
 
   return (
     <div className="legal-section">
-      <h2>Private Data (Tableland)</h2>
+      <h2>Private Data (Ceramic)</h2>
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Multi-Chain Support:</strong> Your private data is securely stored on Optimism for cost efficiency, 
-            while your wallet remains connected to your preferred network. Our cross-chain technology handles all network 
-            interactions behind the scenes - no network switching required.
+            <strong>Ceramic Network Integration:</strong> Your private data is securely stored on the Ceramic Network, 
+            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
+            and user experience compared to our previous implementation.
           </p>
         </div>
           <>
