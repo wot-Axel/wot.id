@@ -67,7 +67,7 @@ export const HumanRelationshipsSection = () => {
             setTableName(collectionId);
             
             // Get existing data
-            const records = await getRecords(ceramic, DataType.CONNECTIONS, collectionId);
+            const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
             const formattedData = records.map((record, index) => ({
@@ -136,7 +136,7 @@ export const HumanRelationshipsSection = () => {
       await createRecord(ceramic, DataType.CONNECTIONS, tableName, content, ['contact']);
       
       // Refresh data
-      const records = await getRecords(ceramic, DataType.CONNECTIONS, tableName);
+      const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
       const formattedData = records.map((record, index) => ({
@@ -172,7 +172,7 @@ export const HumanRelationshipsSection = () => {
       setError('');
       
       // Clear the collection
-      await clearCollection(ceramic, DataType.CONNECTIONS, tableName);
+      await clearCollection(ceramic, tableName);
       
       // Reset data
       setContactsData([]);

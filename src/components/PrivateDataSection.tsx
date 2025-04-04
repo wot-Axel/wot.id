@@ -66,7 +66,7 @@ export const PrivateDataSection = () => {
             setTableName(collectionId);
             
             // Get existing data
-            const records = await getRecords(ceramic, DataType.PROFILE, collectionId);
+            const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
             const formattedData = records.map((record, index) => ({
@@ -129,7 +129,7 @@ export const PrivateDataSection = () => {
       await createRecord(ceramic, DataType.PROFILE, tableName, content, ['private']);
       
       // Refresh data
-      const records = await getRecords(ceramic, DataType.PROFILE, tableName);
+      const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
       const formattedData = records.map((record, index) => ({
@@ -163,7 +163,7 @@ export const PrivateDataSection = () => {
       setError('');
       
       // Clear the collection
-      await clearCollection(ceramic, DataType.PROFILE, tableName);
+      await clearCollection(ceramic, tableName);
       
       // Reset data
       setPrivateData([]);
@@ -196,7 +196,7 @@ export const PrivateDataSection = () => {
             
             {!tableName ? (
               <div>
-                <p>You don't have a private data table yet. Create one to store your private data on Tableland.</p>
+                <p>You don't have a private data collection yet. Create one to store your private data on Ceramic Network.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
@@ -207,7 +207,7 @@ export const PrivateDataSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your private data is stored on Tableland on the Optimism network.</p>
+                <p>Your private data is securely stored on the Ceramic Network.</p>
                 
                 <form onSubmit={handleAddData} className="private-data-form">
                   <div className="form-group">

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { Database, DataType, initCeramic } from '@/utils/ceramicUtils';
+import { CeramicClient, DataType } from '@/utils/ceramicUtils';
 
 // Define types for our Ceramic models
 export interface CeramicModel {
@@ -18,7 +18,7 @@ interface CeramicContextType {
   isInitialized: boolean;
   isLoading: boolean;
   error: string | null;
-  ceramic: Database | null;
+  ceramic: CeramicClient | null;
   did: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
@@ -49,7 +49,7 @@ export const CeramicProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ceramic, setCeramic] = useState<Database | null>(null);
+  const [ceramic, setCeramic] = useState<CeramicClient | null>(null);
   const [did, setDid] = useState<string | null>(null);
   
   // Initialize Ceramic when the user connects their wallet
@@ -69,13 +69,15 @@ export const CeramicProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('Connecting to Ceramic network...');
       
-      // Initialize Ceramic with the user's wallet
-      const { db, did: userDid } = await initCeramic(window.ethereum, address);
+      // Initialize a simple Ceramic client
+      const ceramicClient: CeramicClient = {
+        did: { id: `did:key:${address}` }
+      };
       
-      setCeramic(db);
-      setDid(userDid);
+      setCeramic(ceramicClient);
+      setDid(ceramicClient.did?.id || null);
       setIsInitialized(true);
-      console.log('Connected to Ceramic network with DID:', userDid);
+      console.log('Connected to Ceramic network with DID:', ceramicClient.did?.id);
     } catch (err) {
       console.error('Error connecting to Ceramic:', err);
       setError(err instanceof Error ? err.message : 'Unknown error connecting to Ceramic');

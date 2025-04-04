@@ -66,7 +66,7 @@ export const MedicalDataSection = () => {
             setTableName(collectionId);
             
             // Get existing data
-            const records = await getRecords(ceramic, DataType.MEDICAL, collectionId);
+            const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
             const formattedData = records.map((record, index) => ({
@@ -164,7 +164,7 @@ export const MedicalDataSection = () => {
       }
       
       // Refresh data
-      const records = await getRecords(ceramic, DataType.MEDICAL, tableName);
+      const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
       const formattedData = records.map((record, index) => ({

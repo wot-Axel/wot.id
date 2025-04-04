@@ -74,13 +74,13 @@ export const RealWorldAssetsSection = () => {
           setLoading(true);
           
           // Check if collection exists
-          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.REAL_ASSETS, did);
+          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.REAL_WORLD_ASSETS, did);
           
           if (exists) {
             setTableName(collectionId);
             
             // Get existing data
-            const records = await getRecords(ceramic, DataType.REAL_ASSETS, collectionId);
+            const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
             const formattedData = records.map((record, index) => ({
@@ -105,7 +105,7 @@ export const RealWorldAssetsSection = () => {
           } else {
             // Create a new collection if it doesn't exist
             console.log('Creating new collection for real world assets');
-            const result = await createCollection(ceramic, DataType.REAL_ASSETS, did);
+            const result = await createCollection(ceramic, DataType.REAL_WORLD_ASSETS, did);
             setTableName(result.collectionId);
           }
           
@@ -132,7 +132,7 @@ export const RealWorldAssetsSection = () => {
       setError('');
       
       // Create a new collection for real world assets data
-      const { collectionId } = await createCollection(ceramic, DataType.REAL_ASSETS, did);
+      const { collectionId } = await createCollection(ceramic, DataType.REAL_WORLD_ASSETS, did);
       setTableName(collectionId);
       
       setLoading(false);
@@ -164,7 +164,7 @@ export const RealWorldAssetsSection = () => {
       let currentTableName = tableName;
       if (!currentTableName) {
         console.log('No collection found, creating a new one');
-        const result = await createCollection(ceramic, DataType.REAL_ASSETS, did);
+        const result = await createCollection(ceramic, DataType.REAL_WORLD_ASSETS, did);
         currentTableName = result.collectionId;
         setTableName(currentTableName);
       }
@@ -181,16 +181,16 @@ export const RealWorldAssetsSection = () => {
       });
       
       // Clear existing collection
-      await clearCollection(ceramic, DataType.REAL_ASSETS, currentTableName);
+      await clearCollection(ceramic, currentTableName);
       
       // Create a new record with all asset data
       if (Object.keys(assetData).length > 0) {
         console.log('Creating record with data:', assetData);
-        await createRecord(ceramic, DataType.REAL_ASSETS, currentTableName, assetData, ['asset']);
+        await createRecord(ceramic, DataType.REAL_WORLD_ASSETS, currentTableName, assetData, ['asset']);
       }
       
       // Refresh data
-      const records = await getRecords(ceramic, DataType.REAL_ASSETS, currentTableName);
+      const records = await getRecords(ceramic, currentTableName);
       console.log('Retrieved records after save:', records);
       
       // Convert records to the format expected by the component
@@ -222,7 +222,7 @@ export const RealWorldAssetsSection = () => {
       setError('');
       
       // Clear the collection
-      await clearCollection(ceramic, DataType.REAL_ASSETS, tableName);
+      await clearCollection(ceramic, tableName);
       
       // Reset data
       setAssetsData([]);

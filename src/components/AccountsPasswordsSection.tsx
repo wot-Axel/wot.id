@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  Database,
+  CeramicClient,
   DataType,
-  PrivateData,
+  TableData,
   initCeramic,
   checkCollectionExists,
   createCollection,
@@ -19,9 +19,9 @@ export const AccountsPasswordsSection = () => {
   const { address, isConnected } = useAppKitAccount();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
+  const [db, setDb] = useState<CeramicClient | null>(null);
   const [tableName, setTableName] = useState<string>('');
-  const [accountsData, setAccountsData] = useState<PrivateData[]>([]);
+  const [accountsData, setAccountsData] = useState<TableData[]>([]);
   const [website, setWebsite] = useState<string>('');
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -67,7 +67,7 @@ export const AccountsPasswordsSection = () => {
             setTableName(collectionId);
             
             // Get existing data
-            const records = await getRecords(ceramic, DataType.PROFILE, collectionId);
+            const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
             const formattedData = records.map((record, index) => ({
@@ -135,7 +135,7 @@ export const AccountsPasswordsSection = () => {
       await createRecord(ceramic, DataType.PROFILE, tableName, content, ['accounts']);
       
       // Refresh data
-      const records = await getRecords(ceramic, DataType.PROFILE, tableName);
+      const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
       const formattedData = records.map((record, index) => ({
@@ -170,7 +170,7 @@ export const AccountsPasswordsSection = () => {
       setError('');
       
       // Clear the collection
-      await clearCollection(ceramic, DataType.PROFILE, tableName);
+      await clearCollection(ceramic, tableName);
       
       // Reset data
       setAccountsData([]);

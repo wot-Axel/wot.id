@@ -102,7 +102,7 @@ export const IdentitySection = () => {
       setLoading(true);
       
       // Get all profile data
-      const records = await getRecords(ceramic, DataType.PROFILE, collectionId);
+      const records = await getRecords(ceramic, collectionId);
       
       // Convert records to the format expected by the component
       const formattedData: TableData[] = records.map((record, index) => ({
@@ -222,7 +222,7 @@ export const IdentitySection = () => {
       setError('');
       
       // Clear existing collection
-      await clearCollection(ceramic, DataType.PROFILE, collectionId);
+      await clearCollection(ceramic, collectionId);
       
       // Combine all field values into a single document record
       const identityDataObj: Record<string, string> = {};

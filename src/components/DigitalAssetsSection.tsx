@@ -3,14 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  Database,
   DataType,
-  PrivateData,
-  initCeramic,
+  CeramicClient,
+  ContentRecord,
   checkCollectionExists,
   createCollection,
   getRecords,
   createRecord,
+  updateRecord,
+  deleteRecord,
   clearCollection
 } from '@/utils/ceramicUtils';
 import { useCeramic } from '@/context/CeramicContext';
@@ -235,9 +236,9 @@ export const DigitalAssetsSection = () => {
   const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
+  const [ceramicClient, setCeramicClient] = useState<CeramicClient | null>(null);
   const [tableName, setTableName] = useState<string>('');
-  const [assetsData, setAssetsData] = useState<PrivateData[]>([]);
+  const [assetsData, setAssetsData] = useState<any[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   
   // Form state
@@ -257,7 +258,7 @@ export const DigitalAssetsSection = () => {
   // Set network information for display purposes
   useEffect(() => {
     // We're using Ceramic now, so we don't need to check the network
-    // Just set to false as we're not specifically using Optimism anymore
+    // Just set to false as we're using Ceramic Network instead of Optimism
     setIsOptimismNetwork(false);
   }, [isConnected]);
   
@@ -267,7 +268,7 @@ export const DigitalAssetsSection = () => {
       <div className="info-box">
         <p>
           <strong>Multi-Chain Support:</strong> Your digital assets can be from any blockchain network.
-          The asset data is securely stored on Optimism for cost efficiency, while your wallet remains 
+          The asset data is securely stored on Ceramic Network for improved identity integration, while your wallet remains 
           connected to your preferred network. Our cross-chain technology handles all network interactions 
           behind the scenes - no network switching required.
         </p>
@@ -315,7 +316,7 @@ export const DigitalAssetsSection = () => {
             setTableName(collectionId);
             
             // Get existing data
-            const records = await getRecords(ceramic, DataType.DIGITAL_ASSETS, collectionId);
+            const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
             const formattedData = records.map((record, index) => ({
@@ -368,7 +369,7 @@ export const DigitalAssetsSection = () => {
         }
         
         // Get the updated records
-        const records = await getRecords(ceramic, DataType.DIGITAL_ASSETS, collectionId);
+        const records = await getRecords(ceramic, collectionId);
         
         // Convert records to the format expected by the component
         const formattedData = records.map((record, index) => ({
@@ -429,7 +430,7 @@ export const DigitalAssetsSection = () => {
       await createRecord(ceramic, DataType.DIGITAL_ASSETS, tableName, asset, tags);
       
       // Refresh data
-      const records = await getRecords(ceramic, DataType.DIGITAL_ASSETS, tableName);
+      const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
       const formattedData = records.map((record, index) => ({
@@ -471,7 +472,7 @@ export const DigitalAssetsSection = () => {
       }
       
       // Clear the collection
-      await clearCollection(ceramic, DataType.DIGITAL_ASSETS, tableName);
+      await clearCollection(ceramic, tableName);
       
       setAssetsData([]);
     } catch (err) {
@@ -495,9 +496,9 @@ export const DigitalAssetsSection = () => {
     <div className="legal-section">
       <h2>My Digital Assets</h2>
       <p className="section-description" style={{ marginBottom: '1rem' }}>
-        Securely store and manage your digital assets from multiple blockchains including Ethereum, Optimism, Polygon, and more.
+        Securely store and manage your digital assets from multiple blockchains including Ethereum, Polygon, and more.
         <span className="network-info" style={{ display: 'block', fontSize: '0.9rem', marginTop: '0.5rem', color: '#666' }}>
-          Data is stored on Optimism for faster and cheaper transactions while keeping your main wallet connection unchanged.
+          Data is stored on Ceramic Network for better identity integration and data management while keeping your main wallet connection unchanged.
         </span>
       </p>
       <div className="section-content">

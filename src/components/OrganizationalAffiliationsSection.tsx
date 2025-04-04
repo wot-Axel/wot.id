@@ -68,7 +68,7 @@ export const OrganizationalAffiliationsSection = () => {
             setTableName(collectionId);
             
             // Get existing data
-            const records = await getRecords(ceramic, DataType.ORGANIZATIONS, collectionId);
+            const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
             const formattedData = records.map((record, index) => ({
@@ -138,7 +138,7 @@ export const OrganizationalAffiliationsSection = () => {
       await createRecord(ceramic, DataType.ORGANIZATIONS, tableName, content, ['affiliation']);
       
       // Refresh data
-      const records = await getRecords(ceramic, DataType.ORGANIZATIONS, tableName);
+      const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
       const formattedData = records.map((record, index) => ({
@@ -175,7 +175,7 @@ export const OrganizationalAffiliationsSection = () => {
       setError('');
       
       // Clear the collection
-      await clearCollection(ceramic, DataType.ORGANIZATIONS, tableName);
+      await clearCollection(ceramic, tableName);
       
       // Reset data
       setAffiliationsData([]);

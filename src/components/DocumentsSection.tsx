@@ -92,7 +92,7 @@ export const DocumentsSection = () => {
       setLoading(true);
       
       // Get all documents data
-      const records = await getRecords(ceramic, DataType.DOCUMENTS, collectionId);
+      const records = await getRecords(ceramic, collectionId);
       
       // Convert records to the format expected by the component
       const formattedData: TableData[] = records.map((record, index) => ({
@@ -142,7 +142,7 @@ export const DocumentsSection = () => {
       setError('');
       
       // Clear existing collection
-      await clearCollection(ceramic, DataType.DOCUMENTS, collectionId);
+      await clearCollection(ceramic, collectionId);
       
       // Combine all field values into a single document record
       const documentData: Record<string, string> = {};

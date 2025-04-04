@@ -3,87 +3,32 @@
  * This is a minimal placeholder version without external dependencies
  */
 
-// Type definitions only - no actual implementation that requires external dependencies
-import { monitorAsync } from './performanceMonitor';
-import { validateData } from './schemaValidation';
-
-/**
- * Initialize Ceramic client
- * @returns Initialized Ceramic client
- */
-export const initCeramic = async (): Promise<CeramicClient> => {
-  return monitorAsync('initCeramic', 'ceramicUtils', async () => {
-    // Create a simple client with a mock DID for now
-    // This will be replaced with a real Ceramic client in the future
-    const ceramic: CeramicClient = {
-      did: { id: 'did:key:placeholder' }
-    };
-    
-    return ceramic;
-  });
-};
-
-// Ensure window.ethereum is recognized
-declare global {
-  interface Window {
-    ethereum?: Record<string, unknown>;
-  }
-}
-
-// Interface for data records - compatible with previous implementation
-export interface TableData {
-  id: number;
-  key: string;      // This maps to item_key in the database
-  value: string;    // This maps to item_value in the database
-  created_at: string;
-}
-
-// Alias for TableData to maintain compatibility with existing code
-export type PrivateData = TableData;
+import { monitorAsync } from './performanceMonitor.js';
+import { validateData } from './schemaValidation.js';
 
 // Enum for data types to ensure consistency across the application
-export enum DataType {
-  PROFILE = 'profile',
-  DOCUMENTS = 'documents',
-  MEDICAL = 'medical',
-  DIGITAL_ASSETS = 'digital_assets',
-  REAL_WORLD_ASSETS = 'real_world_assets',
-  CONNECTIONS = 'connections',
-  ORGANIZATIONS = 'organizations',
-  MESSAGES = 'messages',
-  PRIVATE = 'private'
-}
-
-// Interface for Ceramic DID
-export interface CeramicDID {
-  id: string;
-  [key: string]: any;
-}
-
-// Interface for Ceramic client
-export interface CeramicClient {
-  did?: CeramicDID;
-  [key: string]: any;
-}
-
-// Database type for backward compatibility
-export type Database = CeramicClient;
+export const DataType = {
+  PROFILE: 'profile',
+  DOCUMENTS: 'documents',
+  MEDICAL: 'medical',
+  DIGITAL_ASSETS: 'digital_assets',
+  REAL_WORLD_ASSETS: 'real_world_assets',
+  CONNECTIONS: 'connections',
+  MESSAGES: 'messages',
+  PRIVATE: 'private'
+};
 
 // Interface for content record
-export interface ContentRecord {
-  id: string;
-  streamId: string;
-  controller: string;
-  createdAt: string;
-  updatedAt: string;
-  content: any;
-  tags?: string[];
-}
-
-// Interface for collection information
-export interface CollectionInfo {
-  exists: boolean;
-  collectionId: string;
+export class ContentRecord {
+  constructor(id, streamId, controller, createdAt, updatedAt, content, tags) {
+    this.id = id;
+    this.streamId = streamId;
+    this.controller = controller;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
+    this.content = content;
+    this.tags = tags;
+  }
 }
 
 // Storage key for localStorage
@@ -93,7 +38,7 @@ const CERAMIC_STORAGE_KEY = 'ceramic_local_storage';
  * Get the storage from localStorage
  * @returns The storage object
  */
-const getStorage = (): Record<string, ContentRecord[]> => {
+const getStorage = () => {
   try {
     const storageStr = localStorage.getItem(CERAMIC_STORAGE_KEY);
     return storageStr ? JSON.parse(storageStr) : {};
@@ -107,7 +52,7 @@ const getStorage = (): Record<string, ContentRecord[]> => {
  * Save the storage to localStorage
  * @param storage The storage object to save
  */
-const saveStorage = (storage: Record<string, ContentRecord[]>): void => {
+const saveStorage = (storage) => {
   try {
     localStorage.setItem(CERAMIC_STORAGE_KEY, JSON.stringify(storage));
   } catch (error) {
@@ -118,7 +63,7 @@ const saveStorage = (storage: Record<string, ContentRecord[]>): void => {
 /**
  * Clear all collections from storage
  */
-export const clearAllCollections = (): void => {
+export const clearAllCollections = () => {
   try {
     localStorage.removeItem(CERAMIC_STORAGE_KEY);
     console.log('All collections cleared');
@@ -134,11 +79,7 @@ export const clearAllCollections = (): void => {
  * @param did The DID of the user
  * @returns Collection information
  */
-export const checkCollectionExists = async (
-  ceramic: CeramicClient,
-  dataType: DataType,
-  did: string
-): Promise<CollectionInfo> => {
+export const checkCollectionExists = async (ceramic, dataType, did) => {
   return monitorAsync('checkCollectionExists', 'ceramicUtils', async () => {
     const collectionId = `${dataType}_${did}`;
     const storage = getStorage();
@@ -155,11 +96,7 @@ export const checkCollectionExists = async (
  * @param did The DID of the user
  * @returns Collection information
  */
-export const createCollection = async (
-  ceramic: CeramicClient,
-  dataType: DataType,
-  did: string
-): Promise<CollectionInfo> => {
+export const createCollection = async (ceramic, dataType, did) => {
   return monitorAsync('createCollection', 'ceramicUtils', async () => {
     const collectionId = `${dataType}_${did}`;
     const storage = getStorage();
@@ -183,16 +120,10 @@ export const createCollection = async (
  * @param tags Optional tags for the record
  * @returns The created record
  */
-export const createRecord = async (
-  ceramic: CeramicClient,
-  dataType: DataType,
-  collectionId: string,
-  content: any,
-  tags: string[] = []
-): Promise<ContentRecord> => {
+export const createRecord = async (ceramic, dataType, collectionId, content, tags = []) => {
   return monitorAsync('createRecord', 'ceramicUtils', async () => {
     // Validate the data before storing it
-    const validationResult = validateData(dataType, content);
+    const validationResult = await validateData(dataType, content);
     if (!validationResult.valid) {
       console.warn(`Data validation failed for ${collectionId}:`, validationResult.errors);
       // Continue anyway for now, but log the validation errors
@@ -211,15 +142,15 @@ export const createRecord = async (
     const did = ceramic.did?.id || 'unknown';
     
     // Create a new record
-    const record: ContentRecord = {
-      id: Math.random().toString(36).substring(2, 15),
-      streamId: Math.random().toString(36).substring(2, 15),
-      controller: did,
-      createdAt: timestamp,
-      updatedAt: timestamp,
+    const record = new ContentRecord(
+      Math.random().toString(36).substring(2, 15),
+      Math.random().toString(36).substring(2, 15),
+      did,
+      timestamp,
+      timestamp,
       content,
       tags
-    };
+    );
     
     // Add the record to the collection
     storage[collectionId].push(record);
@@ -238,10 +169,7 @@ export const createRecord = async (
  * @param collectionId The ID of the collection
  * @returns Array of records
  */
-export const getRecords = async (
-  ceramic: CeramicClient,
-  collectionId: string
-): Promise<ContentRecord[]> => {
+export const getRecords = async (ceramic, collectionId) => {
   return monitorAsync('getRecords', 'ceramicUtils', async () => {
     const storage = getStorage();
     return storage[collectionId] || [];
@@ -258,17 +186,10 @@ export const getRecords = async (
  * @param tags Optional new tags for the record
  * @returns The updated record or null if not found
  */
-export const updateRecord = async (
-  ceramic: CeramicClient,
-  dataType: DataType,
-  collectionId: string,
-  recordId: string,
-  content: any,
-  tags?: string[]
-): Promise<ContentRecord | null> => {
+export const updateRecord = async (ceramic, dataType, collectionId, recordId, content, tags) => {
   return monitorAsync('updateRecord', 'ceramicUtils', async () => {
     // Validate the data before updating
-    const validationResult = validateData(dataType, content);
+    const validationResult = await validateData(dataType, content);
     if (!validationResult.valid) {
       console.warn(`Data validation failed for ${collectionId}:`, validationResult.errors);
       // Continue anyway for now, but log the validation errors
@@ -288,12 +209,15 @@ export const updateRecord = async (
     const record = storage[collectionId][recordIndex];
     
     // Update the record
-    const updatedRecord: ContentRecord = {
-      ...record,
-      updatedAt: timestamp,
+    const updatedRecord = new ContentRecord(
+      record.id,
+      record.streamId,
+      record.controller,
+      record.createdAt,
+      timestamp,
       content,
-      ...(tags && { tags })
-    };
+      tags || record.tags
+    );
     
     // Replace the record in the collection
     storage[collectionId][recordIndex] = updatedRecord;
@@ -313,11 +237,7 @@ export const updateRecord = async (
  * @param recordId The ID of the record to delete
  * @returns Whether the record was deleted
  */
-export const deleteRecord = async (
-  ceramic: CeramicClient,
-  collectionId: string,
-  recordId: string
-): Promise<boolean> => {
+export const deleteRecord = async (ceramic, collectionId, recordId) => {
   return monitorAsync('deleteRecord', 'ceramicUtils', async () => {
     const storage = getStorage();
     if (!storage[collectionId]) {
@@ -346,10 +266,7 @@ export const deleteRecord = async (
  * @param collectionId The ID of the collection to clear
  * @returns Whether the collection was cleared
  */
-export const clearCollection = async (
-  ceramic: CeramicClient,
-  collectionId: string
-): Promise<boolean> => {
+export const clearCollection = async (ceramic, collectionId) => {
   return monitorAsync('clearCollection', 'ceramicUtils', async () => {
     const storage = getStorage();
     if (!storage[collectionId]) {
