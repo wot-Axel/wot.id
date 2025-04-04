@@ -32,6 +32,160 @@ const mockDefinition: RuntimeCompositeDefinition = {
 // Storage keys
 const DID_SEED_STORAGE_KEY = 'wot-id-did-seed';
 const CERAMIC_CONNECTION_STATUS_KEY = 'wot-id-ceramic-connection-status';
+const LOCAL_DATA_PREFIX = 'wot-id-local-data:';
+const LOCAL_DATA_INDEX_KEY = 'wot-id-local-data-index';
+const DID_INSTANCE_KEY = 'wot-id-did-instance';
+
+// Interface for local data index entry
+interface LocalDataEntry {
+  id: string;
+  modelName: string;
+  createdAt: string;
+  updatedAt: string;
+  syncStatus: 'pending' | 'synced' | 'failed';
+}
+
+// Get the local data index
+const getLocalDataIndex = (): Record<string, LocalDataEntry> => {
+  if (typeof window === 'undefined') return {};
+  
+  try {
+    const indexJson = localStorage.getItem(LOCAL_DATA_INDEX_KEY);
+    return indexJson ? JSON.parse(indexJson) : {};
+  } catch (error) {
+    console.error('Error reading local data index:', error);
+    return {};
+  }
+};
+
+// Save the local data index
+const saveLocalDataIndex = (index: Record<string, LocalDataEntry>): void => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(LOCAL_DATA_INDEX_KEY, JSON.stringify(index));
+  } catch (error) {
+    console.error('Error saving local data index:', error);
+  }
+};
+
+// Store data in local storage when Ceramic is unavailable
+const storeInLocalStorage = (modelName: string, data: any): any => {
+  if (typeof window === 'undefined') {
+    throw new Error('Local storage is only available in browser environments');
+  }
+  
+  try {
+    // Generate a local ID
+    const localId = `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
+    // Prepare the data with metadata
+    const storedData = {
+      ...data,
+      id: localId,
+      modelName,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      __localOnly: true
+    };
+    
+    // Store the data
+    const storageKey = `${LOCAL_DATA_PREFIX}${localId}`;
+    localStorage.setItem(storageKey, JSON.stringify(storedData));
+    
+    // Update the index
+    const index = getLocalDataIndex();
+    index[localId] = {
+      id: localId,
+      modelName,
+      createdAt: storedData.createdAt,
+      updatedAt: storedData.updatedAt,
+      syncStatus: 'pending'
+    };
+    saveLocalDataIndex(index);
+    
+    console.log(`Stored ${modelName} data locally with ID ${localId} due to Ceramic unavailability`);
+    return storedData;
+  } catch (error) {
+    console.error('Error storing data locally:', error);
+    throw error;
+  }
+};
+
+// Get data from local storage
+const getLocalData = (modelName?: string): any[] => {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const index = getLocalDataIndex();
+    const results: any[] = [];
+    
+    for (const [id, entry] of Object.entries(index)) {
+      // Skip if we're filtering by model name and this doesn't match
+      if (modelName && entry.modelName !== modelName) continue;
+      
+      const storageKey = `${LOCAL_DATA_PREFIX}${id}`;
+      const dataJson = localStorage.getItem(storageKey);
+      
+      if (dataJson) {
+        results.push(JSON.parse(dataJson));
+      }
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('Error retrieving local data:', error);
+    return [];
+  }
+};
+
+// Remove data from local storage
+const removeFromLocalStorage = (modelName: string, data: any): void => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const index = getLocalDataIndex();
+    let idToRemove: string | null = null;
+    
+    // Find the entry to remove
+    for (const [id, entry] of Object.entries(index)) {
+      if (entry.modelName === modelName) {
+        const storageKey = `${LOCAL_DATA_PREFIX}${id}`;
+        const storedDataJson = localStorage.getItem(storageKey);
+        
+        if (storedDataJson) {
+          const storedData = JSON.parse(storedDataJson);
+          
+          // Check if this is the data we want to remove
+          // We can't compare the entire object, so we'll check key fields
+          let isMatch = true;
+          for (const key of Object.keys(data)) {
+            if (JSON.stringify(data[key]) !== JSON.stringify(storedData[key])) {
+              isMatch = false;
+              break;
+            }
+          }
+          
+          if (isMatch) {
+            idToRemove = id;
+            break;
+          }
+        }
+      }
+    }
+    
+    // Remove the entry if found
+    if (idToRemove) {
+      const storageKey = `${LOCAL_DATA_PREFIX}${idToRemove}`;
+      localStorage.removeItem(storageKey);
+      delete index[idToRemove];
+      saveLocalDataIndex(index);
+      console.log(`Removed local data with ID ${idToRemove}`);
+    }
+  } catch (error) {
+    console.error('Error removing local data:', error);
+  }
+};
 
 // Connection status tracking
 interface ConnectionStatus {
@@ -136,6 +290,20 @@ const getPersistentDIDSeed = (forceNew = false): Uint8Array => {
  * @returns Promise resolving to authenticated DID
  */
 const getOrCreateDID = async (seed?: Uint8Array): Promise<DID> => {
+  // In browser environments, try to load a cached DID instance first
+  if (typeof window !== 'undefined') {
+    try {
+      const cachedDIDString = localStorage.getItem(DID_INSTANCE_KEY);
+      if (cachedDIDString) {
+        // We can't directly deserialize the DID instance, but we can use the ID
+        // to check if we should generate a new one or use the existing seed
+        console.log('Found cached DID information');
+      }
+    } catch (error) {
+      console.warn('Error accessing cached DID:', error);
+    }
+  }
+  
   // Get the persistent seed or use the provided seed
   const didSeed = seed || getPersistentDIDSeed();
   
@@ -146,10 +314,26 @@ const getOrCreateDID = async (seed?: Uint8Array): Promise<DID> => {
     resolver: getResolver(),
   });
   
-  // Authenticate the DID
-  await did.authenticate();
-  
-  return did;
+  try {
+    // Authenticate the DID
+    await did.authenticate();
+    
+    // Cache the DID ID for future reference
+    if (typeof window !== 'undefined') {
+      try {
+        // We can't store the full DID instance, but we can store the ID
+        localStorage.setItem(DID_INSTANCE_KEY, did.id);
+        console.log('Cached authenticated DID ID:', did.id);
+      } catch (error) {
+        console.warn('Error caching DID ID:', error);
+      }
+    }
+    
+    return did;
+  } catch (error) {
+    console.error('DID authentication failed:', error);
+    throw error;
+  }
 };
 
 /**
@@ -417,6 +601,10 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
             const existingIds = JSON.parse(localStorage.getItem(storageKey) || '[]');
             existingIds.push(doc.id.toString());
             localStorage.setItem(storageKey, JSON.stringify(existingIds));
+            
+            // If this data was previously stored locally, remove it
+            // since we've now successfully stored it in Ceramic
+            removeFromLocalStorage(modelName, data);
           }
           
           // Return the created document with our expected format
@@ -427,7 +615,10 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
           };
         } catch (error) {
           console.error(`Error creating ${modelName}:`, error);
-          throw error;
+          
+          // Fall back to local storage if Ceramic fails
+          console.log(`Falling back to local storage for ${modelName} data`);
+          return storeInLocalStorage(modelName, data);
         }
       },
       
@@ -527,12 +718,18 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
         } catch (error) {
           console.error('Error executing query:', error);
           
-          // Return empty result on error
+          // Get local data as fallback
+          console.log(`Falling back to local data for ${modelName} query`);
+          const localData = getLocalData(modelName);
+          
+          // Return local data formatted to match ComposeDB response
           return {
             data: {
               viewer: {
                 [`${modelName || 'Generic'}Index`]: {
-                  edges: []
+                  edges: localData.map(doc => ({
+                    node: doc
+                  }))
                 }
               }
             }
@@ -559,6 +756,15 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
           
           // Load each document
           const documents: Array<Record<string, any>> = [];
+          
+          // Also get any locally stored documents for this model type
+          const localDocuments = getLocalData(modelName);
+          if (localDocuments.length > 0) {
+            console.log(`Found ${localDocuments.length} locally stored ${modelName} documents`);
+            documents.push(...localDocuments);
+          }
+          
+          // Then load network documents
           for (const id of docIds) {
             try {
               console.log(`Attempting to load document in list with ID: ${id}`);
@@ -593,7 +799,10 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
           return documents;
         } catch (error) {
           console.error(`Error listing ${modelName}:`, error);
-          return [];
+          
+          // Fall back to local data only if network operations fail
+          console.log(`Falling back to local data only for ${modelName} list`);
+          return getLocalData(modelName);
         }
       },
       
