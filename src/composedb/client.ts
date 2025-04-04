@@ -28,15 +28,55 @@ const mockDefinition: RuntimeCompositeDefinition = {
   accountData: {}
 };
 
+// Storage key for DID seed
+const DID_SEED_STORAGE_KEY = 'wot-id-did-seed';
+
 // ComposeDB client singleton
 let composeClient: any = null;
 
 /**
+ * Generate or retrieve a persistent DID seed
+ * @returns Uint8Array seed for DID generation
+ */
+const getPersistentDIDSeed = (): Uint8Array => {
+  if (typeof window === 'undefined') {
+    // Server-side, generate a temporary seed
+    return crypto.getRandomValues(new Uint8Array(32));
+  }
+  
+  // Check if we have a stored seed
+  const storedSeed = localStorage.getItem(DID_SEED_STORAGE_KEY);
+  
+  if (storedSeed) {
+    try {
+      // Convert stored hex string back to Uint8Array
+      const seedArray = JSON.parse(storedSeed);
+      return new Uint8Array(seedArray);
+    } catch (error) {
+      console.error('Error parsing stored DID seed, generating new one:', error);
+    }
+  }
+  
+  // Generate a new seed if none exists or parsing failed
+  const newSeed = crypto.getRandomValues(new Uint8Array(32));
+  
+  // Store the seed for future sessions
+  try {
+    localStorage.setItem(DID_SEED_STORAGE_KEY, JSON.stringify(Array.from(newSeed)));
+    console.log('Generated and stored new DID seed for persistent identity');
+  } catch (error) {
+    console.error('Error storing DID seed:', error);
+  }
+  
+  return newSeed;
+};
+
+/**
  * Initialize the ComposeDB client
- * @param seed Optional seed for DID authentication
+ * @param forceSeed Optional seed to force for DID authentication (overrides stored seed)
  * @returns Initialized ComposeDB client
  */
-export const initComposeDB = async (seed?: Uint8Array): Promise<any> => {
+export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
   return monitorAsync('initComposeDB', 'composedb', async () => {
     if (composeClient) {
       return composeClient;
@@ -45,22 +85,20 @@ export const initComposeDB = async (seed?: Uint8Array): Promise<any> => {
     // Create a Ceramic client
     const ceramic = new CeramicClient(getCeramicNodeUrl());
 
-    // Set up DID authentication
-    if (seed) {
-      // If seed is provided, use it to create a DID
-      const provider = new Ed25519Provider(seed);
-      const did = new DID({
-        provider,
-        resolver: getResolver(),
-      });
-      await did.authenticate();
-      ceramic.did = did;
-    } else if (typeof window !== 'undefined' && window.ethereum) {
-      // If in browser with ethereum provider, use it for authentication
-      // This would be replaced with a proper wallet connection in production
-      console.log('Using Ethereum provider for authentication');
-      // Implementation would go here
-    }
+    // Get the persistent seed or use the forced seed if provided
+    const seed = forceSeed || getPersistentDIDSeed();
+    
+    // Set up DID authentication with the persistent seed
+    const provider = new Ed25519Provider(seed);
+    const did = new DID({
+      provider,
+      resolver: getResolver(),
+    });
+    
+    await did.authenticate();
+    ceramic.did = did;
+    
+    console.log('Connected to Ceramic network with DID:', did.id);
 
     try {
       // Create a real ComposeDB client with our mock definition
@@ -77,27 +115,66 @@ export const initComposeDB = async (seed?: Uint8Array): Promise<any> => {
         composeClient: realComposeClient,
         exists: async (modelName: string, query: any) => {
           // In a real implementation, we would query the model
-          // For now, return false to simulate a non-existent collection
+          // For now, check localStorage to simulate persistence
+          const storageKey = `composedb-${modelName}`;
+          const storedData = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+          if (storedData) {
+            const parsedData = JSON.parse(storedData);
+            return parsedData.some((item: any) => {
+              // Check if any item matches the query
+              return Object.keys(query).every(key => item[key] === query[key]);
+            });
+          }
           return false;
         },
         create: async (modelName: string, data: any) => {
           // In a real implementation, we would use composeClient.executeQuery
-          // For now, we'll simulate a created document
+          // For now, we'll store in localStorage to simulate persistence
           const id = `doc-${Date.now()}`;
-          return {
+          const newDoc = {
             documentId: id,
             streamId: `stream-${id}`,
-            ...data
+            ...data,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           };
+          
+          // Store in localStorage
+          if (typeof window !== 'undefined') {
+            const storageKey = `composedb-${modelName}`;
+            const existingData = localStorage.getItem(storageKey);
+            const items = existingData ? JSON.parse(existingData) : [];
+            items.push(newDoc);
+            localStorage.setItem(storageKey, JSON.stringify(items));
+          }
+          
+          return newDoc;
         },
         update: async (modelName: string, id: string, data: any) => {
           // In a real implementation, we would use composeClient.executeQuery
-          // For now, we'll simulate an updated document
-          return {
-            documentId: id,
-            streamId: `stream-${id}`,
-            ...data
-          };
+          // For now, we'll update in localStorage to simulate persistence
+          if (typeof window !== 'undefined') {
+            const storageKey = `composedb-${modelName}`;
+            const existingData = localStorage.getItem(storageKey);
+            if (existingData) {
+              const items = JSON.parse(existingData);
+              const index = items.findIndex((item: any) => item.documentId === id || item.streamId === id);
+              
+              if (index >= 0) {
+                const updatedDoc = {
+                  ...items[index],
+                  ...data,
+                  updatedAt: new Date().toISOString()
+                };
+                items[index] = updatedDoc;
+                localStorage.setItem(storageKey, JSON.stringify(items));
+                return updatedDoc;
+              }
+            }
+          }
+          
+          // If no document found to update, return null
+          return null;
         },
         query: async ({ query }: { query: string }) => {
           try {
@@ -123,28 +200,99 @@ export const initComposeDB = async (seed?: Uint8Array): Promise<any> => {
       // Fall back to a fully mocked client if we can't create a real one
       composeClient = {
         ceramic,
-        exists: async (modelName: string, query: any) => false,
+        exists: async (modelName: string, query: any) => {
+          // Check localStorage to simulate persistence
+          const storageKey = `composedb-${modelName}`;
+          const storedData = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+          if (storedData) {
+            const parsedData = JSON.parse(storedData);
+            return parsedData.some((item: any) => {
+              // Check if any item matches the query
+              return Object.keys(query).every(key => item[key] === query[key]);
+            });
+          }
+          return false;
+        },
         create: async (modelName: string, data: any) => {
           const id = `doc-${Date.now()}`;
-          return {
+          const newDoc = {
             documentId: id,
             streamId: `stream-${id}`,
-            ...data
+            ...data,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           };
+          
+          // Store in localStorage
+          if (typeof window !== 'undefined') {
+            const storageKey = `composedb-${modelName}`;
+            const existingData = localStorage.getItem(storageKey);
+            const items = existingData ? JSON.parse(existingData) : [];
+            items.push(newDoc);
+            localStorage.setItem(storageKey, JSON.stringify(items));
+            console.log(`Stored item in localStorage: ${storageKey}`, newDoc);
+          }
+          
+          return newDoc;
         },
         update: async (modelName: string, id: string, data: any) => {
-          return {
-            documentId: id,
-            streamId: `stream-${id}`,
-            ...data
-          };
+          // Update in localStorage
+          if (typeof window !== 'undefined') {
+            const storageKey = `composedb-${modelName}`;
+            const existingData = localStorage.getItem(storageKey);
+            if (existingData) {
+              const items = JSON.parse(existingData);
+              const index = items.findIndex((item: any) => item.documentId === id || item.streamId === id);
+              
+              if (index >= 0) {
+                const updatedDoc = {
+                  ...items[index],
+                  ...data,
+                  updatedAt: new Date().toISOString()
+                };
+                items[index] = updatedDoc;
+                localStorage.setItem(storageKey, JSON.stringify(items));
+                console.log(`Updated item in localStorage: ${storageKey}`, updatedDoc);
+                return updatedDoc;
+              }
+            }
+          }
+          
+          return null;
         },
         query: async ({ query }: { query: string }) => {
-          const modelName = query.includes('ProfileIndex') ? 'ProfileIndex' : 'GenericIndex';
+          // Extract model name from query (simplified parsing)
+          const modelNameMatch = query.match(/viewer\s*{\s*(\w+)\s*{/i);
+          const modelName = modelNameMatch ? modelNameMatch[1] : 
+                          query.includes('ProfileIndex') ? 'ProfileIndex' : 'GenericIndex';
+          
+          if (typeof window !== 'undefined') {
+            const storageKey = `composedb-${modelName}`;
+            const storedData = localStorage.getItem(storageKey);
+            const items = storedData ? JSON.parse(storedData) : [];
+            
+            console.log(`Retrieved items from localStorage: ${storageKey}`, items);
+            
+            // Convert to expected ComposeDB response format
+            return {
+              data: {
+                viewer: {
+                  [modelName]: {
+                    edges: items.map((item: any) => ({
+                      node: item
+                    }))
+                  }
+                }
+              }
+            };
+          }
+          
           return {
             data: {
-              [modelName]: {
-                edges: []
+              viewer: {
+                [modelName]: {
+                  edges: []
+                }
               }
             }
           };

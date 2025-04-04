@@ -81,16 +81,21 @@ export const ComposeDBProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('Connecting to ComposeDB...');
       
-      // Initialize ComposeDB client
+      // Initialize ComposeDB client with persistent DID
+      // The client implementation now handles DID persistence internally
       const composeClient = await initComposeDB();
       
-      // Set the DID based on the connected wallet
-      const userDid = `did:key:${address}`;
+      // Get the DID from the client
+      const userDid = composeClient.ceramic.did?.id;
+      
+      if (!userDid) {
+        throw new Error('Failed to authenticate with DID');
+      }
       
       setClient(composeClient);
       setDid(userDid);
       setIsInitialized(true);
-      console.log('Connected to ComposeDB with DID:', userDid);
+      console.log('Connected to ComposeDB with persistent DID:', userDid);
     } catch (err) {
       console.error('Error connecting to ComposeDB:', err);
       setError(err instanceof Error ? err.message : 'Unknown error connecting to ComposeDB');
