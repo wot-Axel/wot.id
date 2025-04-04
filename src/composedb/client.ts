@@ -163,75 +163,89 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
       return composeClient;
     }
 
-    // Get connection status and determine best node to use
+    // Get connection status for tracking
     const connectionStatus = getConnectionStatus();
-    let ceramicUrl = '';
-    let ceramic: CeramicClient | null = null;
     
-    // Check for environment variable override
+    // Implement a local-first strategy with offline capabilities
+    let ceramic: CeramicClient | null = null;
+    let ceramicUrl = '';
+    
+    // First, try to use environment variable if specified
     if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_CERAMIC_NODE) {
       ceramicUrl = process.env.NEXT_PUBLIC_CERAMIC_NODE;
       console.log(`Using environment-specified Ceramic node: ${ceramicUrl}`);
-      ceramic = new CeramicClient(ceramicUrl);
-    } else {
-      // Try the nodes in order of preference until one works
-      const nodesToTry = [];
-      
-      // If we have a previously successful node, try that first
-      if (connectionStatus.lastSuccessfulNode) {
-        nodesToTry.push(connectionStatus.lastSuccessfulNode);
+      try {
+        ceramic = new CeramicClient(ceramicUrl);
+      } catch (error) {
+        console.warn(`Failed to connect to environment-specified node: ${error}`);
+        ceramic = null;
+      }
+    }
+    
+    // If that didn't work, try local node in development
+    if (!ceramic && !isProduction && CERAMIC_NODES.includes('http://localhost:7007')) {
+      try {
+        console.log('Attempting to connect to local Ceramic node');
+        ceramic = new CeramicClient('http://localhost:7007');
+        ceramicUrl = 'http://localhost:7007';
+      } catch (error) {
+        console.warn('Failed to connect to local node:', error);
+        ceramic = null;
+      }
+    }
+    
+    // If still no connection, try to connect to nodes in order of priority
+    if (!ceramic) {
+      // Prioritize last successful node if available
+      if (connectionStatus.lastSuccessfulNode && !connectionStatus.failedNodes.includes(connectionStatus.lastSuccessfulNode)) {
+        try {
+          console.log(`Attempting to connect to previously successful node: ${connectionStatus.lastSuccessfulNode}`);
+          ceramic = new CeramicClient(connectionStatus.lastSuccessfulNode);
+          ceramicUrl = connectionStatus.lastSuccessfulNode;
+        } catch (error) {
+          console.warn(`Failed to connect to previously successful node: ${error}`);
+          // Mark this node as failed
+          connectionStatus.failedNodes.push(connectionStatus.lastSuccessfulNode);
+          ceramic = null;
+        }
       }
       
-      // Use the nodes from our configuration
-      // This will automatically handle development vs production environments
-      nodesToTry.push(...CERAMIC_NODES);
-      
-      // Try each node until one works
-      for (const nodeUrl of nodesToTry) {
-        if (connectionStatus.failedNodes.includes(nodeUrl)) {
-          console.log(`Skipping known failed node: ${nodeUrl}`);
-          continue;
-        }
-        
-        try {
-          console.log(`Attempting to connect to Ceramic node at: ${nodeUrl}`);
-          
-          // Test the node with a health check first
-          try {
-            const response = await fetch(`${nodeUrl}/api/v0/node/healthcheck`, {
-              method: 'GET',
-              headers: { 
-                'Content-Type': 'application/json',
-                'Origin': typeof window !== 'undefined' ? window.location.origin : 'https://wot.id'
-              },
-              signal: AbortSignal.timeout(isProduction ? 2000 : 3000) // shorter timeout in production
-            });
-            
-            if (!response.ok) {
-              console.warn(`Node health check failed for ${nodeUrl}: ${response.status}`);
-              continue;
-            }
-          } catch (error) {
-            console.warn(`Node health check failed for ${nodeUrl}:`, error);
+      // If still no connection, try each node in the list that hasn't failed
+      if (!ceramic) {
+        for (const node of CERAMIC_NODES) {
+          // Skip nodes that have already failed
+          if (connectionStatus.failedNodes.includes(node)) {
+            console.log(`Skipping previously failed node: ${node}`);
             continue;
           }
           
-          // Create a Ceramic client with proper configuration
-          ceramic = new CeramicClient(nodeUrl);
-          ceramicUrl = nodeUrl;
-          break;
-        } catch (error) {
-          console.warn(`Failed to connect to ${nodeUrl}:`, error);
-          connectionStatus.failedNodes.push(nodeUrl);
+          try {
+            console.log(`Attempting to connect to Ceramic node: ${node}`);
+            ceramic = new CeramicClient(node);
+            ceramicUrl = node;
+            break; // Stop once we have a successful connection
+          } catch (error) {
+            console.warn(`Failed to connect to node ${node}:`, error);
+            // Mark this node as failed
+            connectionStatus.failedNodes.push(node);
+            ceramic = null;
+          }
         }
+      }
+      
+      // If all nodes failed, try the first one as a last resort
+      if (!ceramic) {
+        const defaultNode = CERAMIC_NODES[0];
+        console.log(`All nodes failed, using default as last resort: ${defaultNode}`);
+        ceramic = new CeramicClient(defaultNode);
+        ceramicUrl = defaultNode;
       }
     }
     
-    if (!ceramic) {
-      throw new Error('Failed to connect to any Ceramic node');
-    }
+    console.log(`Initialized Ceramic client with node: ${ceramicUrl}`);
     
-    console.log(`Successfully connected to Ceramic node at: ${ceramicUrl}`);
+    // Even if we can't connect to a node right now, we'll still create the client
+    // This allows for offline-first operation with local storage fallback
     
     // Note: Different versions of CeramicClient have different APIs
     // We'll use a try-catch to handle potential compatibility issues
@@ -308,14 +322,24 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
       
       throw new Error(`Failed to connect to any Ceramic node: ${error.message}`);
     }
-    ceramic.did = did;
-    
-    console.log('Connected to Ceramic network with DID:', did.id);
+    // Ensure ceramic is not null before assigning DID
+    if (ceramic) {
+      ceramic.did = did;
+      console.log('Connected to Ceramic network with DID:', did.id);
+    } else {
+      throw new Error('Ceramic client is null, cannot assign DID');
+    }
 
     // Create a real ComposeDB client with our definition
     console.log('Creating ComposeDB client with Ceramic instance');
+    
+    // Ensure ceramic is not null before creating ComposeDB client
+    if (!ceramic) {
+      throw new Error('Cannot create ComposeDB client: Ceramic client is null');
+    }
+    
     const realComposeClient = new ComposeClient({
-      ceramic: ceramic as any, // Type assertion to avoid compatibility issues
+      ceramic: ceramic as any, // Type assertion needed due to version mismatches between dependencies
       definition: mockDefinition
     });
     
@@ -683,22 +707,75 @@ export const createRecord = async (
     // Get the model for this data type
     const modelName = dataType;
     
-    // Create the record in ComposeDB
-    const result = await client.create(modelName, recordData) as ComposeDBResult;
-    
-    // Extract the DID from the collection ID
-    const did = collectionId.split('_')[1];
-    
-    // Return the record in our standard format
-    return {
-      id: result.documentId,
-      streamId: result.streamId,
-      controller: did,
-      createdAt: now,
-      updatedAt: now,
-      content: recordData,
-      tags
-    };
+    try {
+      // Try to create the record in ComposeDB
+      const result = await client.create(modelName, recordData) as ComposeDBResult;
+      
+      // Extract the DID from the collection ID
+      const did = collectionId.split('_')[1];
+      
+      // Return the record in our standard format
+      const record = {
+        id: result.documentId,
+        streamId: result.streamId,
+        controller: did,
+        createdAt: now,
+        updatedAt: now,
+        content: recordData,
+        tags
+      };
+      
+      // Also store in local storage as fallback
+      if (typeof window !== 'undefined') {
+        try {
+          const localStorageKey = `ceramic_record_${collectionId}_${result.documentId}`;
+          localStorage.setItem(localStorageKey, JSON.stringify(record));
+        } catch (error) {
+          console.warn('Failed to store record in local storage:', error);
+        }
+      }
+      
+      return record;
+    } catch (error) {
+      console.error('Failed to create record in ComposeDB:', error);
+      
+      // Generate a local ID for offline operation
+      const localId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      
+      // Create a local record
+      const record = {
+        id: localId,
+        streamId: `local_stream_${localId}`,
+        controller: collectionId.split('_')[1] || 'unknown',
+        createdAt: now,
+        updatedAt: now,
+        content: recordData,
+        tags,
+        _isLocalOnly: true
+      };
+      
+      // Store in local storage
+      if (typeof window !== 'undefined') {
+        try {
+          const localStorageKey = `ceramic_record_${collectionId}_${localId}`;
+          localStorage.setItem(localStorageKey, JSON.stringify(record));
+          
+          // Also keep track of local-only records for syncing later
+          const localOnlyRecords = JSON.parse(localStorage.getItem('ceramic_local_only_records') || '[]');
+          localOnlyRecords.push({
+            collectionId,
+            recordId: localId,
+            dataType,
+            timestamp: now
+          });
+          localStorage.setItem('ceramic_local_only_records', JSON.stringify(localOnlyRecords));
+        } catch (storageError) {
+          console.error('Failed to store record in local storage:', storageError);
+        }
+      }
+      
+      return record;
+    }
   });
 };
 

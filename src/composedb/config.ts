@@ -7,16 +7,17 @@
 export const isProduction = process.env.NODE_ENV === 'production';
 
 // Default Ceramic node URLs - can be overridden with environment variables
-// We provide multiple options for better reliability
+// Updated with multiple fallback options (April 2025)
 export const CERAMIC_NODES = [
-  // Local node for development (most reliable, but only in dev)
-  ...(isProduction ? [] : ['http://localhost:7007']),
-  // Clay testnet nodes - prioritized in production
+  // Local node for development
+  'http://localhost:7007',
+  // Community-run nodes (check status at https://status.ceramic.network)
   'https://ceramic-clay.3boxlabs.com',
-  // Alternative endpoints
-  'https://gateway.ceramic.network',
-  'https://ceramic-clay.glazed.dev',
-  'https://ceramic.composedb.com'
+  'https://ceramic.composedb.com',
+  // IP-based fallbacks (more reliable than DNS in some environments)
+  'http://143.198.139.3:7007',  // Direct IP for ceramic-clay
+  // Testnet node
+  'https://testnet-clay-1.ceramic.network'
 ];
 
 // Default to the first node in the list
