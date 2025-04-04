@@ -11,11 +11,11 @@ import {
   PrivateData
 } from '../utils/tablelandUtils';
 import { 
-  initTablelandWithOptimismWrite,
-  initTablelandWithOptimism,
+  initCeramicWithOptimismWrite,
+  initCeramicWithOptimism,
   isUserOnOptimism
 } from '../utils/optimismProvider';
-import { Database } from '@tableland/sdk';
+import { Database } from '@/utils/ceramicUtils';
 
 // Types for digital assets
 interface DigitalAsset {
@@ -292,7 +292,7 @@ export const DigitalAssetsSection = () => {
           
           // Use our dedicated Optimism provider for read operations
           // This doesn't require the user to switch networks
-          const database = await initTablelandWithOptimism(address);
+          const database = await initCeramicWithOptimism(address);
           setDb(database);
           
           // Check if table exists
@@ -332,7 +332,7 @@ export const DigitalAssetsSection = () => {
       }
       
       // For write operations, we need a provider with write capabilities
-      const writeDb = await initTablelandWithOptimismWrite(address);
+      const writeDb = await initCeramicWithOptimismWrite(address);
       
       const result = await createDigitalAssetsTable(writeDb, address);
       setTableName(result.tableName);
@@ -347,7 +347,7 @@ export const DigitalAssetsSection = () => {
         }
         
         // For read operations, use the read-only provider
-        const readDb = await initTablelandWithOptimism(address);
+        const readDb = await initCeramicWithOptimism(address);
         setDb(readDb);
         
         const data = await getDigitalAssetsData(readDb, result.tableName);
@@ -395,7 +395,7 @@ export const DigitalAssetsSection = () => {
       };
       
       // For write operations, we need a provider with write capabilities
-      const writeDb = await initTablelandWithOptimismWrite(address);
+      const writeDb = await initCeramicWithOptimismWrite(address);
       
       // Insert into table
       await insertDigitalAssetData(writeDb, tableName, JSON.stringify(asset));
@@ -436,7 +436,7 @@ export const DigitalAssetsSection = () => {
       }
       
       // For write operations, we need a provider with write capabilities
-      const writeDb = await initTablelandWithOptimismWrite(address);
+      const writeDb = await initCeramicWithOptimismWrite(address);
       
       await clearDigitalAssetsData(writeDb, tableName);
       setAssetsData([]);

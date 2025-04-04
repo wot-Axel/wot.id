@@ -11,8 +11,8 @@ import {
   clearPrivateData,
   type PrivateData
 } from '@/utils/tablelandUtils';
-import { initTablelandWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@tableland/sdk';
+import { initCeramicWithOptimismWrite } from '@/utils/optimismProvider';
+import { Database } from '@/utils/ceramicUtils';
 
 export const PrivateDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
@@ -49,7 +49,7 @@ export const PrivateDataSection = () => {
       setError('');
       
       // Initialize Tableland with Optimism provider for writing
-      const tablelandDb = await initTablelandWithOptimismWrite(address || '');
+      const tablelandDb = await initCeramicWithOptimismWrite(address || '');
       setDb(tablelandDb);
       
       // Check if table exists

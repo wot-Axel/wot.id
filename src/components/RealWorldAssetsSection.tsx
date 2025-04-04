@@ -10,8 +10,8 @@ import {
   checkPrivateTableExists,
   type PrivateData
 } from '@/utils/tablelandUtils';
-import { initTablelandWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@tableland/sdk';
+import { initCeramicWithOptimismWrite } from '@/utils/optimismProvider';
+import { Database } from '@/utils/ceramicUtils';
 
 // Define asset fields
 interface AssetField {
@@ -63,7 +63,7 @@ export const RealWorldAssetsSection = () => {
       setError('');
       
       // Initialize Tableland with Optimism provider for writing
-      const dbInstance = await initTablelandWithOptimismWrite(address || '');
+      const dbInstance = await initCeramicWithOptimismWrite(address || '');
       setDb(dbInstance);
       
       // Check if table exists

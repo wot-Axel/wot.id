@@ -16,15 +16,15 @@ import { Wallet } from 'ethers';
  * - Send and receive messages
  * - List conversations
  * 
- * Phase 2 (Planned): Add persistent storage with Tableland
- * - Store message history in Tableland
+ * Phase 2 (Planned): Add persistent storage with Ceramic
+ * - Store message history in Ceramic
  * - Retrieve message history when reconnecting
  * - Implement message encryption for privacy
  */
 
 // Phase 2 imports (will be uncommented when implemented)
-// import { Database } from '@tableland/sdk';
-// import { TableType, checkTableExists, createTable, insertData, getData } from '../utils/tablelandUtils';
+// import { Database } from '../utils/ceramicUtils';
+// import { TableType, checkTableExists, createTable, insertData, getData } from '../utils/ceramicUtils';
 
 // Use dynamic import to prevent server-side rendering of XMTP client
 // which uses WebAssembly and can cause issues on the server

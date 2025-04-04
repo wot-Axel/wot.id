@@ -10,8 +10,8 @@ import {
   checkMedicalTableExists,
   type PrivateData
 } from '@/utils/tablelandUtils';
-import { initTablelandWithOptimismWrite } from '@/utils/optimismProvider';
-import { Database } from '@tableland/sdk';
+import { initCeramicWithOptimismWrite } from '@/utils/optimismProvider';
+import { Database } from '@/utils/ceramicUtils';
 import { MedicalDataTable } from './MedicalDataTable';
 
 export const MedicalDataSection = () => {
@@ -49,7 +49,7 @@ export const MedicalDataSection = () => {
       setError('');
       
       // Initialize Tableland with Optimism provider for writing
-      const tablelandDb = await initTablelandWithOptimismWrite(address || '');
+      const tablelandDb = await initCeramicWithOptimismWrite(address || '');
       setDb(tablelandDb);
       
       // Check if medical table exists

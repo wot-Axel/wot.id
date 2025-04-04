@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { Database, Validator } from '@tableland/sdk';
+import { Database } from '@/utils/ceramicUtils';
 import { optimism } from '@reown/appkit/networks';
 
 // Constants
@@ -16,14 +16,14 @@ export const getOptimismProvider = () => {
 };
 
 /**
- * Initializes a Tableland connection using a dedicated Optimism provider.
+ * Initializes a Ceramic connection using a dedicated Optimism provider.
  * This follows the same pattern used for attestations - using Optimism for specific features
  * while keeping the user's primary identity on Ethereum L1.
  * 
  * @param userAddress The user's Ethereum address
- * @returns A Database instance connected to Optimism
+ * @returns A Database instance for Ceramic operations
  */
-export const initTablelandWithOptimism = async (userAddress: string): Promise<Database> => {
+export const initCeramicWithOptimism = async (userAddress: string): Promise<Database> => {
   try {
     // Create a dedicated provider for Optimism
     const optimismProvider = getOptimismProvider();
@@ -32,15 +32,12 @@ export const initTablelandWithOptimism = async (userAddress: string): Promise<Da
     // This allows us to connect to Optimism without requiring network switching
     const readOnlySigner = new ethers.VoidSigner(userAddress, optimismProvider);
     
-    // Initialize the Database with the signer
-    const db = new Database({
-      signer: readOnlySigner,
-      autoWait: true
-    });
+    // Initialize the Database (now using Ceramic implementation)
+    const db = new Database();
     
     return db;
   } catch (error) {
-    console.error('Error initializing Tableland with Optimism provider:', error);
+    console.error('Error initializing Ceramic with Optimism provider:', error);
     throw error;
   }
 };
@@ -155,14 +152,14 @@ export const createOptimismSigner = async (userAddress: string) => {
 };
 
 /**
- * Initializes Tableland with write capabilities using a dedicated Optimism provider.
- * This function provides the same interface as the original initTableland
+ * Initializes Ceramic with write capabilities using a dedicated Optimism provider.
+ * This function provides the same interface as the original initCeramic
  * but doesn't require the user to switch networks.
  * 
  * @param userAddress The user's Ethereum address
- * @returns A Database instance connected to Optimism with write capabilities
+ * @returns A Database instance for Ceramic operations with write capabilities
  */
-export const initTablelandWithOptimismWrite = async (userAddress: string): Promise<Database> => {
+export const initCeramicWithOptimismWrite = async (userAddress: string): Promise<Database> => {
   try {
     // Create a dedicated provider for Optimism
     const optimismProvider = getOptimismProvider();
@@ -176,11 +173,8 @@ export const initTablelandWithOptimismWrite = async (userAddress: string): Promi
         // while the user remains on their preferred network
         const customSigner = await createOptimismSigner(userAddress);
         
-        // Initialize the Database with the custom signer
-        const db = new Database({
-          signer: customSigner as unknown as ethers.Signer,
-          autoWait: true
-        });
+        // Initialize the Database (now using Ceramic implementation)
+        const db = new Database();
         
         return db;
       } catch (signerError) {
@@ -191,15 +185,12 @@ export const initTablelandWithOptimismWrite = async (userAddress: string): Promi
     // Fallback to read-only signer if custom signer fails or isn't available
     const readOnlySigner = new ethers.VoidSigner(userAddress, optimismProvider);
     
-    // Initialize the Database with the read-only signer
-    const db = new Database({
-      signer: readOnlySigner,
-      autoWait: true
-    });
+    // Initialize the Database (now using Ceramic implementation)
+    const db = new Database();
     
     return db;
   } catch (error) {
-    console.error('Error initializing Tableland with Optimism write access:', error);
+    console.error('Error initializing Ceramic with Optimism write access:', error);
     throw error;
   }
 };
