@@ -435,8 +435,36 @@ export const initCeramic = async (
   }
 };
 
-// In-memory storage for testing
-const inMemoryStorage: Record<string, ContentRecord[]> = {};
+// Client-side storage for persistence
+const getStorage = (): Record<string, ContentRecord[]> => {
+  if (typeof window === 'undefined') {
+    // Server-side: use in-memory storage
+    return {};
+  }
+  
+  // Client-side: use localStorage
+  try {
+    const storageData = localStorage.getItem('ceramicStorage');
+    return storageData ? JSON.parse(storageData) : {};
+  } catch (error) {
+    console.error('Error accessing localStorage:', error);
+    return {};
+  }
+};
+
+const saveStorage = (data: Record<string, ContentRecord[]>): void => {
+  if (typeof window === 'undefined') {
+    // Server-side: do nothing
+    return;
+  }
+  
+  // Client-side: save to localStorage
+  try {
+    localStorage.setItem('ceramicStorage', JSON.stringify(data));
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
+};
 
 /**
  * Check if a collection exists for a given data type and DID
@@ -452,7 +480,8 @@ export const checkCollectionExists = async (
   did: string
 ): Promise<{ exists: boolean; collectionId: string }> => {
   const collectionId = `${dataType}-${did.split(':').pop()}`;
-  const exists = !!inMemoryStorage[collectionId] && inMemoryStorage[collectionId].length > 0;
+  const storage = getStorage();
+  const exists = !!storage[collectionId] && storage[collectionId].length > 0;
   console.log(`Checking if collection exists: ${collectionId}, result: ${exists}`);
   return { exists, collectionId };
 };
@@ -473,8 +502,10 @@ export const createCollection = async (
   const collectionId = `${dataType}-${did.split(':').pop()}`;
   
   // Initialize the collection if it doesn't exist
-  if (!inMemoryStorage[collectionId]) {
-    inMemoryStorage[collectionId] = [];
+  const storage = getStorage();
+  if (!storage[collectionId]) {
+    storage[collectionId] = [];
+    saveStorage(storage);
   }
   
   console.log(`Created collection: ${collectionId}`);
@@ -498,9 +529,12 @@ export const createRecord = async (
   content: any,
   tags?: string[]
 ): Promise<ContentRecord> => {
+  // Get the storage
+  const storage = getStorage();
+  
   // Initialize the collection if it doesn't exist
-  if (!inMemoryStorage[collectionId]) {
-    inMemoryStorage[collectionId] = [];
+  if (!storage[collectionId]) {
+    storage[collectionId] = [];
   }
   
   const timestamp = new Date().toISOString();
@@ -518,7 +552,10 @@ export const createRecord = async (
   };
   
   // Add the record to the collection
-  inMemoryStorage[collectionId].push(record);
+  storage[collectionId].push(record);
+  
+  // Save the updated storage
+  saveStorage(storage);
   
   console.log(`Created record in ${collectionId}:`, record);
   return record;
@@ -537,13 +574,16 @@ export const getRecords = async (
   dataType: DataType,
   collectionId: string
 ): Promise<ContentRecord[]> => {
+  // Get the storage
+  const storage = getStorage();
+  
   // Return an empty array if the collection doesn't exist
-  if (!inMemoryStorage[collectionId]) {
+  if (!storage[collectionId]) {
     return [];
   }
   
-  console.log(`Retrieved ${inMemoryStorage[collectionId].length} records from ${collectionId}`);
-  return [...inMemoryStorage[collectionId]];
+  console.log(`Retrieved ${storage[collectionId].length} records from ${collectionId}`);
+  return [...storage[collectionId]];
 };
 
 /**
@@ -608,14 +648,22 @@ export const clearCollection = async (
   dataType: DataType,
   collectionId: string
 ): Promise<void> => {
+  // Get the storage
+  const storage = getStorage();
+  
   // Initialize the collection if it doesn't exist
-  if (!inMemoryStorage[collectionId]) {
-    inMemoryStorage[collectionId] = [];
+  if (!storage[collectionId]) {
+    storage[collectionId] = [];
+    saveStorage(storage);
     return;
   }
   
   // Clear all records from the collection
-  inMemoryStorage[collectionId] = [];
+  storage[collectionId] = [];
+  
+  // Save the updated storage
+  saveStorage(storage);
+  
   console.log(`Cleared all records from ${collectionId}`);
 };
 
