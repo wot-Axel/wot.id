@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import './globals.css';
 import ContextProvider from '@/context';
 import { XmtpProvider } from '@/context/XmtpContext';
-import { CeramicProvider } from '@/context/CeramicContext';
+import { DataProviders } from '@/context/DataProviders';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Footer } from '@/components/Footer';
 
@@ -36,13 +36,13 @@ export default async function RootLayout({
       <body className={isLoggedIn ? 'logged-in' : ''}>
         <ContextProvider cookies={cookies}>
           <XmtpProvider>
-            <CeramicProvider>
+            <DataProviders>
               <TopNavigation />
               <main className="main-content">
                 {children}
               </main>
               <Footer />
-            </CeramicProvider>
+            </DataProviders>
           </XmtpProvider>
         </ContextProvider>
       </body>

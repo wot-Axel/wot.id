@@ -2,19 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { 
-  DataType,
-  CeramicClient,
-  ContentRecord,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  updateRecord,
-  deleteRecord,
-  clearCollection
-} from '@/utils/ceramicUtils';
-import { useCeramic } from '@/context/CeramicContext';
+import { DataType } from '@/utils/ceramicUtils';
+import { useDataAccess } from '@/hooks/useDataAccess';
 
 // Types for digital assets
 interface DigitalAsset {
@@ -233,12 +222,20 @@ const parseAssetData = (data: string | undefined): DigitalAsset => {
 
 export const DigitalAssetsSection = () => {
   const { address, isConnected } = useAppKitAccount();
+  const { 
+    data: assetsData, 
+    isLoading, 
+    error: dataError,
+    createItem,
+    updateItem,
+    deleteItem,
+    refreshData,
+    clearItems
+  } = useDataAccess(DataType.DIGITAL_ASSETS);
+  
   const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [ceramicClient, setCeramicClient] = useState<CeramicClient | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [assetsData, setAssetsData] = useState<any[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   
   // Form state
@@ -276,114 +273,32 @@ export const DigitalAssetsSection = () => {
     );
   };
 
-  // Use the Ceramic context
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
-  
-  // Initialize Ceramic connection
-  useEffect(() => {
-    const init = async () => {
-      try {
-        if (isConnected && address && !isInitialized && !ceramicLoading) {
-          setLoading(true);
-          setError('');
-          
-          // Connect to Ceramic network
-          await connect();
-          
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('Error initializing Ceramic:', err);
-        setError('Failed to initialize Ceramic. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    init();
-  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
-  
-  // Load digital assets when Ceramic is initialized
-  useEffect(() => {
-    const loadAssets = async () => {
-      try {
-        if (isInitialized && ceramic && did) {
-          setLoading(true);
-          
-          // Check if collection exists
-          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.DIGITAL_ASSETS, did);
-          
-          if (exists) {
-            setTableName(collectionId);
-            
-            // Get existing data
-            const records = await getRecords(ceramic, collectionId);
-            
-            // Convert records to the format expected by the component
-            const formattedData = records.map((record, index) => ({
-              id: index,
-              key: record.id,
-              value: JSON.stringify(record.content),
-              created_at: new Date().toISOString() // Add required created_at field
-            }));
-            
-            setAssetsData(formattedData);
-          }
-          
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('Error loading digital assets:', err);
-        setError('Failed to load digital assets. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    loadAssets();
-  }, [isInitialized, ceramic, did]);
+  // No need for Ceramic context initialization or data loading as useDataAccess handles that
 
   // We no longer need to switch networks as we're using a dedicated Optimism provider
   // Instead, we provide information about which network is being used for data storage
 
-  // Handle collection creation
-  const handleCreateTable = async () => {
+  // Handle adding mock data for demonstration
+  const handleAddMockData = async () => {
     try {
       setLoading(true);
       setError('');
       
-      if (!ceramic || !did) {
-        setError('Ceramic not initialized or no DID available.');
-        return;
-      }
-      
-      // Create a new collection for digital assets
-      const { collectionId } = await createCollection(ceramic, DataType.DIGITAL_ASSETS, did);
-      setTableName(collectionId);
-      
       // Add mock data for demonstration
       if (process.env.NODE_ENV === 'development') {
         for (const nft of mockNFTs) {
-          await createRecord(ceramic, DataType.DIGITAL_ASSETS, collectionId, nft, ['nft']);
+          await createItem(nft, ['nft', nft.chainName.toLowerCase()]);
         }
         for (const gamingAsset of mockGamingAssets) {
-          await createRecord(ceramic, DataType.DIGITAL_ASSETS, collectionId, gamingAsset, ['gaming']);
+          await createItem(gamingAsset, ['gaming', gamingAsset.chainName.toLowerCase()]);
         }
         
-        // Get the updated records
-        const records = await getRecords(ceramic, collectionId);
-        
-        // Convert records to the format expected by the component
-        const formattedData = records.map((record, index) => ({
-          id: index,
-          key: record.id,
-          value: JSON.stringify(record.content),
-          created_at: new Date().toISOString() // Add required created_at field
-        }));
-        
-        setAssetsData(formattedData);
+        // Refresh the data
+        await refreshData();
       }
     } catch (err) {
-      console.error('Error creating collection:', err);
-      setError('Failed to create collection. Please try again.');
+      console.error('Error adding mock data:', err);
+      setError('Failed to add mock data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -396,11 +311,6 @@ export const DigitalAssetsSection = () => {
     try {
       setLoading(true);
       setError('');
-      
-      if (!ceramic || !tableName) {
-        setError('Ceramic not initialized or no collection available.');
-        return;
-      }
       
       // Prepare asset data
       // Get chain name from the selected chain ID
@@ -427,20 +337,10 @@ export const DigitalAssetsSection = () => {
       if (chainName) tags.push(chainName.toLowerCase());
       if (platform) tags.push(platform.toLowerCase());
       
-      await createRecord(ceramic, DataType.DIGITAL_ASSETS, tableName, asset, tags);
+      await createItem(asset, tags);
       
       // Refresh data
-      const records = await getRecords(ceramic, tableName);
-      
-      // Convert records to the format expected by the component
-      const formattedData = records.map((record, index) => ({
-        id: index,
-        key: record.id,
-        value: JSON.stringify(record.content),
-        created_at: new Date().toISOString() // Add required created_at field
-      }));
-      
-      setAssetsData(formattedData);
+      await refreshData();
       
       // Reset form
       setAssetName('');
@@ -466,15 +366,11 @@ export const DigitalAssetsSection = () => {
       setLoading(true);
       setError('');
       
-      if (!ceramic || !tableName) {
-        setError('Ceramic not initialized or no collection available.');
-        return;
-      }
+      // Clear all items using the useDataAccess hook
+      await clearItems();
       
-      // Clear the collection
-      await clearCollection(ceramic, tableName);
-      
-      setAssetsData([]);
+      // Refresh data
+      await refreshData();
     } catch (err) {
       console.error('Error clearing assets:', err);
       setError('Failed to clear assets. Please try again.');
@@ -509,15 +405,15 @@ export const DigitalAssetsSection = () => {
         ) : (
           <>
             
-            {!tableName ? (
+            {assetsData.length === 0 && !isLoading ? (
               <div>
-                <p>You don't have a digital assets table yet. Create one to track your NFTs and gaming assets.</p>
+                <p>You don't have any digital assets yet. Add some to track your NFTs and gaming assets.</p>
                 <button 
                   className="button-primary" 
-                  onClick={handleCreateTable}
+                  onClick={handleAddMockData}
                   disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create Digital Assets Table'}
+                  {loading ? 'Adding...' : 'Add Sample Assets'}
                 </button>
               </div>
             ) : (

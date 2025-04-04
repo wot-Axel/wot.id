@@ -2,123 +2,39 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { 
-  Database,
-  DataType,
-  PrivateData,
-  initCeramic,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  clearCollection
-} from '@/utils/ceramicUtils';
-import { useCeramic } from '@/context/CeramicContext';
+import { DataType, PrivateData } from '@/utils/ceramicUtils';
+import { useDataAccess } from '@/hooks/useDataAccess';
 
 export const OrganizationalAffiliationsSection = () => {
   const { address, isConnected } = useAppKitAccount();
+  const { 
+    data: affiliationsData, 
+    isLoading, 
+    error: dataError,
+    createItem,
+    updateItem,
+    deleteItem,
+    refreshData,
+    clearItems
+  } = useDataAccess(DataType.ORGANIZATIONS);
+  
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [affiliationsData, setAffiliationsData] = useState<PrivateData[]>([]);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   const [organizationName, setOrganizationName] = useState<string>('');
   const [role, setRole] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [description, setDescription] = useState<string>('');
 
-  // Use the Ceramic context
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
 
-  // Initialize Ceramic connection
-  useEffect(() => {
-    const init = async () => {
-      try {
-        if (isConnected && address && !isInitialized && !ceramicLoading) {
-          setLoading(true);
-          setError('');
-          
-          // Connect to Ceramic network
-          await connect();
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error initializing Ceramic:', err);
-        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    init();
-  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
-  
-  // Load affiliations data when Ceramic is initialized
-  useEffect(() => {
-    const loadAffiliationsData = async () => {
-      try {
-        if (isInitialized && ceramic && did) {
-          setLoading(true);
-          
-          // Check if collection exists
-          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.ORGANIZATIONS, did);
-          
-          if (exists) {
-            setTableName(collectionId);
-            
-            // Get existing data
-            const records = await getRecords(ceramic, collectionId);
-            
-            // Convert records to the format expected by the component
-            const formattedData = records.map((record, index) => ({
-              id: index,
-              key: record.id,
-              value: JSON.stringify(record.content),
-              created_at: new Date().toISOString()
-            }));
-            
-            setAffiliationsData(formattedData);
-          }
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error loading affiliations data:', err);
-        setError(err.message || 'Failed to load affiliations data. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    loadAffiliationsData();
-  }, [isInitialized, ceramic, did]);
 
-  const handleCreateTable = async () => {
-    if (!ceramic || !did) {
-      setError('Ceramic not initialized or no DID available.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Create a new collection for affiliations data
-      const { collectionId } = await createCollection(ceramic, DataType.ORGANIZATIONS, did);
-      setTableName(collectionId);
-      
-      setLoading(false);
-    } catch (err: any) {
-      console.error('Error creating collection:', err);
-      setError(err.message || 'Failed to create collection. Please try again.');
-      setLoading(false);
-    }
-  };
+  // No need for handleCreateTable as the useDataAccess hook handles collection creation
 
   const handleAddAffiliation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ceramic || !tableName || !organizationName) {
-      setError('Missing required information. Please check all fields.');
+    if (!organizationName) {
+      setError('Organization name is required.');
       return;
     }
     
@@ -126,7 +42,7 @@ export const OrganizationalAffiliationsSection = () => {
       setLoading(true);
       setError('');
       
-      // Create a record in the collection
+      // Create a record with the affiliation data
       const content = {
         organizationName,
         role,
@@ -135,20 +51,10 @@ export const OrganizationalAffiliationsSection = () => {
         description
       };
       
-      await createRecord(ceramic, DataType.ORGANIZATIONS, tableName, content, ['affiliation']);
+      await createItem(content, ['affiliation']);
       
       // Refresh data
-      const records = await getRecords(ceramic, tableName);
-      
-      // Convert records to the format expected by the component
-      const formattedData = records.map((record, index) => ({
-        id: index,
-        key: record.id,
-        value: JSON.stringify(record.content),
-        created_at: new Date().toISOString()
-      }));
-      
-      setAffiliationsData(formattedData);
+      await refreshData();
       
       // Clear form
       setOrganizationName('');
@@ -165,20 +71,15 @@ export const OrganizationalAffiliationsSection = () => {
   };
 
   const handleClearAffiliationsData = async () => {
-    if (!ceramic || !tableName) {
-      setError('Ceramic not initialized or no collection available.');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
       
-      // Clear the collection
-      await clearCollection(ceramic, tableName);
+      // Clear all items using the useDataAccess hook
+      await clearItems();
       
-      // Reset data
-      setAffiliationsData([]);
+      // Refresh data
+      await refreshData();
       
       setLoading(false);
     } catch (err: any) {
@@ -215,15 +116,15 @@ export const OrganizationalAffiliationsSection = () => {
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!tableName ? (
+            {affiliationsData.length === 0 && !isLoading ? (
               <div>
-                <p>You don't have an affiliations collection yet. Create one to store your organizational affiliations securely on Ceramic Network.</p>
+                <p>You don't have any organizational affiliations yet. Add one to store your information securely.</p>
                 <button 
                   className="button-primary" 
-                  onClick={handleCreateTable}
+                  onClick={() => setIsEditing(true)}
                   disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create Affiliations Table'}
+                  {loading ? 'Loading...' : 'Add Affiliation'}
                 </button>
               </div>
             ) : (

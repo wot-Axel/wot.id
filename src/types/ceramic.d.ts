@@ -7,6 +7,7 @@ export interface CeramicClient {
   did?: {
     id: string;
   };
+  disconnect?: () => void;
 }
 
 // Data types enum
@@ -32,8 +33,8 @@ export interface ContentRecord {
   tags: string[];
 }
 
-// Collection check result
-export interface CollectionCheckResult {
+// Collection information interface
+export interface CollectionInfo {
   exists: boolean;
   collectionId: string;
 }
@@ -68,4 +69,42 @@ export interface PerformanceStats {
   minDuration: number;
   maxDuration: number;
   avgDuration: number;
+}
+
+// ComposeDB specific types
+
+// ComposeDB client result interface
+export interface ComposeDBResult {
+  documentId: string;
+  streamId: string;
+  createdAt?: string;
+  [key: string]: any;
+}
+
+// ComposeDB query result interface
+export interface ComposeDBQueryResult {
+  data: {
+    [key: string]: {
+      edges: {
+        node: {
+          id: string;
+          controller: string;
+          createdAt: string;
+          updatedAt: string;
+          content: any;
+          tags?: string[];
+          [key: string]: any;
+        };
+      }[];
+    };
+  };
+}
+
+// ComposeDB model interface
+export interface ComposeDBModel {
+  id: string;
+  content: any;
+  createdAt: string;
+  updatedAt: string;
+  tags?: string[];
 }

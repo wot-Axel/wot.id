@@ -2,121 +2,37 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { 
-  CeramicClient,
-  DataType,
-  TableData,
-  initCeramic,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  clearCollection
-} from '@/utils/ceramicUtils';
-import { useCeramic } from '@/context/CeramicContext';
+import { DataType, TableData } from '@/utils/ceramicUtils';
+import { useDataAccess } from '@/hooks/useDataAccess';
 
 export const AccountsPasswordsSection = () => {
   const { address, isConnected } = useAppKitAccount();
+  const { 
+    data: accountsData, 
+    isLoading, 
+    error: dataError,
+    createItem,
+    updateItem,
+    deleteItem,
+    refreshData,
+    clearItems
+  } = useDataAccess(DataType.PROFILE);
+  
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<CeramicClient | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [accountsData, setAccountsData] = useState<TableData[]>([]);
   const [website, setWebsite] = useState<string>('');
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPasswords, setShowPasswords] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // Use the Ceramic context
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
 
-  // Initialize Ceramic connection
-  useEffect(() => {
-    const init = async () => {
-      try {
-        if (isConnected && address && !isInitialized && !ceramicLoading) {
-          setLoading(true);
-          setError('');
-          
-          // Connect to Ceramic network
-          await connect();
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error initializing Ceramic:', err);
-        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    init();
-  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
-  
-  // Load accounts data when Ceramic is initialized
-  useEffect(() => {
-    const loadAccountsData = async () => {
-      try {
-        if (isInitialized && ceramic && did) {
-          setLoading(true);
-          
-          // Check if collection exists
-          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.PROFILE, did);
-          
-          if (exists) {
-            setTableName(collectionId);
-            
-            // Get existing data
-            const records = await getRecords(ceramic, collectionId);
-            
-            // Convert records to the format expected by the component
-            const formattedData = records.map((record, index) => ({
-              id: index,
-              key: record.id,
-              value: JSON.stringify(record.content),
-              created_at: new Date().toISOString()
-            }));
-            
-            setAccountsData(formattedData);
-          }
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error loading accounts data:', err);
-        setError(err.message || 'Failed to load accounts data. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    loadAccountsData();
-  }, [isInitialized, ceramic, did]);
 
-  const handleCreateTable = async () => {
-    if (!ceramic || !did) {
-      setError('Ceramic not initialized or no DID available.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Create a new collection for accounts data
-      const { collectionId } = await createCollection(ceramic, DataType.PROFILE, did);
-      setTableName(collectionId);
-      
-      setLoading(false);
-    } catch (err: any) {
-      console.error('Error creating collection:', err);
-      setError(err.message || 'Failed to create collection. Please try again.');
-      setLoading(false);
-    }
-  };
+  // No need for handleCreateTable as the useDataAccess hook handles collection creation
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ceramic || !tableName || !website || !username || !password) {
+    if (!website || !username || !password) {
       setError('Missing required information. Please check all fields.');
       return;
     }
@@ -125,33 +41,24 @@ export const AccountsPasswordsSection = () => {
       setLoading(true);
       setError('');
       
-      // Create a record in the collection
+      // Create a record with the account data
       const content = {
         website,
         username,
         password
       };
       
-      await createRecord(ceramic, DataType.PROFILE, tableName, content, ['accounts']);
+      await createItem(content, ['accounts']);
       
       // Refresh data
-      const records = await getRecords(ceramic, tableName);
-      
-      // Convert records to the format expected by the component
-      const formattedData = records.map((record, index) => ({
-        id: index,
-        key: record.id,
-        value: JSON.stringify(record.content),
-        created_at: new Date().toISOString()
-      }));
-      
-      setAccountsData(formattedData);
+      await refreshData();
       
       // Clear form
       setWebsite('');
       setUsername('');
       setPassword('');
       setLoading(false);
+      setIsEditing(false);
     } catch (err: any) {
       console.error('Error adding account data:', err);
       setError(err.message || 'Failed to add account data. Please try again.');
@@ -160,20 +67,15 @@ export const AccountsPasswordsSection = () => {
   };
 
   const handleClearAccountsData = async () => {
-    if (!ceramic || !tableName) {
-      setError('Ceramic not initialized or no collection available.');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
       
-      // Clear the collection
-      await clearCollection(ceramic, tableName);
+      // Clear all items using the useDataAccess hook
+      await clearItems();
       
-      // Reset data
-      setAccountsData([]);
+      // Refresh data
+      await refreshData();
       
       setLoading(false);
     } catch (err: any) {
@@ -210,15 +112,15 @@ export const AccountsPasswordsSection = () => {
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!tableName ? (
+            {accountsData.length === 0 && !isLoading ? (
               <div>
-                <p>You don't have an accounts collection yet. Create one to store your account information securely on Ceramic Network.</p>
+                <p>You don't have any saved accounts yet. Add one to store your information securely.</p>
                 <button 
                   className="button-primary" 
-                  onClick={handleCreateTable}
+                  onClick={() => setIsEditing(true)}
                   disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create Accounts Table'}
+                  {loading ? 'Loading...' : 'Add Account'}
                 </button>
               </div>
             ) : (

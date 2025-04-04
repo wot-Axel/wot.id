@@ -2,17 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { useCeramic } from '@/context/CeramicContext';
-import { 
-  DataType,
-  PrivateData,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  clearCollection,
-  TableData
-} from '@/utils/ceramicUtils';
+import { DataType, TableData } from '@/utils/ceramicUtils';
+import { useDataAccess } from '@/hooks/useDataAccess';
 
 // Define document fields
 interface DocumentField {
@@ -31,98 +22,42 @@ const documentFields: DocumentField[] = [
 
 export const DocumentsSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, error: ceramicError } = useCeramic();
+  const { 
+    data: documentsData, 
+    isLoading, 
+    error: dataError,
+    createItem,
+    updateItem,
+    deleteItem,
+    refreshData,
+    ceramic,
+    composeDB,
+    usingComposeDB
+  } = useDataAccess(DataType.DOCUMENTS);
+  
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [collectionId, setCollectionId] = useState<string>('');
-  const [documentsData, setDocumentsData] = useState<TableData[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // Define initCeramicCollection with useCallback to avoid dependency issues
-  const initCeramicCollection = useCallback(async () => {
-    try {
-      if (!ceramic || !did) {
-        setError('Ceramic not initialized or no DID available.');
-        return;
-      }
-
-      setLoading(true);
-      setError('');
-      
-      // Check if collection exists
-      const collectionCheck = await checkCollectionExists(ceramic, DataType.DOCUMENTS, did);
-      
-      if (collectionCheck.exists) {
-        // Use the collection ID from the check result
-        setCollectionId(collectionCheck.collectionId);
-        
-        // Load existing data
-        await loadDocumentsData(collectionCheck.collectionId);
-      } else {
-        // Create new collection
-        const result = await createCollection(ceramic, DataType.DOCUMENTS, did);
-        setCollectionId(result.collectionId);
-      }
-    } catch (err) {
-      console.error('Error initializing Ceramic:', err);
-      setError('Failed to initialize Ceramic. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [ceramic, did, setError, setLoading, setCollectionId]);
-  
-  // Initialize Ceramic when connected
+  // Initialize form data from documents data when it changes
   useEffect(() => {
-    if (isConnected && address && isInitialized) {
-      initCeramicCollection();
-    }
-  }, [isConnected, address, isInitialized, initCeramicCollection]);
-
-
-
-  // Define loadDocumentsData function to load document data from Ceramic
-  const loadDocumentsData = useCallback(async (collectionId: string) => {
-    try {
-      if (!ceramic) {
-        setError('Ceramic not initialized.');
-        return;
-      }
-      
-      setLoading(true);
-      
-      // Get all documents data
-      const records = await getRecords(ceramic, collectionId);
-      
-      // Convert records to the format expected by the component
-      const formattedData: TableData[] = records.map((record, index) => ({
-        id: index,
-        key: record.id,
-        value: typeof record.content === 'string' ? record.content : JSON.stringify(record.content),
-        created_at: new Date().toISOString()
-      }));
-      
-      setDocumentsData(formattedData);
-      
-      // Populate form data from existing data
+    if (documentsData && documentsData.length > 0) {
       const initialFormData: Record<string, string> = {};
-      records.forEach(record => {
-        const content = record.content as Record<string, string>;
-        if (content) {
-          Object.keys(content).forEach(key => {
-            initialFormData[key] = content[key];
+      
+      documentsData.forEach(record => {
+        if (record.content) {
+          Object.keys(record.content).forEach(key => {
+            initialFormData[key] = record.content[key];
           });
         }
       });
       
       setFormData(initialFormData);
-    } catch (err) {
-      console.error('Error loading documents data:', err);
-      setError('Failed to load documents data. Please try again.');
-    } finally {
-      setLoading(false);
     }
-  }, [ceramic, setLoading, setError, setDocumentsData, setFormData]);
+  }, [documentsData]);
+  
+
 
   const handleInputChange = (fieldId: string, value: string) => {
     setFormData(prev => ({
@@ -132,17 +67,9 @@ export const DocumentsSection = () => {
   };
 
   const saveDocumentsData = async () => {
-    if (!ceramic || !collectionId) {
-      setError('Ceramic not initialized. Please try again.');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
-      
-      // Clear existing collection
-      await clearCollection(ceramic, collectionId);
       
       // Combine all field values into a single document record
       const documentData: Record<string, string> = {};
@@ -152,13 +79,17 @@ export const DocumentsSection = () => {
         }
       });
       
-      // Create a new record with all document data
-      if (Object.keys(documentData).length > 0) {
-        await createRecord(ceramic, DataType.DOCUMENTS, collectionId, documentData, ['document']);
+      // Check if we have existing data to update or need to create new
+      if (documentsData && documentsData.length > 0) {
+        // Update existing record
+        await updateItem(documentsData[0].id, documentData, ['document']);
+      } else if (Object.keys(documentData).length > 0) {
+        // Create a new record with all document data
+        await createItem(documentData, ['document']);
       }
       
-      // Reload data to show updated values
-      await loadDocumentsData(collectionId);
+      // Refresh data
+      await refreshData();
       setIsEditing(false);
     } catch (err) {
       console.error('Error saving documents data:', err);
@@ -178,12 +109,12 @@ export const DocumentsSection = () => {
         </div>
       ) : (
         <div className="legal-content">
-          {loading ? (
+          {loading || isLoading ? (
             <p>Loading...</p>
-          ) : error ? (
+          ) : error || dataError ? (
             <div className="error-message">
-              <p>{error}</p>
-              <button onClick={initCeramicCollection} className="button-primary logged-in-button">
+              <p>{error || dataError}</p>
+              <button onClick={refreshData} className="button-primary logged-in-button">
                 Try Again
               </button>
             </div>
