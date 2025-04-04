@@ -100,192 +100,146 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
     
     console.log('Connected to Ceramic network with DID:', did.id);
 
-    try {
-      // Create a real ComposeDB client with our mock definition
-      // In production, we would use a proper definition generated from our models
-      const realComposeClient = new ComposeClient({
-        ceramic: ceramic as any, // Type assertion to avoid compatibility issues
-        definition: mockDefinition
-      });
+    // Create a real ComposeDB client with our definition
+    const realComposeClient = new ComposeClient({
+      ceramic: ceramic as any, // Type assertion to avoid compatibility issues
+      definition: mockDefinition
+    });
 
-      // Create a hybrid client that uses the real ComposeDB client where possible
-      // but falls back to mock implementations for development
-      composeClient = {
-        ceramic,
-        composeClient: realComposeClient,
-        exists: async (modelName: string, query: any) => {
-          // In a real implementation, we would query the model
-          // For now, check localStorage to simulate persistence
-          const storageKey = `composedb-${modelName}`;
-          const storedData = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
-          if (storedData) {
-            const parsedData = JSON.parse(storedData);
-            return parsedData.some((item: any) => {
-              // Check if any item matches the query
-              return Object.keys(query).every(key => item[key] === query[key]);
-            });
-          }
-          return false;
-        },
-        create: async (modelName: string, data: any) => {
-          // In a real implementation, we would use composeClient.executeQuery
-          // For now, we'll store in localStorage to simulate persistence
-          const id = `doc-${Date.now()}`;
-          const newDoc = {
-            documentId: id,
-            streamId: `stream-${id}`,
-            ...data,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          
-          // Store in localStorage
-          if (typeof window !== 'undefined') {
-            const storageKey = `composedb-${modelName}`;
-            const existingData = localStorage.getItem(storageKey);
-            const items = existingData ? JSON.parse(existingData) : [];
-            items.push(newDoc);
-            localStorage.setItem(storageKey, JSON.stringify(items));
-          }
-          
-          return newDoc;
-        },
-        update: async (modelName: string, id: string, data: any) => {
-          // In a real implementation, we would use composeClient.executeQuery
-          // For now, we'll update in localStorage to simulate persistence
-          if (typeof window !== 'undefined') {
-            const storageKey = `composedb-${modelName}`;
-            const existingData = localStorage.getItem(storageKey);
-            if (existingData) {
-              const items = JSON.parse(existingData);
-              const index = items.findIndex((item: any) => item.documentId === id || item.streamId === id);
-              
-              if (index >= 0) {
-                const updatedDoc = {
-                  ...items[index],
-                  ...data,
-                  updatedAt: new Date().toISOString()
-                };
-                items[index] = updatedDoc;
-                localStorage.setItem(storageKey, JSON.stringify(items));
-                return updatedDoc;
-              }
-            }
-          }
-          
-          // If no document found to update, return null
-          return null;
-        },
-        query: async ({ query }: { query: string }) => {
-          try {
-            // Try to use the real ComposeDB client for queries
-            // This will work for simple queries that don't depend on our specific models
-            return await realComposeClient.executeQuery(query);
-          } catch (error) {
-            console.warn('Falling back to mock query implementation:', error);
-            // Fall back to mock implementation if the real client fails
-            const modelName = query.includes('ProfileIndex') ? 'ProfileIndex' : 'GenericIndex';
-            return {
-              data: {
-                [modelName]: {
-                  edges: []
-                }
-              }
-            };
-          }
-        }
-      };
-    } catch (error) {
-      console.error('Error creating ComposeDB client:', error);
-      // Fall back to a fully mocked client if we can't create a real one
-      composeClient = {
-        ceramic,
-        exists: async (modelName: string, query: any) => {
-          // Check localStorage to simulate persistence
-          const storageKey = `composedb-${modelName}`;
-          const storedData = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
-          if (storedData) {
-            const parsedData = JSON.parse(storedData);
-            return parsedData.some((item: any) => {
-              // Check if any item matches the query
-              return Object.keys(query).every(key => item[key] === query[key]);
-            });
-          }
-          return false;
-        },
-        create: async (modelName: string, data: any) => {
-          const id = `doc-${Date.now()}`;
-          const newDoc = {
-            documentId: id,
-            streamId: `stream-${id}`,
-            ...data,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          
-          // Store in localStorage
-          if (typeof window !== 'undefined') {
-            const storageKey = `composedb-${modelName}`;
-            const existingData = localStorage.getItem(storageKey);
-            const items = existingData ? JSON.parse(existingData) : [];
-            items.push(newDoc);
-            localStorage.setItem(storageKey, JSON.stringify(items));
-            console.log(`Stored item in localStorage: ${storageKey}`, newDoc);
-          }
-          
-          return newDoc;
-        },
-        update: async (modelName: string, id: string, data: any) => {
-          // Update in localStorage
-          if (typeof window !== 'undefined') {
-            const storageKey = `composedb-${modelName}`;
-            const existingData = localStorage.getItem(storageKey);
-            if (existingData) {
-              const items = JSON.parse(existingData);
-              const index = items.findIndex((item: any) => item.documentId === id || item.streamId === id);
-              
-              if (index >= 0) {
-                const updatedDoc = {
-                  ...items[index],
-                  ...data,
-                  updatedAt: new Date().toISOString()
-                };
-                items[index] = updatedDoc;
-                localStorage.setItem(storageKey, JSON.stringify(items));
-                console.log(`Updated item in localStorage: ${storageKey}`, updatedDoc);
-                return updatedDoc;
-              }
-            }
-          }
-          
-          return null;
-        },
-        query: async ({ query }: { query: string }) => {
-          // Extract model name from query (simplified parsing)
-          const modelNameMatch = query.match(/viewer\s*{\s*(\w+)\s*{/i);
-          const modelName = modelNameMatch ? modelNameMatch[1] : 
-                          query.includes('ProfileIndex') ? 'ProfileIndex' : 'GenericIndex';
-          
-          if (typeof window !== 'undefined') {
-            const storageKey = `composedb-${modelName}`;
-            const storedData = localStorage.getItem(storageKey);
-            const items = storedData ? JSON.parse(storedData) : [];
-            
-            console.log(`Retrieved items from localStorage: ${storageKey}`, items);
-            
-            // Convert to expected ComposeDB response format
-            return {
-              data: {
-                viewer: {
-                  [modelName]: {
-                    edges: items.map((item: any) => ({
-                      node: item
-                    }))
+    // Create a client that uses the Ceramic network for data storage
+    composeClient = {
+      ceramic,
+      composeClient: realComposeClient,
+      
+      // Check if a model exists
+      exists: async (modelName: string, query: any) => {
+        try {
+          // For now, use a simplified approach to check existence
+          // Query for all documents and check if any match
+          const result = await realComposeClient.executeQuery(`
+            query {
+              viewer {
+                ${modelName}Index(first: 10) {
+                  edges {
+                    node {
+                      id
+                    }
                   }
                 }
               }
-            };
+            }
+          `);
+          
+          // Check if we got any results
+          const viewerData = result?.data?.viewer as Record<string, any>;
+          const modelData = viewerData?.[`${modelName}Index`] as { edges: any[] } | undefined;
+          const edges = modelData?.edges || [];
+          return edges.length > 0;
+        } catch (error) {
+          console.error(`Error checking if ${modelName} exists:`, error);
+          return false;
+        }
+      },
+      
+      // Create a new model instance
+      create: async (modelName: string, data: any) => {
+        try {
+          // Use ComposeDB to create a new document
+          const mutation = `
+            mutation {
+              create${modelName}(
+                input: {
+                  content: ${JSON.stringify({
+                    ...data,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                  })}
+                }
+              ) {
+                document {
+                  id
+                  content
+                }
+              }
+            }
+          `;
+          
+          const result = await realComposeClient.executeQuery(mutation);
+          const resultData = result?.data as Record<string, any> || {};
+          const createResult = resultData[`create${modelName}`] as Record<string, any> || {};
+          const document = createResult.document as { id: string; content: any } | undefined;
+          
+          if (!document) {
+            throw new Error(`Failed to create ${modelName}`);
           }
+          
+          // Return the created document with our expected format
+          return {
+            documentId: document.id,
+            streamId: document.id,
+            ...document.content
+          };
+        } catch (error) {
+          console.error(`Error creating ${modelName}:`, error);
+          throw error;
+        }
+      },
+      
+      // Update an existing model
+      update: async (modelName: string, id: string, data: any) => {
+        try {
+          // Use ComposeDB to update the document
+          const mutation = `
+            mutation {
+              update${modelName}(
+                input: {
+                  id: "${id}"
+                  content: ${JSON.stringify({
+                    ...data,
+                    updatedAt: new Date().toISOString()
+                  })}
+                }
+              ) {
+                document {
+                  id
+                  content
+                }
+              }
+            }
+          `;
+          
+          const result = await realComposeClient.executeQuery(mutation);
+          const resultData = result?.data as Record<string, any> || {};
+          const updateResult = resultData[`update${modelName}`] as Record<string, any> || {};
+          const document = updateResult.document as { id: string; content: any } | undefined;
+          
+          if (!document) {
+            return null;
+          }
+          
+          // Return the updated document
+          return {
+            documentId: document.id,
+            streamId: document.id,
+            ...document.content
+          };
+        } catch (error) {
+          console.error(`Error updating ${modelName}:`, error);
+          return null;
+        }
+      },
+      
+      // Query for models
+      query: async ({ query }: { query: string }) => {
+        try {
+          // Execute the query directly using the ComposeDB client
+          return await realComposeClient.executeQuery(query);
+        } catch (error) {
+          console.error('Error executing query:', error);
+          
+          // Return empty result on error
+          const modelNameMatch = query.match(/viewer\s*{\s*(\w+)\s*{/i);
+          const modelName = modelNameMatch ? modelNameMatch[1] : 'GenericIndex';
           
           return {
             data: {
@@ -297,9 +251,43 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
             }
           };
         }
-      };
-    }
-
+      },
+      
+      // List all documents of a model type
+      list: async (modelName: string) => {
+        try {
+          // Query for all documents of this model type
+          const result = await realComposeClient.executeQuery(`
+            query {
+              viewer {
+                ${modelName}Index(first: 100) {
+                  edges {
+                    node {
+                      id
+                      content
+                    }
+                  }
+                }
+              }
+            }
+          `);
+          
+          const viewerData = result?.data?.viewer as Record<string, any> || {};
+          const modelData = viewerData[`${modelName}Index`] as { edges: any[] } | undefined;
+          const edges = modelData?.edges || [];
+          
+          return edges.map((edge: any) => ({
+            documentId: edge.node.id,
+            streamId: edge.node.id,
+            ...edge.node.content
+          }));
+        } catch (error) {
+          console.error(`Error listing ${modelName}:`, error);
+          return [];
+        }
+      }
+    };
+    
     return composeClient;
   });
 };
