@@ -24,7 +24,7 @@ export const DataProviders = ({ children }: { children: ReactNode }) => {
  * This can be controlled by a feature flag, user preference, or environment variable
  */
 export const useComposeDBEnabled = (): boolean => {
-  // For now, we'll return false to continue using the original Ceramic context
-  // This can be updated later to enable ComposeDB for all users or specific users
-  return false;
+  // Enable ComposeDB for all users
+  // We're now using the real ComposeDB implementation instead of the original Ceramic context
+  return true;
 };
