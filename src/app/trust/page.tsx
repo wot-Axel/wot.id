@@ -28,7 +28,7 @@ export default function TrustPage() {
       {/* Receive Trust Section */}
       <div className="legal-section">
         <h2>Receive Trust</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <div className={styles.qrCodeContainer}>
             <QRCodeDisplay
               data={address || ''}
@@ -42,7 +42,7 @@ export default function TrustPage() {
       {/* Send Trust Section */}
       <div className="legal-section">
         <h2>Send Trust</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>Send trust attestations to this address</p>
           
           <button 
@@ -97,7 +97,7 @@ export default function TrustPage() {
       {/* Trust History Section */}
       <div className="legal-section">
         <h2>Trust History</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>View your trust relationships</p>
           <div className={styles.trustHistory}>
             <p className={styles.emptyState}>No trust relationships yet</p>

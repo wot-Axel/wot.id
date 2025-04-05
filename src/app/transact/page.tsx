@@ -29,7 +29,7 @@ export default function TransactPage() {
       {/* Receive Transaction Section */}
       <div className="legal-section">
         <h2>Receive Transaction</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <div className={styles.qrCodeContainer}>
             <QRCodeDisplay
               data={address || ''}
@@ -43,7 +43,7 @@ export default function TransactPage() {
       {/* Send Transaction Section */}
       <div className="legal-section">
         <h2>Send Transaction</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>Send currency or real-world assets to this address</p>
           
           <button 
@@ -98,7 +98,7 @@ export default function TransactPage() {
       {/* Transaction History Section */}
       <div className="legal-section">
         <h2>Transaction History</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>View your recent transactions</p>
           <div className={styles.transactionHistory}>
             <p className={styles.emptyState}>No transactions yet</p>

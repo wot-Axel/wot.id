@@ -7,7 +7,7 @@ const Legal = () => {
       
       <div className="legal-section">
         <h2>Responsible</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>Dr. Axel Noack</p>
           <p>c/o wot.id Project</p>
           <p>Berlin, Germany</p>
@@ -17,7 +17,7 @@ const Legal = () => {
       
       <div className="legal-section">
         <h2>Contact</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>Email: axel@wot.id</p>
           <p>For legal inquiries requiring a postal address, please contact via email first.</p>
         </div>
@@ -25,7 +25,7 @@ const Legal = () => {
       
       <div className="legal-section">
         <h2>Disclaimer</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             This distributed App (dApp) is experimental and for information purposes only. It intends to
             illustrate the advantages of a blockchain-based peer-to-peer system and
@@ -50,7 +50,7 @@ const Legal = () => {
       
       <div className="legal-section">
         <h2>Data Protection</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             This website uses necessary technical cookies only. By using this site,
             the user agrees to this. An explicit agreement by the user is not
@@ -70,7 +70,7 @@ const Legal = () => {
       
       <div className="legal-section">
         <h2>Copyright</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>wot.id logo © Axel Noack</p>
         </div>
       </div>

@@ -12,7 +12,7 @@ const AboutWho = () => {
       
       <div className="legal-section">
         <h2>Who We Are</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             wot.id is a decentralized identity platform built on the principles of the Web of Trust (WOT) concept in cryptography. 
             We are a team of blockchain enthusiasts and privacy advocates who believe that individuals should have complete control over their digital identities.
@@ -34,7 +34,7 @@ const AboutWho = () => {
       
       <div className="legal-section">
         <h2>Our Vision</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             We envision a world where individuals have complete sovereignty over their digital identities, where personal data is not controlled by centralized entities, and where trust can be established directly between peers without intermediaries.
           </p>

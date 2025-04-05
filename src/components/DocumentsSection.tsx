@@ -104,11 +104,11 @@ export const DocumentsSection = () => {
       <h2>My Documents</h2>
       
       {!isConnected ? (
-        <div className="legal-content">
+        <div className="section-content">
           <p>Please connect your wallet to manage your document information.</p>
         </div>
       ) : (
-        <div className="legal-content">
+        <div className="section-content">
           {loading || isLoading ? (
             <p>Loading...</p>
           ) : error || dataError ? (

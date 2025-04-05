@@ -17,7 +17,7 @@ const About = () => {
           
           <div className="legal-section">
             <h2>For Everything</h2>
-            <div className="legal-content">
+            <div className="section-content">
               <ul className="feature-list">
                 <li>I can store all aspects of my life in one place, from personal documents to digital assets</li>
                 <li>My personal information is securely managed using blockchain technology</li>
@@ -31,7 +31,7 @@ const About = () => {
           
           <div className="legal-section">
             <h2>For Everywhere</h2>
-            <div className="legal-content">
+            <div className="section-content">
               <ul className="feature-list">
                 <li>I can access my identity from anywhere in the world with just a web browser</li>
                 <li>My credentials are always available when I need them, backed by blockchain technology</li>
@@ -45,7 +45,7 @@ const About = () => {
           
           <div className="legal-section">
             <h2>For Everyone (I choose)</h2>
-            <div className="legal-content">
+            <div className="section-content">
               <ul className="feature-list">
                 <li>I decide who can see my information through cryptographic access controls</li>
                 <li>I can share specific credentials with only those I trust, with granular permissions</li>
@@ -59,7 +59,7 @@ const About = () => {
           
           <div className="legal-section">
             <h2>For Ever</h2>
-            <div className="legal-content">
+            <div className="section-content">
               <ul className="feature-list">
                 <li>My identity attestations are permanent and immutable</li>
                 <li>I have a lasting record of my credentials that can&apos;t be erased</li>
@@ -79,7 +79,7 @@ const About = () => {
           
           <div className="legal-section">
             <h2>About Web of Trust</h2>
-            <div className="legal-content">
+            <div className="section-content">
               <p>
                 The Web of Trust (WOT) is a concept in cryptography that helps establish the authenticity of binding between a public key and its owner. It's a decentralized alternative to the centralized certificate authority model.
               </p>
@@ -92,7 +92,7 @@ const About = () => {
           
           <div className="legal-section">
             <h2>How It Works</h2>
-            <div className="legal-content">
+            <div className="section-content">
               <p>
                 Users can create attestations that verify certain claims about themselves or others. These attestations are stored on the Optimism blockchain using the Ethereum Attestation Service, providing faster and more cost-effective transactions while maintaining security.
               </p>
@@ -109,7 +109,7 @@ const About = () => {
           
           <div className="legal-section">
             <h2>Technology</h2>
-            <div className="legal-content">
+            <div className="section-content">
               <p>
                 This dApp is built using modern technologies that prioritize security, privacy, and user experience:
               </p>

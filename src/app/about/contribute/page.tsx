@@ -13,7 +13,7 @@ const AboutContribute = () => {
       
       <div className="legal-section">
         <h2>Contribute Work and Capital</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             <strong>Anyone interested can contribute work and capital to wot.id.</strong>
           </p>
@@ -43,7 +43,7 @@ const AboutContribute = () => {
       
       <div className="legal-section">
         <h2>The Liquid Equity Split Explained</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             As wot.id is transitioning from the ideation phase to a Minimum Viable Product, we don't yet have traditional funding available. This is where our innovative approach comes in.
           </p>
@@ -67,7 +67,7 @@ const AboutContribute = () => {
       
       <div className="legal-section">
         <h2>Valuation Mechanism</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             Our valuation approach is as innovative as our technology. We plan to sell shares of ownership in wot.id to the public through an auction mechanism:
           </p>
@@ -88,7 +88,7 @@ const AboutContribute = () => {
       
       <div className="legal-section">
         <h2>Legal Framework</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             To provide a solid foundation for our innovative approach, wot.id will be anchored in the real world as a Cooperative under European Law. This structure is chosen specifically because it aligns with our core values.
           </p>
@@ -111,7 +111,7 @@ const AboutContribute = () => {
       
       <div className="legal-section">
         <h2>Long-term Vision for Value Distribution</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             Our ultimate vision goes beyond traditional business models. At some stage, all value created on wot.id will be distributed immediately and continuously as micro-transactions to its participants.
           </p>
@@ -128,7 +128,7 @@ const AboutContribute = () => {
       
       <div className="legal-section">
         <h2>Development Resources</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             If you're interested in contributing to the development of wot.id, here are some resources to get you started:
           </p>
@@ -147,7 +147,7 @@ const AboutContribute = () => {
       
       <div className="legal-section">
         <h2>Contact Us</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             If you're interested in contributing to wot.id or have questions about our liquid equity split model, please reach out:
           </p>

@@ -20,7 +20,7 @@ export const CurrenciesSection = () => {
   return (
     <div className="legal-section">
       <h2>My Currencies</h2>
-      <div className="legal-content">
+      <div className="section-content">
         {isLoading ? (
           <p>Loading your ETH balance...</p>
         ) : isError ? (

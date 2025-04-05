@@ -12,7 +12,7 @@ const AboutWhy = () => {
       
       <div className="legal-section">
         <h2>Why We Built wot.id</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             In today&apos;s digital world, our identities are fragmented across countless platforms and services. 
             Personal information is often stored in centralized databases vulnerable to breaches, and users have little control over how their data is used.
@@ -35,7 +35,7 @@ const AboutWhy = () => {
       
       <div className="legal-section">
         <h2>The Problem with Traditional Identity</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             Traditional identity systems suffer from several critical problems:
           </p>

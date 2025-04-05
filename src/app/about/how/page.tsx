@@ -12,7 +12,7 @@ const AboutHow = () => {
       
       <div className="legal-section">
         <h2>Technology Behind wot.id</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             wot.id is built using a combination of cutting-edge technologies:
           </p>
@@ -31,7 +31,7 @@ const AboutHow = () => {
       
       <div className="legal-section">
         <h2>How It Works</h2>
-        <div className="legal-content">
+        <div className="section-content">
           <p>
             Users can create attestations that verify certain claims about themselves or others. These attestations are stored on the Optimism blockchain using the Ethereum Attestation Service, providing faster and more cost-effective transactions while maintaining security.
           </p>

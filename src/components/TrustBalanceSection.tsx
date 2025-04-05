@@ -127,7 +127,7 @@ export const TrustBalanceSection = () => {
   return (
     <div className="legal-section">
       <h2>My Trust Balance</h2>
-      <div className="legal-content">
+      <div className="section-content">
         {!isConnected ? (
           <p>Please connect your wallet to view your trust balance.</p>
         ) : loading ? (

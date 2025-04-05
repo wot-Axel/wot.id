@@ -488,7 +488,7 @@ label {
 }
 
 /* General content section styling */
-.section-content, .legal-content {
+.section-content, .legal-content { /* legal-content kept for backward compatibility */
   padding: 20px;
   width: 100%;
   max-width: 100%;
@@ -498,13 +498,11 @@ label {
   word-wrap: break-word;
 }
 
-/* legal-content is kept for backward compatibility and will be gradually replaced with section-content */
-
-.legal-content p, .section-content p {
+.section-content p, .legal-content p { /* legal-content kept for backward compatibility */
   margin-bottom: 15px;
 }
 
-.legal-content p:last-child, .section-content p:last-child {
+.section-content p:last-child, .legal-content p:last-child { /* legal-content kept for backward compatibility */
   margin-bottom: 0;
 }
 
@@ -535,7 +533,7 @@ label {
     padding: 12px 15px;
   }
   
-  .legal-content {
+  .section-content, .legal-content { /* legal-content kept for backward compatibility */
     padding: 15px;
     font-size: 0.95rem;
   }
