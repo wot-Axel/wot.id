@@ -51,6 +51,8 @@ export const modal = createAppKit({
     analytics: true, // Optional - defaults to your Cloud configuration
     connectMethodsOrder: ["social", "wallet", "email"] // Control the order of connection methods
   },
+  // Ensure wallet options are strictly enforced
+  allWallets: "HIDE", // Hide the "All Wallets" button to ensure only our specified wallets are shown
   themeVariables: {
     '--w3m-accent': '#000000',
   }
