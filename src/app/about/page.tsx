@@ -136,7 +136,7 @@ const About = () => {
         </p>
       </div>
       
-      <div className="tell-me-more-button">
+      <div className="button-bottom">
         {showDetails ? (
           <button className="button-primary" onClick={() => setShowDetails(false)}>Hide details</button>
         ) : (

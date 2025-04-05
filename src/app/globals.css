@@ -65,7 +65,7 @@ body {
 /* Footer Styles - Aligned with Main Content */
 .site-footer {
   width: 100%;
-  margin-top: 60px;
+  margin-top: 35px;
   margin-bottom: 30px; /* Add space below the footer */
   padding: 0;
   text-align: center;
@@ -1154,10 +1154,17 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.tell-me-more-button {
+/* Button container for buttons that are the last element before the footer */
+.button-bottom {
   display: block;
-  margin: 40px auto 20px;
+  margin: 40px auto 0;
   text-align: center;
+}
+
+/* Remove margin from buttons inside button-bottom container but keep them centered */
+.button-bottom .button-primary,
+.button-bottom .button-secondary {
+  margin: 0 auto;
 }
 
 @media (max-width: 580px) {
