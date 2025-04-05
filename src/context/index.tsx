@@ -48,7 +48,8 @@ export const modal = createAppKit({
   },
   // Standard features
   features: {
-    analytics: true // Optional - defaults to your Cloud configuration
+    analytics: true, // Optional - defaults to your Cloud configuration
+    connectMethodsOrder: ["social", "wallet", "email"] // Control the order of connection methods
   },
   themeVariables: {
     '--w3m-accent': '#000000',
