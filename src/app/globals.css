@@ -442,7 +442,7 @@ label {
 .legal-page {
   width: 100%;
   margin: 0;
-  padding: 0;
+  padding: 0 20px;
   color: var(--foreground);
   box-sizing: border-box;
 }
@@ -519,7 +519,7 @@ label {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .legal-page {
-    padding: 15px;
+    padding: 15px 20px;
     max-width: 100%;
     width: 100%;
   }
