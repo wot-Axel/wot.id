@@ -144,12 +144,6 @@ const About = () => {
         )}
       </div>
       
-      <div className="tell-me-more-button" style={{ marginTop: '10px' }}>
-        <Link href="/about/who">
-          <button className="button-secondary">Learn more about who we are</button>
-        </Link>
-      </div>
-      
       {/* Footer is now included in the layout */}
     </div>
   );
