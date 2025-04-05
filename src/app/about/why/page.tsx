@@ -6,7 +6,7 @@ import { AboutSubNav } from "@/components/AboutSubNav";
 const AboutWhy = () => {
   return (
     <div className="legal-page">
-      <h1 className="page-title">Why wot.id</h1>
+      <h1 className="page-title">About wot.id</h1>
       
       <AboutSubNav />
       

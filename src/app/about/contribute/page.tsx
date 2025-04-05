@@ -7,7 +7,7 @@ import Link from "next/link";
 const AboutContribute = () => {
   return (
     <div className="legal-page">
-      <h1 className="page-title">Contribute to wot.id</h1>
+      <h1 className="page-title">About wot.id</h1>
       
       <AboutSubNav />
       
