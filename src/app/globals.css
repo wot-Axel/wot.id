@@ -442,7 +442,7 @@ label {
 .legal-page {
   width: 100%;
   margin: 0;
-  padding: 0 20px;
+  padding: 0;
   color: var(--foreground);
   box-sizing: border-box;
 }
@@ -452,7 +452,7 @@ label {
   margin: 0 auto 40px;
   font-size: 2.2rem;
   border-bottom: 2px solid #eaeaea;
-  padding: 20px 0 15px;
+  padding: 20px 20px 15px;
   width: 100%;
   max-width: 1024px;
 }
@@ -519,7 +519,7 @@ label {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .legal-page {
-    padding: 15px 20px;
+    padding: 15px;
     max-width: 100%;
     width: 100%;
   }
@@ -527,6 +527,7 @@ label {
   .page-title {
     font-size: 1.8rem;
     margin-bottom: 30px;
+    padding: 15px 20px 15px;
   }
   
   .legal-section h2 {
