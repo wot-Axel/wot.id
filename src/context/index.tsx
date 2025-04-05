@@ -50,14 +50,13 @@ export const modal = createAppKit({
   features: {
     analytics: true, // Optional - defaults to your Cloud configuration
     connectMethodsOrder: ["social", "wallet", "email"], // Control the order of connection methods
-    // Display social login options in a consistent format
-    // Using exactly 2 options gives equal-sized buttons side by side
-    socials: ["google", "apple"],
+    // Display social login options with Apple first
+    socials: ["apple", "google", "github", "x", "discord", "facebook", "farcaster"],
     // Show all wallet options directly on the initial screen
     emailShowWallets: true
   },
-  // Ensure wallet options are strictly enforced
-  allWallets: "HIDE", // Hide the "All Wallets" button to ensure only our specified wallets are shown
+  // Enable the "All Wallets" list
+  allWallets: "SHOW", // Show the "All Wallets" button to provide access to all available wallet options
   themeVariables: {
     '--w3m-accent': '#000000',
   }
