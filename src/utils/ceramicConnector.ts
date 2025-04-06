@@ -13,9 +13,8 @@ import { CeramicClient } from '@ceramicnetwork/http-client';
 import { DID } from 'dids';
 import { Ed25519Provider } from 'key-did-provider-ed25519';
 import { getResolver } from 'key-did-resolver';
-// Fix for TypeScript module resolution issue in production build
-import * as uint8arrays from 'uint8arrays';
-const { fromString } = uint8arrays;
+// Using direct import with custom type declarations
+import { fromString } from 'uint8arrays/from-string';
 
 // Constants
 const CONNECTION_TIMEOUT = 10000; // 10 seconds
