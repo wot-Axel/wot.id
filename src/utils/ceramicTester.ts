@@ -12,16 +12,43 @@ import {
   getRecords,
   updateRecord,
   deleteRecord,
-  clearCollection
-} from './ceramicUtils';
+  clearCollection,
+  initCeramic
+} from '../composedb/ceramic';
+import { createDIDFromId } from '../composedb/did-helper';
 import { validateData } from './schemaValidation';
 import { exportAllData, importData } from './dataExportImport';
 import { encryptData, decryptData } from './encryptionUtils';
 import { monitorAsync } from './performanceMonitor';
 
-// Mock Ceramic client for testing
-const mockCeramic: CeramicClient = {
-  did: { id: 'did:key:test' }
+// Initialize a real Ceramic client for testing
+// This will be properly initialized with a DID when used
+let mockCeramic: CeramicClient;
+
+// Create a mock Ceramic client with a proper DID
+const createMockCeramicWithDID = (): CeramicClient => {
+  return {
+    did: createDIDFromId('did:key:test'),
+    isOffline: true
+  } as CeramicClient;
+};
+
+// Initialize the Ceramic client
+const initMockCeramic = async () => {
+  if (!mockCeramic) {
+    try {
+      mockCeramic = await initCeramic();
+      // Ensure the client has a valid DID
+      if (!mockCeramic.did) {
+        mockCeramic.did = createDIDFromId('did:key:test');
+      }
+    } catch (error) {
+      console.error('Failed to initialize Ceramic client:', error);
+      // Use our mock client with a proper DID
+      mockCeramic = createMockCeramicWithDID();
+    }
+  }
+  return mockCeramic;
 };
 
 // Test data for each data type
@@ -94,6 +121,9 @@ export const runCeramicTest = async () => {
     
     try {
       console.log('Starting Ceramic integration test...');
+      
+      // Initialize the Ceramic client
+      mockCeramic = await initMockCeramic();
       
       // Test each data type
       for (const dataType of Object.values(DataType)) {
@@ -219,6 +249,9 @@ export const runSimpleCeramicTest = async () => {
   try {
     const testDid = 'did:key:test';
     const dataType = DataType.PROFILE;
+    
+    // Initialize the Ceramic client
+    mockCeramic = await initMockCeramic();
     
     // Check if collection exists
     const { exists, collectionId } = await checkCollectionExists(
