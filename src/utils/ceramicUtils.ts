@@ -1,26 +1,65 @@
 /**
  * Ceramic utility functions for interacting with the Ceramic network
- * This is a minimal placeholder version without external dependencies
+ * Implements a robust connection strategy with multi-node fallback
  */
 
-// Type definitions only - no actual implementation that requires external dependencies
 import { monitorAsync } from './performanceMonitor';
 import { validateData } from './schemaValidation';
+import { connectToCeramic, resetFailedNodes, getConnectionStatus } from './ceramicConnector';
+
+// Import types from our consolidated ceramic.ts file
+import { 
+  CeramicClient,
+  ContentRecord,
+  CollectionInfo,
+  DataType
+} from '../composedb/ceramic';
+
+// Define CeramicDID for backward compatibility
+export interface CeramicDID {
+  id: string;
+}
 
 /**
- * Initialize Ceramic client
+ * Initialize Ceramic client with multi-node fallback strategy
+ * @param identity Optional user identity for deterministic DID generation
  * @returns Initialized Ceramic client
  */
-export const initCeramic = async (): Promise<CeramicClient> => {
+export const initCeramic = async (identity?: string): Promise<any> => {
   return monitorAsync('initCeramic', 'ceramicUtils', async () => {
-    // Create a simple client with a mock DID for now
-    // This will be replaced with a real Ceramic client in the future
-    const ceramic: CeramicClient = {
-      did: { id: 'did:key:placeholder' }
-    };
+    // Try to connect using our robust connection strategy
+    const ceramic = await connectToCeramic(identity);
+    
+    if (!ceramic) {
+      console.error('Failed to connect to any Ceramic node. Using fallback local implementation.');
+      // Return a minimal client for offline functionality
+      return {
+        did: { id: 'did:key:placeholder' },
+        isOffline: true
+      };
+    }
     
     return ceramic;
   });
+};
+
+/**
+ * Reset failed nodes to retry previously failed connections
+ */
+export const resetCeramicNodes = (): void => {
+  resetFailedNodes();
+  console.log('Reset failed Ceramic nodes. Will retry on next connection attempt.');
+};
+
+/**
+ * Get current Ceramic connection status
+ * @returns Connection status information
+ */
+export const getCeramicStatus = (): {
+  lastSuccessfulNode: string | null;
+  failedNodes: string[];
+} => {
+  return getConnectionStatus();
 };
 
 // Ensure window.ethereum is recognized
@@ -41,50 +80,24 @@ export interface TableData {
 // Alias for TableData to maintain compatibility with existing code
 export type PrivateData = TableData;
 
-// Enum for data types to ensure consistency across the application
-export enum DataType {
-  PROFILE = 'profile',
-  DOCUMENTS = 'documents',
-  MEDICAL = 'medical',
-  DIGITAL_ASSETS = 'digital_assets',
-  REAL_WORLD_ASSETS = 'real_world_assets',
-  CONNECTIONS = 'connections',
-  ORGANIZATIONS = 'organizations',
-  MESSAGES = 'messages',
-  PRIVATE = 'private'
-}
+// Re-export DataType from our consolidated ceramic.ts file
+export { DataType };
 
-// Interface for Ceramic DID
-export interface CeramicDID {
-  id: string;
-  [key: string]: any;
-}
+// CeramicDID is already defined above
 
-// Interface for Ceramic client
-export interface CeramicClient {
-  did?: CeramicDID;
-  [key: string]: any;
-}
+// Re-export types from ceramic-exports
+export type { CeramicClient };
 
 // Database type for backward compatibility
 export type Database = CeramicClient;
 
-// Interface for content record
-export interface ContentRecord {
-  id: string;
-  streamId: string;
-  controller: string;
-  createdAt: string;
-  updatedAt: string;
-  content: any;
-  tags?: string[];
-}
+// Re-export types from ceramic-exports
+export type { ContentRecord };
 
-// Interface for collection information
-export interface CollectionInfo {
-  exists: boolean;
-  collectionId: string;
-}
+// Re-export types from ceramic-exports
+export type { CollectionInfo };
+
+// DataType is already re-exported above
 
 // Storage key for localStorage
 const CERAMIC_STORAGE_KEY = 'ceramic_local_storage';

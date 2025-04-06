@@ -3,7 +3,7 @@
  * These models define the structure of our data in ComposeDB
  */
 
-import { DataType } from '@/utils/ceramicUtils';
+import { DataType } from './ceramic';
 
 // Base model for all content
 export const BaseContentModel = {
