@@ -88,26 +88,53 @@ export const initTableland = async (): Promise<Database> => {
 // Generic function to create a table
 export const createTable = async (db: Database, tableType: TableType, address: string): Promise<string> => {
   return executeWithRetry(async () => {
-    // Create a real Tableland table with the appropriate schema
-    // All tables have the same schema: id, item_key, item_value, created_at
-    // Note: We're using item_key instead of key because key is a reserved SQL keyword
-    const prefix = address.toLowerCase().slice(2, 10); // Remove 0x and take 8 chars
-    const tableName = `${tableType}_${prefix}`;
+    // Skip if we're on the server side
+    if (typeof window === 'undefined') {
+      console.log('Server-side rendering detected, skipping table creation');
+      return `${tableType}_placeholder`;
+    }
     
-    const { meta: create } = await db.prepare(`
-      CREATE TABLE ${tableName} (
-        id INTEGER PRIMARY KEY,
-        item_key TEXT NOT NULL,
-        item_value TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      )
-    `).run();
-    
-    // Wait for transaction to complete
-    await create.txn?.wait();
-    
-    // Return the actual table name from Tableland
-    return create.txn?.name || tableName;
+    try {
+      // Create a real Tableland table with the appropriate schema
+      // All tables have the same schema: id, item_key, item_value, created_at
+      // Note: We're using item_key instead of key because key is a reserved SQL keyword
+      
+      // Ensure address is properly formatted
+      const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
+      const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
+      
+      // Ensure tableName follows Tableland naming conventions
+      // Tableland requires lowercase names with only alphanumeric characters and underscores
+      const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const tableName = `${safeTableType}_${prefix}`;
+      
+      // Create the table
+      const createResult = await db.prepare(`
+        CREATE TABLE ${tableName} (
+          id INTEGER PRIMARY KEY,
+          item_key TEXT NOT NULL,
+          item_value TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      `).run();
+      
+      // Safely access the meta property
+      const meta = createResult?.meta;
+      
+      // Wait for transaction to complete if it exists
+      if (meta?.txn) {
+        await meta.txn.wait();
+      }
+      
+      // Return the actual table name from Tableland or fall back to our constructed name
+      return (meta?.txn?.name) || tableName;
+    } catch (error) {
+      console.error(`Error creating table for ${tableType}:`, error);
+      // Return a fallback name in case of error
+      const fallbackPrefix = address ? (address.startsWith('0x') ? address.slice(2, 10) : address.slice(0, 8)) : 'error';
+      const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      return `${safeTableType}_${fallbackPrefix}`;
+    }
   }, tableType);
 };
 
@@ -143,18 +170,42 @@ export const insertData = async (
 
 // Generic function to get data from a table
 export const getData = async (db: Database, tableType: TableType, tableName: string): Promise<TableData[]> => {
+  // Skip if we're on the server side
+  if (typeof window === 'undefined') {
+    console.log('Server-side rendering detected, skipping getData');
+    return [];
+  }
+  
+  // Validate inputs
+  if (!db) {
+    console.error('Database instance is null or undefined');
+    return [];
+  }
+  
+  if (!tableName) {
+    console.error('Table name is null or undefined');
+    return [];
+  }
+  
   try {
+    // Ensure tableName follows Tableland naming conventions
+    // Tableland requires lowercase names with only alphanumeric characters and underscores
+    const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    
     // Query data from the Tableland table
-    const { results } = await db.prepare(`
-      SELECT id, item_key, item_value, created_at FROM ${tableName} ORDER BY id ASC
+    const queryResult = await db.prepare(`
+      SELECT id, item_key, item_value, created_at FROM ${safeTableName} ORDER BY id ASC
     `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
+    
+    // Safely access the results property
+    const results = queryResult?.results || [];
     
     // Map the results to match the TableData interface
     const mappedResults = results.map(item => ({
-      id: item.id,
-      key: item.item_key,
-      value: item.item_value,
-      created_at: item.created_at
+      id: item.id || 0,
+      key: item.item_key || '',
+      value: item.item_value || '',
+      created_at: item.created_at || new Date().toISOString()
     }));
     
     return mappedResults;
@@ -190,16 +241,26 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     // Handle case where address might not start with 0x
     const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
     const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
-    const tableName = `${tableType}_${prefix}`;
     
-    // Check if the table exists by trying to query it
-    // This will throw an error if the table doesn't exist
-    await db.prepare(`SELECT * FROM ${tableName} LIMIT 1`).all();
+    // Ensure tableName follows Tableland naming conventions
+    // Tableland requires lowercase names with only alphanumeric characters and underscores
+    const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const tableName = `${safeTableType}_${prefix}`;
     
-    // If we get here, the table exists
-    return { exists: true, tableName };
+    try {
+      // Check if the table exists by trying to query it
+      // This will throw an error if the table doesn't exist
+      const result = await db.prepare(`SELECT * FROM ${tableName} LIMIT 1`).all();
+      
+      // If we get here, the table exists
+      return { exists: true, tableName };
+    } catch (queryError) {
+      // Specific error for table not found
+      console.log(`Table ${tableName} does not exist:`, queryError);
+      return { exists: false, tableName };
+    }
   } catch (error) {
-    // Table doesn't exist or there was an error
+    // Handle any other errors
     console.error(`Error checking if table ${tableType} exists:`, error);
     
     // Ensure we return a valid tableName even in error case
@@ -207,7 +268,8 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     if (address && typeof address === 'string') {
       const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
       const prefix = cleanAddress.toLowerCase().slice(0, 8);
-      tableName = `${tableType}_${prefix}`;
+      const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      tableName = `${safeTableType}_${prefix}`;
     }
     
     return { exists: false, tableName };

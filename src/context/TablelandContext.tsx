@@ -139,12 +139,13 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
     // Skip if we're on the server side
     if (typeof window === 'undefined') {
       console.log('Server-side rendering detected, skipping getTableName');
-      return null;
+      // Return a placeholder for server-side rendering
+      return `${modelType.toString().toLowerCase()}_placeholder`;
     }
     
     if (!isInitialized || !client || !address) {
       console.error('Tableland not initialized');
-      return null;
+      return `${modelType.toString().toLowerCase()}_uninit`;
     }
     
     // If we already have the table name cached, return it
@@ -152,20 +153,31 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
       return tableNames[modelType];
     }
     
+    // Ensure we have a valid fallback name that follows Tableland naming conventions
+    const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
+    const addressPrefix = cleanAddress.toLowerCase().slice(0, 8);
+    const safeModelType = modelType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const fallbackName = `${safeModelType}_${addressPrefix}`;
+    
     try {
       // Check if table exists
-      let result;
+      let result = null;
       try {
         result = await checkTableExists(client, modelType, address);
       } catch (checkError) {
         console.error(`Error checking if table exists for ${modelType}:`, checkError);
-        // Return a default tableName in case of error
-        const fallbackName = `${modelType}_${address.slice(0, 10)}`;
         return fallbackName;
       }
       
-      // Safely destructure with defaults in case result is undefined
-      const { exists = false, tableName = `${modelType}_${address.slice(0, 10)}` } = result || {};
+      // Handle case where result might be null or undefined
+      if (!result) {
+        console.warn(`Null result from checkTableExists for ${modelType}`);
+        return fallbackName;
+      }
+      
+      // Safely destructure with defaults
+      const exists = result.exists === true; // Ensure it's a boolean
+      const tableName = result.tableName || fallbackName;
       
       if (exists && tableName) {
         // Cache the table name
@@ -180,27 +192,27 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
       try {
         const newTableName = await createTable(client, modelType, address);
         
-        if (newTableName) {
-          // Cache the new table name
-          setTableNames(prev => ({
-            ...prev,
-            [modelType]: newTableName
-          }));
-          
-          return newTableName;
-        } else {
-          throw new Error(`Failed to create table for ${modelType}`);
+        // Handle case where newTableName might be null or undefined
+        if (!newTableName) {
+          console.warn(`Null result from createTable for ${modelType}`);
+          return fallbackName;
         }
+        
+        // Cache the new table name
+        setTableNames(prev => ({
+          ...prev,
+          [modelType]: newTableName
+        }));
+        
+        return newTableName;
       } catch (createError) {
         console.error(`Error creating table for ${modelType}:`, createError);
-        // Return a default tableName in case of error
-        return `${modelType}_${address.slice(0, 10)}`;
+        return fallbackName;
       }
     } catch (error) {
       console.error(`Error getting table name for ${modelType}:`, error);
       setError(error instanceof Error ? error.message : `Unknown error getting table name for ${modelType}`);
-      // Return a default tableName in case of error
-      return `${modelType}_${address.slice(0, 10)}`;
+      return fallbackName;
     }
   };
   
