@@ -37,12 +37,12 @@ const nextConfig = {
   // Disable server-side rendering for all components
   reactStrictMode: false,
   
-  // Exclude Ceramic and ComposeDB files from the build
+  // Enable ESLint and TypeScript checking during builds
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // Define page extensions
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
