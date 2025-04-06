@@ -7,7 +7,7 @@ import { useTableland } from '@/context/TablelandContext';
 import { useComposeDBEnabled, useTablelandEnabled } from '@/context/DataProviders';
 import { DataType } from '@/utils/ceramicUtils';
 import { TableType } from '@/utils/tablelandUtils';
-import { monitorAsync, getMetrics, getPerformanceComparison } from '@/utils/performanceMonitor';
+import { monitorAsync } from '@/utils/performanceMonitor';
 
 /**
  * Hook for accessing data from either Ceramic or ComposeDB
@@ -453,9 +453,6 @@ export const useDataAccess = (dataType: DataType) => {
     composeDB,
     tableland,
     usingComposeDB: isComposeDBEnabled,
-    usingTableland: isTablelandEnabled,
-    // Performance monitoring functions
-    getPerformanceMetrics: () => getMetrics(isTablelandEnabled ? 'tableland' : isComposeDBEnabled ? 'composedb' : 'ceramic'),
-    getPerformanceComparison: () => getPerformanceComparison('fetchData')
+    usingTableland: isTablelandEnabled
   };
 };
