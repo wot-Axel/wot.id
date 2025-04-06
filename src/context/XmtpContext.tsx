@@ -107,7 +107,7 @@ const setupMockEthereumProvider = (walletClient: any, address: string | undefine
   };
   
   // Assign the mock provider to window.ethereum if it doesn't exist
-  if (!window.ethereum) {
+  if (typeof window !== 'undefined' && !window.ethereum) {
     console.log('Installing mock ethereum provider to window.ethereum');
     // @ts-ignore - TypeScript doesn't know about window.ethereum
     window.ethereum = mockProvider;

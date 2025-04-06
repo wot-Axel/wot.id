@@ -325,7 +325,18 @@ export const connectToCeramic = async (identity?: string): Promise<CeramicClient
     } else {
       // Generate random key if no identity provided
       const randomKey = new Uint8Array(32);
-      window.crypto.getRandomValues(randomKey);
+      
+      // Check if we're in a browser environment
+      if (typeof window !== 'undefined' && window.crypto) {
+        window.crypto.getRandomValues(randomKey);
+      } else {
+        // Fallback for server-side rendering
+        // Fill with a deterministic but random-looking value
+        for (let i = 0; i < 32; i++) {
+          randomKey[i] = (i * 7 + 11) % 256;
+        }
+      }
+      
       did = await createDID(randomKey);
       
       // Store the key for future use
