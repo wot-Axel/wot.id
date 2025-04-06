@@ -359,6 +359,30 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
         definition: mockDefinition,
         did: mockCeramic.did,
         isMockImplementation: true,
+        // Add getRecords method to retrieve documents from localStorage
+        getRecords: async (collectionId: string) => {
+          console.log(`[Mock ComposeDB] Getting records for collection: ${collectionId}`);
+          const records = [];
+          
+          // Extract the data type and DID from the collection ID
+          const [dataType, did] = collectionId.split('_');
+          
+          // Scan localStorage for records with this collection ID
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith(`ceramic_record_${collectionId}_`)) {
+              try {
+                const record = JSON.parse(localStorage.getItem(key) || '{}');
+                records.push(record);
+              } catch (e) {
+                console.error('[Mock ComposeDB] Error parsing record from localStorage', e);
+              }
+            }
+          }
+          
+          console.log(`[Mock ComposeDB] Found ${records.length} records for collection ${collectionId}`);
+          return records;
+        },
         // Add mock methods for ComposeDB operations
         executeQuery: async () => ({ data: {}, errors: [] }),
         index: { 
@@ -388,17 +412,39 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
           return { exists };
         },
         // Add the create method that's being called by the application
-        create: async (content: any, options?: any) => {
-          console.log(`[Mock ComposeDB] Creating document:`, content);
+        create: async (modelName: string, content: any, options?: any) => {
+          console.log(`[Mock ComposeDB] Creating document for model ${modelName}:`, content);
           const docId = `doc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          const streamId = `stream-${docId}`;
+          const now = new Date().toISOString();
+          
+          // Create the document in the format expected by the application
           const doc = {
+            documentId: docId,
+            streamId: streamId,
             id: docId,
             content,
             controller: mockCeramic.did?.id || 'mock-controller',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: now,
+            updatedAt: now
           };
+          
+          // Store in localStorage using both formats for compatibility
           localStorage.setItem(`ceramic-mock-doc-${docId}`, JSON.stringify(doc));
+          
+          // Also store using the collection-based format that the real implementation uses
+          try {
+            // Determine the collection ID based on the model name
+            const collectionId = `${modelName}_${mockCeramic.did?.id || 'mock-controller'}`;
+            const localStorageKey = `ceramic_record_${collectionId}_${docId}`;
+            localStorage.setItem(localStorageKey, JSON.stringify({
+              ...doc,
+              modelName
+            }));
+          } catch (storageError) {
+            console.error('[Mock ComposeDB] Failed to store document in local storage:', storageError);
+          }
+          
           return doc;
         },
         // Add model-related methods
@@ -447,15 +493,45 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
         createRecord: async (modelName: string, content: any) => {
           console.log(`[Mock ComposeDB] Creating record for model ${modelName}:`, content);
           const recordId = `record-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          const streamId = `stream-${recordId}`;
+          const now = new Date().toISOString();
+          
+          // Create the record in the format expected by the application
           const record = {
             id: recordId,
+            streamId: streamId,
+            documentId: recordId,
             modelName,
             content,
             controller: mockCeramic.did?.id || 'mock-controller',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            createdAt: now,
+            updatedAt: now
           };
+          
+          // Store in localStorage using the same key format as the real implementation
           localStorage.setItem(`ceramic-mock-record-${recordId}`, JSON.stringify(record));
+          
+          // Also store using the collection-based format that the real implementation uses
+          try {
+            // Determine the collection ID based on the model name
+            // This should match the pattern used in the real implementation
+            const collectionId = `${modelName}_${mockCeramic.did?.id || 'mock-controller'}`;
+            const localStorageKey = `ceramic_record_${collectionId}_${recordId}`;
+            localStorage.setItem(localStorageKey, JSON.stringify(record));
+            
+            // Keep track of local records for potential future syncing
+            const localRecords = JSON.parse(localStorage.getItem('ceramic_records') || '[]');
+            localRecords.push({
+              collectionId,
+              recordId,
+              modelName,
+              timestamp: now
+            });
+            localStorage.setItem('ceramic_records', JSON.stringify(localRecords));
+          } catch (storageError) {
+            console.error('[Mock ComposeDB] Failed to store record in local storage:', storageError);
+          }
+          
           return record;
         },
         // Add any other methods needed by your application
