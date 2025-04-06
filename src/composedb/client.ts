@@ -362,6 +362,14 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
         // Add mock methods for ComposeDB operations
         executeQuery: async () => ({ data: {}, errors: [] }),
         index: { findMany: async () => [] },
+        // Add the exists method that's being called by the application
+        exists: async (streamId: string, options?: any) => {
+          console.log(`[Mock ComposeDB] Checking if stream exists: ${streamId}`);
+          // Check if we have this stream ID in localStorage
+          const storageKey = `ceramic-mock-doc-${streamId}`;
+          const exists = localStorage.getItem(storageKey) !== null;
+          return { exists };
+        },
         // Add any other methods needed by your application
       };
       
