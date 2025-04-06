@@ -11,7 +11,7 @@ import styles from './chat.module.css';
 export default function ChatPage() {
   const { isConnected } = useAppKitAccount();
   const { client, isLoading, error, conversations, initClient, createIdentity } = useXmtp();
-  const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [selectedConversation, setSelectedConversation] = useState<{ peerAddress: string } | null>(null);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [initializingClient, setInitializingClient] = useState(false);
   
@@ -44,7 +44,7 @@ export default function ChatPage() {
   }, []);
   
   // Handle conversation selection
-  const handleSelectConversation = (conversation: any) => {
+  const handleSelectConversation = (conversation: { peerAddress: string }) => {
     setSelectedConversation(conversation);
   };
   
@@ -96,12 +96,14 @@ export default function ChatPage() {
         console.error('Failed to create identity in development mode');
         // If the automatic reload didn't work, provide a manual reload button
         if (typeof window !== 'undefined') {
-          alert('Identity created, but automatic reload failed. Please refresh the page manually.');
+          window.alert('Identity created, but automatic reload failed. Please refresh the page manually.');
         }
       }
     } catch (e) {
       console.error('Error creating identity:', e);
-      alert('Error creating identity: ' + (e instanceof Error ? e.message : String(e)));
+      if (typeof window !== 'undefined') {
+        window.alert('Error creating identity: ' + (e instanceof Error ? e.message : String(e)));
+      }
     } finally {
       setInitializingClient(false);
     }
@@ -233,3 +235,11 @@ export default function ChatPage() {
     </div>
   );
 }
+
+
+export const viewport = {
+  viewportFit: 'cover',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1
+};

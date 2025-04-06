@@ -5,14 +5,14 @@ import { useAppKitAccount } from '@reown/appkit/react';
 import dynamic from 'next/dynamic';
 import { useCeramic } from '@/context/CeramicContext';
 import { 
-  DataType, 
-  TableData,
+  DataType,
   checkCollectionExists,
   createCollection,
   getRecords,
   createRecord,
-  clearCollection
-} from '@/utils/ceramicUtils';
+  clearCollection,
+  TableData
+} from '@/composedb/ceramic';
 
 // Dynamically import the ScannerModal component with no SSR
 const ScannerModal = dynamic(() => import('./ScannerModal'), {
@@ -106,10 +106,10 @@ export const IdentitySection = () => {
       
       // Convert records to the format expected by the component
       const formattedData: TableData[] = records.map((record, index) => ({
-        id: index,
-        key: record.id,
+        id: String(index),
+        name: record.id,
         value: typeof record.content === 'string' ? record.content : JSON.stringify(record.content),
-        created_at: new Date().toISOString()
+        date: record.createdAt || new Date().toISOString()
       }));
       
       setIdentityData(formattedData);
@@ -314,7 +314,7 @@ export const IdentitySection = () => {
                     <>
                       <div className="identity-fields">
                         {identityFields.map(field => {
-                          const dataItem = identityData.find(item => item.key === field.id);
+                          const dataItem = identityData.find(item => item.name === field.id);
                           const value = dataItem ? dataItem.value : '';
                           
                           // Only show fields that have values

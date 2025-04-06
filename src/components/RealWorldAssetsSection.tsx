@@ -12,7 +12,7 @@ import {
   getRecords,
   createRecord,
   clearCollection
-} from '@/utils/ceramicUtils';
+} from '@/composedb/ceramic';
 import { useCeramic } from '@/context/CeramicContext';
 
 // Define asset fields
@@ -83,11 +83,11 @@ export const RealWorldAssetsSection = () => {
             const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
-            const formattedData = records.map((record, index) => ({
-              id: index,
-              key: record.id,
-              value: JSON.stringify(record.content),
-              created_at: new Date().toISOString()
+            const formattedData: PrivateData[] = records.map((record, index) => ({
+              id: String(index),
+              type: DataType.REAL_WORLD_ASSETS,
+              content: record.content,
+              encrypted: false
             }));
             
             setAssetsData(formattedData);
@@ -194,11 +194,11 @@ export const RealWorldAssetsSection = () => {
       console.log('Retrieved records after save:', records);
       
       // Convert records to the format expected by the component
-      const formattedData = records.map((record, index) => ({
-        id: index,
-        key: record.id,
-        value: JSON.stringify(record.content),
-        created_at: new Date().toISOString()
+      const formattedData: PrivateData[] = records.map((record, index) => ({
+        id: String(index),
+        type: DataType.REAL_WORLD_ASSETS,
+        content: record.content,
+        encrypted: false
       }));
       
       setAssetsData(formattedData);
@@ -302,8 +302,16 @@ export const RealWorldAssetsSection = () => {
                     <>
                       <div className="assets-fields">
                         {assetFields.map(field => {
-                          const dataItem = assetsData.find(item => item.key === field.id);
-                          const value = dataItem ? dataItem.value : '';
+                          const dataItem = assetsData.find(item => {
+                            if (typeof item.content === 'object' && item.content !== null) {
+                              return field.id in item.content;
+                            }
+                            return false;
+                          });
+                          
+                          const value = dataItem && typeof dataItem.content === 'object' && dataItem.content !== null
+                            ? dataItem.content[field.id]
+                            : '';
                           
                           // Only show fields that have values
                           if (!value) return null;
@@ -311,7 +319,7 @@ export const RealWorldAssetsSection = () => {
                           return (
                             <div key={field.id} className="asset-field">
                               <span className="field-label">{field.label}:</span>
-                              <span className="field-value">{value}</span>
+                              <span className="field-value">{typeof value === 'string' ? value : JSON.stringify(value)}</span>
                             </div>
                           );
                         })}

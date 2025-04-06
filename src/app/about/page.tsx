@@ -2,7 +2,6 @@
 
 // Footer is now included in the layout
 import { AboutSubNav } from "@/components/AboutSubNav";
-import Link from "next/link";
 import { useState } from "react";
 
 const About = () => {
@@ -158,3 +157,11 @@ const About = () => {
 }
 
 export default About;
+
+
+export const viewport = {
+  viewportFit: 'cover',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1
+};

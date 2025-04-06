@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TableData } from '@/utils/ceramicUtils';
+import { TableData } from '@/composedb/ceramic';
 
 interface MedicalDataTableProps {
   sectionTitle: string;
@@ -14,7 +14,7 @@ export const MedicalDataTable: React.FC<MedicalDataTableProps> = ({ sectionTitle
   // Group data by parameter
   const parameterGroups: Record<string, TableData[]> = {};
   data.forEach(item => {
-    const parameter = item.key.split('|')[0]; // Format: "Parameter|Date"
+    const parameter = item.name.split('|')[0]; // Format: "Parameter|Date"
     if (!parameterGroups[parameter]) {
       parameterGroups[parameter] = [];
     }
@@ -24,7 +24,7 @@ export const MedicalDataTable: React.FC<MedicalDataTableProps> = ({ sectionTitle
   // Get unique dates from all data
   const allDates = new Set<string>();
   data.forEach(item => {
-    const datePart = item.key.split('|')[1];
+    const datePart = item.name.split('|')[1];
     if (datePart) allDates.add(datePart);
   });
   
@@ -77,7 +77,7 @@ export const MedicalDataTable: React.FC<MedicalDataTableProps> = ({ sectionTitle
                 const valuesByDate: Record<string, string> = {};
                 
                 items.forEach(item => {
-                  const datePart = item.key.split('|')[1];
+                  const datePart = item.name.split('|')[1];
                   if (datePart) {
                     const valueParts = item.value.split('|');
                     if (valueParts.length >= 3) {

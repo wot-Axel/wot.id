@@ -214,7 +214,23 @@ export const DataTypeToModelMap = {
   [DataType.CONNECTIONS]: RelationshipModel,
   [DataType.ORGANIZATIONS]: OrganizationModel,
   [DataType.PRIVATE]: PrivateDataModel,
-  [DataType.MESSAGES]: {} // We'll implement this later
+  // Messages model is not currently used in the application
+  [DataType.MESSAGES]: {
+    name: 'Message',
+    schema: {
+      type: 'object',
+      properties: {
+        ...BaseContentModel.schema.properties,
+        sender: { type: 'string', maxLength: 200 },
+        recipient: { type: 'string', maxLength: 200 },
+        content: { type: 'string', maxLength: 5000 },
+        subject: { type: 'string', maxLength: 200 },
+        isRead: { type: 'boolean', default: false },
+        isEncrypted: { type: 'boolean', default: true }
+      },
+      required: ['sender', 'recipient', 'content', 'createdAt']
+    }
+  }
 };
 
 // Combined model definition for ComposeDB
@@ -228,6 +244,7 @@ export const CombinedModelDefinition = {
     Document: DocumentModel,
     Relationship: RelationshipModel,
     Organization: OrganizationModel,
-    RealWorldAsset: RealWorldAssetModel
+    RealWorldAsset: RealWorldAssetModel,
+    Message: DataTypeToModelMap[DataType.MESSAGES]
   }
 };

@@ -3,16 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  Database,
   DataType,
-  PrivateData,
   initCeramic,
   checkCollectionExists,
   createCollection,
   getRecords,
   createRecord,
-  clearCollection
-} from '@/utils/ceramicUtils';
+  clearCollection,
+  Database, 
+  PrivateData
+} from '@/composedb/ceramic';
 import { useCeramic } from '@/context/CeramicContext';
 
 export const HumanRelationshipsSection = () => {
@@ -70,11 +70,11 @@ export const HumanRelationshipsSection = () => {
             const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
-            const formattedData = records.map((record, index) => ({
-              id: index,
-              key: record.id,
-              value: JSON.stringify(record.content),
-              created_at: new Date().toISOString()
+            const formattedData: PrivateData[] = records.map((record, index) => ({
+              id: String(index),
+              type: DataType.CONNECTIONS,
+              content: record.content,
+              encrypted: false
             }));
             
             setContactsData(formattedData);
@@ -139,11 +139,11 @@ export const HumanRelationshipsSection = () => {
       const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
-      const formattedData = records.map((record, index) => ({
-        id: index,
-        key: record.id,
-        value: JSON.stringify(record.content),
-        created_at: new Date().toISOString()
+      const formattedData: PrivateData[] = records.map((record, index) => ({
+        id: String(index),
+        type: DataType.CONNECTIONS,
+        content: record.content,
+        encrypted: false
       }));
       
       setContactsData(formattedData);
@@ -313,14 +313,14 @@ export const HumanRelationshipsSection = () => {
                       </thead>
                       <tbody>
                         {contactsData.map((item) => {
-                          const contactInfo = parseContactData(item.value);
+                          const contactInfo = parseContactData(typeof item.content === 'string' ? item.content : JSON.stringify(item.content));
                           return (
                             <tr key={item.id}>
                               <td>{contactInfo.name}</td>
                               <td>{contactInfo.email || '-'}</td>
                               <td>{contactInfo.phone || '-'}</td>
                               <td>{contactInfo.notes || '-'}</td>
-                              <td>{new Date(item.created_at).toLocaleString()}</td>
+                              <td>{new Date().toLocaleString()}</td>
                             </tr>
                           );
                         })}

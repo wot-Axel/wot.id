@@ -1,25 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { useWalletPreferences } from '@/hooks/useWalletPreferences';
-import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
-import { ethers } from 'ethers';
 
-// Constants for EAS
-const EAS_CONTRACT_ADDRESS = '0x4200000000000000000000000000000000000021';
-const SCHEMA_ID = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf';
+// Note: These imports are kept for future implementation
+// import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
+// import { ethers } from 'ethers';
 
-// Create a type for our transaction that allows dynamic access
-type LooseObject = {
-  [key: string]: any;
+// Constants for EAS - will be used in future implementation
+// const EAS_CONTRACT_ADDRESS = '0x4200000000000000000000000000000000000021';
+// const SCHEMA_ID = '0xfda16985b01f97d81468a76dee939af365d518910ed2ebf06400290aff490fcf';
+
+// Create a type for structured transaction data
+type AttestationData = {
+  wotId: string;
+  isHuman: boolean;
 };
 
 const AttestationForm = () => {
   // Use the AppKit account for authentication status
   const { address, isConnected } = useAppKitAccount();
   // Use our custom hook for wallet connection
-  const { openModal } = useWalletPreferences();
+  const { } = useWalletPreferences(); // openModal will be used in future implementation
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wotId, setWotId] = useState('');

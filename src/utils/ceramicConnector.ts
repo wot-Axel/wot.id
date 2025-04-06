@@ -18,6 +18,13 @@ import { fromString } from 'uint8arrays/from-string';
 // Import fallback mechanisms
 import { createFallbackDID, attemptCeramicRecovery } from '../composedb/did-fallback';
 
+// Ensure window.ethereum is recognized
+declare global {
+  interface Window {
+    ethereum?: Record<string, unknown>;
+  }
+}
+
 // Constants
 const CONNECTION_TIMEOUT = 10000; // 10 seconds
 const HEALTH_CHECK_TIMEOUT = 5000; // 5 seconds

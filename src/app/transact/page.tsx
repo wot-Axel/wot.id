@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { ConnectButton } from '@/components/ConnectButton';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
-import ScanButton from '@/components/ScanButton';
 import ScannerModal from '@/components/ScannerModal';
 import styles from './transact.module.css';
 
@@ -119,3 +118,11 @@ export default function TransactPage() {
     </div>
   );
 }
+
+
+export const viewport = {
+  viewportFit: 'cover',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1
+};

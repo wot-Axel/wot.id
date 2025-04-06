@@ -3,16 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  Database,
   DataType,
-  PrivateData,
   initCeramic,
   checkCollectionExists,
   createCollection,
   getRecords,
   createRecord,
-  clearCollection
-} from '@/utils/ceramicUtils';
+  clearCollection,
+  Database,
+  PrivateData,
+  TableData
+} from '@/composedb/ceramic';
 import { useCeramic } from '@/context/CeramicContext';
 import { MedicalDataTable } from './MedicalDataTable';
 
@@ -69,17 +70,17 @@ export const MedicalDataSection = () => {
             const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
-            const formattedData = records.map((record, index) => ({
-              id: index,
-              key: record.id,
-              value: JSON.stringify(record.content),
-              created_at: new Date().toISOString()
+            const formattedData: PrivateData[] = records.map((record, index) => ({
+              id: String(index),
+              type: DataType.MEDICAL,
+              content: record.content,
+              encrypted: false
             }));
             
             setPrivateData(formattedData);
             
             // Check if medical data is already imported
-            const hasMedicalData = formattedData.some(item => item.key.includes('|'));
+            const hasMedicalData = formattedData.some(item => item.id.includes('|'));
             if (hasMedicalData) {
               setImportedData(true);
               organizeMedicalData(formattedData);
@@ -120,12 +121,22 @@ export const MedicalDataSection = () => {
     }
   };
 
+  // Convert PrivateData to TableData for display
+  const convertToTableData = (data: PrivateData[]): TableData[] => {
+    return data.map(item => ({
+      id: item.id,
+      name: item.id,
+      value: typeof item.content === 'string' ? item.content : JSON.stringify(item.content),
+      date: new Date().toISOString()
+    }));
+  };
+
   const organizeMedicalData = (data: PrivateData[]) => {
     const sections: Record<string, PrivateData[]> = {};
     
     data.forEach(item => {
-      if (item.key.includes('|')) {
-        const [section] = item.key.split('.');
+      if (item.id.includes('|')) {
+        const [section] = item.id.split('.');
         if (!sections[section]) {
           sections[section] = [];
         }
@@ -167,11 +178,11 @@ export const MedicalDataSection = () => {
       const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
-      const formattedData = records.map((record, index) => ({
-        id: index,
-        key: record.id,
-        value: JSON.stringify(record.content),
-        created_at: new Date().toISOString()
+      const formattedData: PrivateData[] = records.map((record, index) => ({
+        id: String(index),
+        type: DataType.MEDICAL,
+        content: record.content,
+        encrypted: false
       }));
       
       setPrivateData(formattedData);
@@ -387,7 +398,7 @@ export const MedicalDataSection = () => {
                       <MedicalDataTable 
                         key={section} 
                         sectionTitle={section} 
-                        data={medicalDataSections[section]} 
+                        data={medicalDataSections[section] ? convertToTableData(medicalDataSections[section]) : []} 
                       />
                     ))}
                   </div>

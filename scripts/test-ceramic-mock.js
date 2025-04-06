@@ -12,8 +12,8 @@
 process.env.NODE_ENV = 'production';
 
 // Import required modules
-const { createMockCeramicClient, shouldUseMockImplementation, clearMockData } = require('../src/composedb/ceramic-mock');
-const { initCeramic } = require('../src/composedb/ceramic');
+import { createMockCeramicClient, shouldUseMockImplementation, clearMockData } from '../src/composedb/ceramic-mock.js';
+import { initCeramic } from '../src/composedb/ceramic.js';
 
 // Test data
 const TEST_DOCUMENTS = [

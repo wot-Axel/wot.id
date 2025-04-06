@@ -1,19 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { DataType, TableData } from '@/utils/ceramicUtils';
+import { DataType } from '@/utils/ceramicUtils';
 import { useDataAccess } from '@/hooks/useDataAccess';
 
 export const AccountsPasswordsSection = () => {
-  const { address, isConnected } = useAppKitAccount();
+  const { isConnected } = useAppKitAccount();
   const { 
     data: accountsData, 
     isLoading, 
-    error: dataError,
     createItem,
-    updateItem,
-    deleteItem,
     refreshData,
     clearItems
   } = useDataAccess(DataType.PROFILE);
@@ -25,8 +22,6 @@ export const AccountsPasswordsSection = () => {
   const [password, setPassword] = useState<string>('');
   const [showPasswords, setShowPasswords] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
-
-
 
   // No need for handleCreateTable as the useDataAccess hook handles collection creation
 
@@ -59,9 +54,13 @@ export const AccountsPasswordsSection = () => {
       setPassword('');
       setLoading(false);
       setIsEditing(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding account data:', err);
-      setError(err.message || 'Failed to add account data. Please try again.');
+      setError(
+        err instanceof Error 
+          ? err.message 
+          : 'Failed to add account data. Please try again.'
+      );
       setLoading(false);
     }
   };
@@ -78,9 +77,13 @@ export const AccountsPasswordsSection = () => {
       await refreshData();
       
       setLoading(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error clearing accounts data:', err);
-      setError(err.message || 'Failed to clear accounts data. Please try again.');
+      setError(
+        err instanceof Error 
+          ? err.message 
+          : 'Failed to clear accounts data. Please try again.'
+      );
       setLoading(false);
     }
   };
@@ -89,7 +92,7 @@ export const AccountsPasswordsSection = () => {
   const parseAccountData = (jsonString: string) => {
     try {
       return JSON.parse(jsonString);
-    } catch (err) {
+    } catch {
       return { website: '', username: '', password: '' };
     }
   };

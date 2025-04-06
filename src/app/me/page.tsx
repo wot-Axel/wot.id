@@ -2,7 +2,6 @@
 
 import { useAppKitAccount, useDisconnect } from '@reown/appkit/react';
 // Footer is now included in the layout
-import { PrivateDataSection } from "@/components/PrivateDataSection";
 import { MedicalDataSection } from "@/components/MedicalDataSection";
 import { AccountsPasswordsSection } from "@/components/AccountsPasswordsSection";
 import { HumanRelationshipsSection } from "@/components/HumanRelationshipsSection";
@@ -13,20 +12,15 @@ import { IdentitySection } from "@/components/IdentitySection";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { RealWorldAssetsSection } from "@/components/RealWorldAssetsSection";
 import { TrustBalanceSection } from "@/components/TrustBalanceSection";
-import { useEffect, useState } from 'react';
-import { formatAddress } from '@/utils/attestationUtils';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const MePage = () => {
   const { address, isConnected } = useAppKitAccount();
   const { disconnect } = useDisconnect();
-  const [walletAddress, setWalletAddress] = useState<string>('');
   const router = useRouter();
   
   useEffect(() => {
-    if (address) {
-      setWalletAddress(address);
-    }
     
     // Redirect to homepage if not connected
     if (!isConnected) {
@@ -90,3 +84,11 @@ const MePage = () => {
 };
 
 export default MePage;
+
+
+export const viewport = {
+  viewportFit: 'cover',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1
+};

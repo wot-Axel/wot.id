@@ -1,3 +1,4 @@
+import React from 'react';
 import type { Metadata } from "next";
 import { headers } from 'next/headers';
 import './globals.css';
@@ -9,9 +10,9 @@ import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: "wot.id",
-  description: "Trusted Identity",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
-};
+  description: "Trusted Identity"};
+
+export const viewport =  "width=device-width, initial-scale=1, maximum-scale=1";
 
 // Get server-side data
 async function getServerData() {
@@ -25,8 +26,7 @@ async function getServerData() {
 }
 
 export default async function RootLayout({
-  children,
-}: Readonly<{
+  children}: Readonly<{
   children: React.ReactNode;
 }>) {
   const { cookies, isLoggedIn } = await getServerData();

@@ -12,7 +12,7 @@ import {
   getRecords,
   createRecord,
   clearCollection
-} from '@/utils/ceramicUtils';
+} from '@/composedb/ceramic';
 import { useCeramic } from '@/context/CeramicContext';
 
 export const PrivateDataSection = () => {
@@ -69,11 +69,11 @@ export const PrivateDataSection = () => {
             const records = await getRecords(ceramic, collectionId);
             
             // Convert records to the format expected by the component
-            const formattedData = records.map((record, index) => ({
-              id: index,
-              key: record.id,
-              value: JSON.stringify(record.content),
-              created_at: new Date().toISOString()
+            const formattedData: PrivateData[] = records.map((record, index) => ({
+              id: String(index),
+              type: DataType.PRIVATE,
+              content: record.content,
+              encrypted: false
             }));
             
             setPrivateData(formattedData);
@@ -132,11 +132,11 @@ export const PrivateDataSection = () => {
       const records = await getRecords(ceramic, tableName);
       
       // Convert records to the format expected by the component
-      const formattedData = records.map((record, index) => ({
-        id: index,
-        key: record.id,
-        value: JSON.stringify(record.content),
-        created_at: new Date().toISOString()
+      const formattedData: PrivateData[] = records.map((record, index) => ({
+        id: String(index),
+        type: DataType.PRIVATE,
+        content: record.content,
+        encrypted: false
       }));
       
       setPrivateData(formattedData);
@@ -272,9 +272,9 @@ export const PrivateDataSection = () => {
                       <tbody>
                         {privateData.map((item) => (
                           <tr key={item.id}>
-                            <td>{item.key}</td>
-                            <td>{item.value}</td>
-                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{item.id}</td>
+                            <td>{typeof item.content === 'string' ? item.content : JSON.stringify(item.content)}</td>
+                            <td>{new Date().toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>

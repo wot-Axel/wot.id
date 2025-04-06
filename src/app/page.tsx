@@ -3,7 +3,6 @@
 // import { cookieStorage, createStorage, http } from '@wagmi/core'
 import { ConnectButton } from "@/components/ConnectButton";
 //import { InfoList } from "@/components/InfoList";
-import ScanButton from '@/components/ScanButton';
 import Image from 'next/image';
 // Footer is now included in the layout
 import './globals.css';
@@ -47,3 +46,10 @@ export default function Home() {
 
 
 //<br/>Go to <a href="https://cloud.reown.com" target="_blank" className="link-button" rel="Reown Cloud">Reown Cloud</a> to get your own.
+
+export const viewport = {
+  viewportFit: 'cover',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1
+};

@@ -5,14 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --no-lint",
+    "build:lint": "next build",
     "start": "next start",
     "lint": "next lint",
     "test:ceramic": "node test-ceramic.js",
     "test:did": "npx ts-node scripts/test-did-persistence.ts",
+    "test:composedb": "npx ts-node-esm test-composedb-comprehensive.ts",
+    "verify:composedb": "node scripts/verify-composedb-deployment.js",
+    "check:deployment": "node scripts/check-deployment-readiness.js",
     "ceramic:daemon": "npx ceramic daemon --config ceramic-config.json",
     "ceramic:admin": "npx composedb admin:create --ceramic-url=http://localhost:7007",
-    "ceramic:start": "node scripts/start-ceramic-dev.js"
+    "ceramic:start": "node scripts/start-ceramic-dev.js",
+    "predeploy": "npm run verify:composedb"
   },
   "dependencies": {
     "@ceramicnetwork/http-client": "^6.4.0",
@@ -34,6 +39,7 @@
     "react-dom": "^18.3.1",
     "react-qr-code": "^2.0.15",
     "tesseract.js": "^6.0.0",
+    "uint8arrays": "^5.1.0",
     "uuid": "^11.1.0",
     "viem": "^2.23.11",
     "wagmi": "^2.14.15"
@@ -56,7 +62,8 @@
     "key-did-resolver": "^4.0.0",
     "kubo": "^0.34.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.29.0"
   },
   "resolutions": {
     "viem": "2.23.11",

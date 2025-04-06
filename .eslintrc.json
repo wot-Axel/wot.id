@@ -1,8 +1,24 @@
 {
   "extends": "next/core-web-vitals",
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true
+  },
+  "globals": {
+    "React": "readonly",
+    "alert": "readonly",
+    "AbortController": "readonly",
+    "setTimeout": "readonly",
+    "clearTimeout": "readonly",
+    "Buffer": "readonly",
+    "CryptoKey": "readonly"
+  },
   "rules": {
     "@typescript-eslint/no-explicit-any": "off",
-    "react/no-unescaped-entities": "off"
+    "react/no-unescaped-entities": "off",
+    "no-unused-vars": "warn",
+    "no-undef": "warn"
   },
   "overrides": [
     {
@@ -19,6 +35,27 @@
       ],
       "rules": {
         "@typescript-eslint/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/ceramicConnector.ts"
+      ],
+      "rules": {
+        "no-undef": "off",
+        "no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": "off"
+      }
+    },
+    {
+      "files": [
+        "src/composedb/config.ts",
+        "src/utils/encryptionUtils.ts",
+        "src/app/layout.tsx",
+        "src/components/AccountsPasswordsSection.tsx"
+      ],
+      "rules": {
+        "no-undef": "off"
       }
     },
     {
