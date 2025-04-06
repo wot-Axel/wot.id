@@ -167,9 +167,29 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
 
 // Generic function to check if a table exists
 export const checkTableExists = async (db: Database, tableType: TableType, address: string): Promise<{exists: boolean, tableName: string}> => {
+  // Skip if we're on the server side
+  if (typeof window === 'undefined') {
+    console.log('Server-side rendering detected, skipping table check');
+    // Return a default response for server-side rendering
+    return { exists: false, tableName: `${tableType}_placeholder` };
+  }
+  
+  // Validate inputs
+  if (!db) {
+    console.error('Database instance is null or undefined');
+    return { exists: false, tableName: `${tableType}_error` };
+  }
+  
+  if (!address) {
+    console.error('Address is null or undefined');
+    return { exists: false, tableName: `${tableType}_error` };
+  }
+  
   try {
     // Format the address correctly - remove 0x prefix and use lowercase
-    const prefix = address.toLowerCase().slice(2, 10);
+    // Handle case where address might not start with 0x
+    const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
+    const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
     const tableName = `${tableType}_${prefix}`;
     
     // Check if the table exists by trying to query it
@@ -180,8 +200,17 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     return { exists: true, tableName };
   } catch (error) {
     // Table doesn't exist or there was an error
-    // We'll assume it doesn't exist in either case
-    return { exists: false, tableName: `${tableType}_${address.toLowerCase().slice(2, 10)}` };
+    console.error(`Error checking if table ${tableType} exists:`, error);
+    
+    // Ensure we return a valid tableName even in error case
+    let tableName = `${tableType}_error`;
+    if (address && typeof address === 'string') {
+      const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
+      const prefix = cleanAddress.toLowerCase().slice(0, 8);
+      tableName = `${tableType}_${prefix}`;
+    }
+    
+    return { exists: false, tableName };
   }
 };
 

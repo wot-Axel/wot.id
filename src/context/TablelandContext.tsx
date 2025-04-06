@@ -136,6 +136,12 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
   
   // Get table name for a specific type, checking if it exists and caching the result
   const getTableName = async (modelType: TableType): Promise<string | null> => {
+    // Skip if we're on the server side
+    if (typeof window === 'undefined') {
+      console.log('Server-side rendering detected, skipping getTableName');
+      return null;
+    }
+    
     if (!isInitialized || !client || !address) {
       console.error('Tableland not initialized');
       return null;
@@ -148,9 +154,20 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       // Check if table exists
-      const { exists, tableName } = await checkTableExists(client, modelType, address);
+      let result;
+      try {
+        result = await checkTableExists(client, modelType, address);
+      } catch (checkError) {
+        console.error(`Error checking if table exists for ${modelType}:`, checkError);
+        // Return a default tableName in case of error
+        const fallbackName = `${modelType}_${address.slice(0, 10)}`;
+        return fallbackName;
+      }
       
-      if (exists) {
+      // Safely destructure with defaults in case result is undefined
+      const { exists = false, tableName = `${modelType}_${address.slice(0, 10)}` } = result || {};
+      
+      if (exists && tableName) {
         // Cache the table name
         setTableNames(prev => ({
           ...prev,
@@ -160,19 +177,30 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // If table doesn't exist, create it
-      const newTableName = await createTable(client, modelType, address);
-      
-      // Cache the new table name
-      setTableNames(prev => ({
-        ...prev,
-        [modelType]: newTableName
-      }));
-      
-      return newTableName;
+      try {
+        const newTableName = await createTable(client, modelType, address);
+        
+        if (newTableName) {
+          // Cache the new table name
+          setTableNames(prev => ({
+            ...prev,
+            [modelType]: newTableName
+          }));
+          
+          return newTableName;
+        } else {
+          throw new Error(`Failed to create table for ${modelType}`);
+        }
+      } catch (createError) {
+        console.error(`Error creating table for ${modelType}:`, createError);
+        // Return a default tableName in case of error
+        return `${modelType}_${address.slice(0, 10)}`;
+      }
     } catch (error) {
       console.error(`Error getting table name for ${modelType}:`, error);
       setError(error instanceof Error ? error.message : `Unknown error getting table name for ${modelType}`);
-      return null;
+      // Return a default tableName in case of error
+      return `${modelType}_${address.slice(0, 10)}`;
     }
   };
   
