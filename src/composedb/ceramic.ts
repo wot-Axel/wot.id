@@ -42,6 +42,7 @@ export enum DataType {
  */
 export type CeramicClient = CeramicHttpClient & {
   isOffline?: boolean;
+  did?: DID | { id: string };
 };
 
 /**

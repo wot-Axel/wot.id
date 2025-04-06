@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { CeramicClient, DataType } from '@/utils/ceramicUtils';
+import { CeramicClient, DataType, initCeramic } from '@/composedb/ceramic';
+import { createDIDFromId, ensureValidDID } from '@/composedb/did-helper';
 
 // Define types for our Ceramic models
 export interface CeramicModel {
@@ -69,13 +70,16 @@ export const CeramicProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('Connecting to Ceramic network...');
       
-      // Initialize a simple Ceramic client
-      const ceramicClient: CeramicClient = {
-        did: { id: `did:key:${address}` }
-      };
+      // Initialize a Ceramic client
+      const ceramicClient = await initCeramic();
+      
+      // Ensure the client has a valid DID object
+      if (!ceramicClient.did && address) {
+        ceramicClient.did = createDIDFromId(`did:key:${address}`);
+      }
       
       setCeramic(ceramicClient);
-      setDid(ceramicClient.did?.id || null);
+      setDid(ceramicClient.did?.id || `did:key:${address}`);
       setIsInitialized(true);
       console.log('Connected to Ceramic network with DID:', ceramicClient.did?.id);
     } catch (err) {
@@ -88,9 +92,8 @@ export const CeramicProvider = ({ children }: { children: ReactNode }) => {
   
   // Disconnect from Ceramic network
   const disconnect = () => {
-    if (ceramic) {
-      ceramic.disconnect();
-    }
+    // We don't need to call any disconnect method on the CeramicClient
+    // Just reset the state
     setCeramic(null);
     setDid(null);
     setIsInitialized(false);
