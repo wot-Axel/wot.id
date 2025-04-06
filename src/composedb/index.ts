@@ -9,9 +9,13 @@ export * from './models';
 export * from './client';
 
 // Export migration utilities
-import { DataType } from '@/utils/ceramicUtils';
-import { getRecords as getLocalRecords } from '@/utils/ceramicUtils';
+import { DataType } from './ceramic';
+import { getRecords as getLocalRecords } from './ceramic';
 import { createRecord as createComposeRecord } from './client';
+import { DID } from 'dids';
+import { CeramicClient } from '@ceramicnetwork/http-client';
+import { initCeramic } from './ceramic';
+import { createDIDFromId } from './fix-types';
 
 /**
  * Migrate data from localStorage to ComposeDB
@@ -26,8 +30,11 @@ export const migrateToComposeDB = async (
   // Get the collection ID
   const collectionId = `${dataType}_${did}`;
   
+  // Initialize a Ceramic client
+  const ceramic = await initCeramic();
+  
   // Get all records from localStorage
-  const records = await getLocalRecords({ did: { id: did } }, collectionId);
+  const records = await getLocalRecords(ceramic, collectionId);
   
   // Create each record in ComposeDB
   let migratedCount = 0;
