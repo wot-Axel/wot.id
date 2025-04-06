@@ -74,9 +74,4 @@ const AboutWhy = () => {
 export default AboutWhy;
 
 
-export const viewport = {
-  viewportFit: 'cover',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1
-};
+

@@ -31,8 +31,19 @@ let XmtpClientModule: any = null;
 
 // Dynamic import function that will be called only on the client side
 const getXmtpClient = async () => {
+  if (typeof window === 'undefined') {
+    // Return a mock module on the server side
+    return { Client: null };
+  }
+  
   if (!XmtpClientModule) {
-    XmtpClientModule = await import('@xmtp/xmtp-js');
+    try {
+      XmtpClientModule = await import('@xmtp/xmtp-js');
+    } catch (error) {
+      console.error('Error importing XMTP client:', error);
+      // Return a mock module if import fails
+      return { Client: null };
+    }
   }
   return XmtpClientModule;
 };
@@ -198,6 +209,11 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   // Create XMTP identity with more detailed logging and error handling
   // Added option to use a development key for testing
   const createIdentity = async (useDevelopmentKey: boolean = false): Promise<boolean> => {
+    // Skip identity creation on server-side
+    if (typeof window === 'undefined') {
+      console.log('Server-side rendering detected, skipping identity creation');
+      return false;
+    }
     console.log('------- CREATE IDENTITY DEBUGGING -------');
     console.log('Checking wallet connection status...');
     console.log('AppKit isConnected:', isConnected);
@@ -423,6 +439,12 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize XMTP client with improved debugging and error handling
   const initClient = async () => {
+    // Skip initialization on server-side
+    if (typeof window === 'undefined') {
+      console.log('Server-side rendering detected, skipping XMTP client initialization');
+      return;
+    }
+    
     console.log('------- INIT CLIENT DEBUGGING -------');
     console.log('Checking wallet connection status...');
     console.log('AppKit isConnected:', isConnected);
@@ -435,38 +457,44 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    // Simple check for development client flag
-    const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
-    console.log('Development client detected in localStorage:', hasDevClient);
-    
-    // If we're on the chat page and there's no development client, show the message to create one
-    if (!hasDevClient && typeof window !== 'undefined' && window.location.pathname.includes('/chat')) {
-      console.log('On chat page without development client, showing create identity message');
-      setError(new Error('Message identity creation required. Please click the button below to create your message identity.'));
+    try {
+      // Simple check for development client flag
+      const hasDevClient = localStorage.getItem('xmtp_dev_client_created') === 'true';
+      console.log('Development client detected in localStorage:', hasDevClient);
+      
+      // If we're on the chat page and there's no development client, show the message to create one
+      if (!hasDevClient && window.location.pathname.includes('/chat')) {
+        console.log('On chat page without development client, showing create identity message');
+        setError(new Error('Message identity creation required. Please click the button below to create your message identity.'));
+        return;
+      }
+      
+      // In development mode, we can bypass some of the wallet checks
+      if (!hasDevClient) {
+        if (!isConnected) {
+          console.error('AppKit reports wallet is not connected');
+          setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
+          return;
+        }
+        
+        if (!address) {
+          console.error('No wallet address available');
+          setError(new Error('Wallet connected but address not available. Please refresh and try again.'));
+          return;
+        }
+        
+        if (!walletClient) {
+          console.error('No wallet client available from wagmi');
+          setError(new Error('Wallet connected but signing capabilities not available. Please refresh and try again.'));
+          return;
+        }
+      } else {
+        console.log('Using development client, bypassing wallet checks');
+      }
+    } catch (error) {
+      console.error('Error during client initialization checks:', error);
+      setError(new Error('Error initializing messaging client. Please refresh and try again.'));
       return;
-    }
-    
-    // In development mode, we can bypass some of the wallet checks
-    if (!hasDevClient) {
-      if (!isConnected) {
-        console.error('AppKit reports wallet is not connected');
-        setError(new Error('Browser wallet not detected. Please make sure your wallet is connected.'));
-        return;
-      }
-      
-      if (!address) {
-        console.error('No wallet address available');
-        setError(new Error('Wallet connected but address not available. Please refresh and try again.'));
-        return;
-      }
-      
-      if (!walletClient) {
-        console.error('No wallet client available from wagmi');
-        setError(new Error('Wallet connected but signing capabilities not available. Please refresh and try again.'));
-        return;
-      }
-    } else {
-      console.log('Using development client, bypassing wallet checks');
     }
 
     try {

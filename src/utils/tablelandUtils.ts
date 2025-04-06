@@ -67,6 +67,12 @@ export const sanitizeInput = (input: string): string => {
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async (): Promise<Database> => {
+  // Skip initialization on server-side
+  if (typeof window === 'undefined') {
+    console.log('Server-side rendering detected, skipping Tableland initialization');
+    throw new Error('Tableland initialization is not supported during server-side rendering');
+  }
+  
   try {
     // Create a new instance of Database with default options
     // This will use the connected wallet's address automatically

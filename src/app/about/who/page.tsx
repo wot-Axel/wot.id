@@ -65,9 +65,4 @@ const AboutWho = () => {
 export default AboutWho;
 
 
-export const viewport = {
-  viewportFit: 'cover',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1
-};
+

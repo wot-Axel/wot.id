@@ -85,6 +85,12 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
   
   // Connect to Tableland
   const connect = async () => {
+    // Skip initialization on server-side
+    if (typeof window === 'undefined') {
+      console.log('Server-side rendering detected, skipping Tableland initialization');
+      return;
+    }
+    
     if (isLoading || isInitialized || !address) return;
     
     try {
