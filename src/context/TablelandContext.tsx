@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { monitorAsync } from '@/utils/performanceMonitor';
+// Performance monitoring removed
 import { 
   TableType, 
   TableData,
@@ -176,7 +176,7 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
     key: string,
     value: string
   ): Promise<TablelandModel | null> => {
-    return monitorAsync('createModel', 'tableland', async () => {
+    try {
       if (!isInitialized || !client || !address) {
         console.error('Tableland not initialized');
         return null;
@@ -213,12 +213,15 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
         setError(error instanceof Error ? error.message : 'Unknown error creating model');
         return null;
       }
-    });
+    } catch (error) {
+      console.error('Error in createModel:', error);
+      return null;
+    }
   };
   
   // Get all models of a specific type
   const getModels = async (modelType: TableType): Promise<TablelandModel[]> => {
-    return monitorAsync('getModels', 'tableland', async () => {
+    try {
       if (!isInitialized || !client || !address) {
         console.error('Tableland not initialized');
         return [];
@@ -248,7 +251,10 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
         setError(error instanceof Error ? error.message : 'Unknown error getting models');
         return [];
       }
-    });
+    } catch (error) {
+      console.error('Error in getModels:', error);
+      return [];
+    }
   };
   
   // Update a model
@@ -258,7 +264,7 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
     key: string,
     value: string
   ): Promise<TablelandModel | null> => {
-    return monitorAsync('updateModel', 'tableland', async () => {
+    try {
       if (!isInitialized || !client || !address) {
         console.error('Tableland not initialized');
         return null;
@@ -297,12 +303,15 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
         setError(error instanceof Error ? error.message : 'Unknown error updating model');
         return null;
       }
-    });
+    } catch (error) {
+      console.error('Error in updateModel:', error);
+      return null;
+    }
   };
   
   // Delete a model
   const deleteModel = async (modelType: TableType, id: number): Promise<boolean> => {
-    return monitorAsync('deleteModel', 'tableland', async () => {
+    try {
       if (!isInitialized || !client || !address) {
         console.error('Tableland not initialized');
         return false;
@@ -327,12 +336,15 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
         setError(error instanceof Error ? error.message : 'Unknown error deleting model');
         return false;
       }
-    });
+    } catch (error) {
+      console.error('Error in deleteModel:', error);
+      return false;
+    }
   };
   
   // Clear all models of a specific type
   const clearModels = async (modelType: TableType): Promise<boolean> => {
-    return monitorAsync('clearModels', 'tableland', async () => {
+    try {
       if (!isInitialized || !client || !address) {
         console.error('Tableland not initialized');
         return false;
@@ -356,7 +368,10 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
         setError(error instanceof Error ? error.message : 'Unknown error clearing models');
         return false;
       }
-    });
+    } catch (error) {
+      console.error('Error in clearModels:', error);
+      return false;
+    }
   };
   
   return (
