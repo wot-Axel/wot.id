@@ -14,6 +14,7 @@ import {
   CollectionInfo,
   DataType
 } from '../composedb/ceramic';
+import { createDIDFromId } from '../composedb/did-helper';
 
 // Define CeramicDID for backward compatibility
 export interface CeramicDID {
@@ -34,7 +35,7 @@ export const initCeramic = async (identity?: string): Promise<any> => {
       console.error('Failed to connect to any Ceramic node. Using fallback local implementation.');
       // Return a minimal client for offline functionality
       return {
-        did: { id: 'did:key:placeholder' },
+        did: createDIDFromId('did:key:placeholder'),
         isOffline: true
       };
     }
