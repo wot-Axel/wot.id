@@ -3,87 +3,80 @@
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  DataType,
-  initCeramic,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  clearCollection,
-  Database,
-  PrivateData,
+  TableType,
+  initTableland,
+  checkTableExists,
+  createTable,
+  getData,
+  insertData,
+  clearData,
   TableData
-} from '@/composedb/ceramic';
-import { useCeramic } from '@/context/CeramicContext';
+} from '@/utils/tablelandUtils';
+import { useTableland } from '@/context/TablelandContext';
+import { useTablelandEnabled } from '@/context/DataProviders';
 import { MedicalDataTable } from './MedicalDataTable';
 
 export const MedicalDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
   const [tableName, setTableName] = useState<string>('');
-  const [privateData, setPrivateData] = useState<PrivateData[]>([]);
-  const [medicalDataSections, setMedicalDataSections] = useState<Record<string, PrivateData[]>>({});
+  const [privateData, setPrivateData] = useState<TableData[]>([]);
+  const [medicalDataSections, setMedicalDataSections] = useState<Record<string, TableData[]>>({});
   const [importedData, setImportedData] = useState<boolean>(false);
 
-  // Use the Ceramic context
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+  // Use the Tableland context
+  const { client, isInitialized, isLoading: tablelandLoading, connect } = useTableland();
+  
+  // Check if we should use Tableland
+  const tablelandEnabled = useTablelandEnabled();
 
-  // Initialize Ceramic connection
+  // Initialize Tableland connection
   useEffect(() => {
     const init = async () => {
       try {
-        if (isConnected && address && !isInitialized && !ceramicLoading) {
+        if (isConnected && address && !isInitialized && !tablelandLoading && tablelandEnabled) {
           setLoading(true);
           setError('');
           
-          // Connect to Ceramic network
+          // Connect to Tableland
           await connect();
           
           setLoading(false);
         }
       } catch (err: any) {
-        console.error('Error initializing Ceramic:', err);
-        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        console.error('Error initializing Tableland:', err);
+        setError(err.message || 'Failed to initialize Tableland. Please try again.');
         setLoading(false);
       }
     };
     
     init();
-  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  }, [isConnected, address, isInitialized, tablelandLoading, connect, tablelandEnabled]);
   
-  // Load medical data when Ceramic is initialized
+  // Load medical data when Tableland is initialized
   useEffect(() => {
     const loadMedicalData = async () => {
       try {
-        if (isInitialized && ceramic && did) {
+        if (isInitialized && client && address && tablelandEnabled) {
           setLoading(true);
           
-          // Check if collection exists
-          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.MEDICAL, did);
+          // Check if table exists
+          const { exists, tableName: existingTable } = await checkTableExists(client, TableType.MEDICAL, address);
           
-          if (exists) {
-            setTableName(collectionId);
+          if (exists && existingTable) {
+            setTableName(existingTable);
             
             // Get existing data
-            const records = await getRecords(ceramic, collectionId);
+            const records = await getData(client, TableType.MEDICAL, existingTable);
             
-            // Convert records to the format expected by the component
-            const formattedData: PrivateData[] = records.map((record, index) => ({
-              id: String(index),
-              type: DataType.MEDICAL,
-              content: record.content,
-              encrypted: false
-            }));
-            
-            setPrivateData(formattedData);
+            setPrivateData(records);
             
             // Check if medical data is already imported
-            const hasMedicalData = formattedData.some(item => item.id.includes('|'));
+            const hasMedicalData = records.some(item => item.key.includes('|'));
             if (hasMedicalData) {
               setImportedData(true);
-              organizeMedicalData(formattedData);
+              organizeMedicalDataTableland(records);
             }
           }
           
@@ -97,11 +90,11 @@ export const MedicalDataSection = () => {
     };
     
     loadMedicalData();
-  }, [isInitialized, ceramic, did]);
+  }, [isInitialized, client, address, tablelandEnabled]);
 
   const handleCreateTable = async () => {
-    if (!ceramic || !did) {
-      setError('Ceramic not initialized or no DID available.');
+    if (!client || !address) {
+      setError('Tableland not initialized or no address available.');
       return;
     }
     
@@ -109,47 +102,87 @@ export const MedicalDataSection = () => {
       setLoading(true);
       setError('');
       
-      // Create a new collection for medical data
-      const { collectionId } = await createCollection(ceramic, DataType.MEDICAL, did);
-      setTableName(collectionId);
+      // Create a new table for medical data
+      const newTableName = await createTable(client, TableType.MEDICAL, address);
+      setTableName(newTableName);
       
       setLoading(false);
     } catch (err: any) {
-      console.error('Error creating collection:', err);
-      setError(err.message || 'Failed to create collection. Please try again.');
+      console.error('Error creating table:', err);
+      setError(err.message || 'Failed to create table. Please try again.');
       setLoading(false);
     }
   };
 
-  // Convert PrivateData to TableData for display
-  const convertToTableData = (data: PrivateData[]): TableData[] => {
-    return data.map(item => ({
-      id: item.id,
-      name: item.id,
-      value: typeof item.content === 'string' ? item.content : JSON.stringify(item.content),
-      date: new Date().toISOString()
-    }));
+  // Convert TableData for display in the MedicalDataTable component
+  const convertToTableData = (data: TableData[]): any[] => {
+    return data.map(item => {
+      // Try to parse the value as JSON
+      let parsedValue;
+      try {
+        parsedValue = JSON.parse(item.value);
+      } catch (e) {
+        parsedValue = item.value;
+      }
+      
+      // Format value for MedicalDataTable
+      // The MedicalDataTable expects value in format: "unit|referenceRange|value"
+      let formattedValue = '';
+      if (typeof parsedValue === 'object') {
+        formattedValue = `${parsedValue.unit || ''}|${parsedValue.referenceRange || ''}|${parsedValue.value || ''}`;
+      } else {
+        formattedValue = parsedValue;
+      }
+      
+      return {
+        id: item.id,
+        name: item.key,
+        value: formattedValue,
+        date: item.created_at || new Date().toISOString()
+      };
+    });
   };
 
-  const organizeMedicalData = (data: PrivateData[]) => {
-    const sections: Record<string, PrivateData[]> = {};
+  // Organize medical data for Tableland data structure
+  const organizeMedicalDataTableland = (data: TableData[]) => {
+    const sections: Record<string, TableData[]> = {};
     
     data.forEach(item => {
-      if (item.id.includes('|')) {
-        const [section] = item.id.split('.');
+      if (item.key.includes('|')) {
+        const [section] = item.key.split('.');
         if (!sections[section]) {
           sections[section] = [];
         }
         sections[section].push(item);
+      } else {
+        // Try to parse the value to check for section information
+        try {
+          const content = JSON.parse(item.value);
+          if (content && typeof content === 'object' && 'section' in content) {
+            const section = content.section as string;
+            
+            if (!sections[section]) {
+              sections[section] = [];
+            }
+            
+            sections[section].push(item);
+          }
+        } catch (e) {
+          // If not valid JSON or doesn't have section, skip
+          console.log('Skipping item without valid section:', item);
+        }
       }
     });
     
     setMedicalDataSections(sections);
   };
+  
+  // Legacy function kept for compatibility
+  const organizeMedicalData = organizeMedicalDataTableland;
 
   const handleImportMedicalData = async () => {
-    if (!ceramic || !tableName) {
-      setError('Ceramic not initialized or no collection available.');
+    if (!client || !tableName) {
+      setError('Tableland not initialized or no table available.');
       return;
     }
     
@@ -160,33 +193,26 @@ export const MedicalDataSection = () => {
       // Parse the CSV data
       const medicalData = parseMedicalData();
       
-      // Store each data point in the medical collection
+      // Store each data point in the medical table
       for (const section in medicalData) {
         for (const entry of medicalData[section]) {
           const key = `${section}.${entry.parameter}|${entry.date}`;
-          const content = {
-            key,
+          const value = JSON.stringify({
             unit: entry.unit,
             referenceRange: entry.referenceRange,
-            value: entry.value
-          };
-          await createRecord(ceramic, DataType.MEDICAL, tableName, content, ['medical']);
+            value: entry.value,
+            section: section
+          });
+          
+          await insertData(client, TableType.MEDICAL, tableName, key, value);
         }
       }
       
       // Refresh data
-      const records = await getRecords(ceramic, tableName);
+      const records = await getData(client, TableType.MEDICAL, tableName);
       
-      // Convert records to the format expected by the component
-      const formattedData: PrivateData[] = records.map((record, index) => ({
-        id: String(index),
-        type: DataType.MEDICAL,
-        content: record.content,
-        encrypted: false
-      }));
-      
-      setPrivateData(formattedData);
-      organizeMedicalData(formattedData);
+      setPrivateData(records);
+      organizeMedicalDataTableland(records);
       setImportedData(true);
       
       setLoading(false);
@@ -343,9 +369,9 @@ export const MedicalDataSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Ceramic Network Integration:</strong> Your medical data is securely stored on the Ceramic Network, 
-            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
-            and user experience compared to our previous implementation.
+            <strong>Tableland Integration:</strong> Your medical data is securely stored on Tableland, 
+            a decentralized SQL database for Web3. This provides better reliability, performance, 
+            and compatibility with server-side rendering compared to Ceramic.
           </p>
         </div>
           <>
@@ -364,7 +390,7 @@ export const MedicalDataSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your lab results are stored privately on the Ceramic Network.</p>
+                <p>Your lab results are stored privately on Tableland.</p>
                 
                 {!importedData ? (
                   <div>

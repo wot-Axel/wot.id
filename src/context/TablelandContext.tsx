@@ -1,0 +1,382 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { monitorAsync } from '@/utils/performanceMonitor';
+import { 
+  TableType, 
+  TableData,
+  initTableland,
+  checkTableExists,
+  createTable,
+  insertData,
+  getData,
+  clearData
+} from '@/utils/tablelandUtils';
+import { Database } from '@tableland/sdk';
+
+// Define types for our Tableland models
+export interface TablelandModel {
+  id: number;
+  key: string;
+  value: string;
+  created_at: string;
+}
+
+// Enhanced context implementation with Tableland functionality
+interface TablelandContextType {
+  isInitialized: boolean;
+  isLoading: boolean;
+  error: string | null;
+  client: Database | null;
+  address: string | null;
+  connect: () => Promise<void>;
+  disconnect: () => void;
+  createModel: (modelType: TableType, key: string, value: string) => Promise<TablelandModel | null>;
+  getModels: (modelType: TableType) => Promise<TablelandModel[]>;
+  updateModel: (modelType: TableType, id: number, key: string, value: string) => Promise<TablelandModel | null>;
+  deleteModel: (modelType: TableType, id: number) => Promise<boolean>;
+  clearModels: (modelType: TableType) => Promise<boolean>;
+  getTableName: (modelType: TableType) => Promise<string | null>;
+}
+
+const TablelandContext = createContext<TablelandContextType>({
+  isInitialized: false,
+  isLoading: false,
+  error: null,
+  client: null,
+  address: null,
+  connect: async () => {},
+  disconnect: () => {},
+  createModel: async () => null,
+  getModels: async () => [],
+  updateModel: async () => null,
+  deleteModel: async () => false,
+  clearModels: async () => false,
+  getTableName: async () => null
+});
+
+export const useTableland = () => useContext(TablelandContext);
+
+export const TablelandProvider = ({ children }: { children: ReactNode }) => {
+  const { address, isConnected } = useAppKitAccount();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [client, setClient] = useState<Database | null>(null);
+  const [tableNames, setTableNames] = useState<Record<TableType, string | null>>({
+    [TableType.PRIVATE]: null,
+    [TableType.MEDICAL]: null,
+    [TableType.ACCOUNTS]: null,
+    [TableType.CONTACTS]: null,
+    [TableType.AFFILIATIONS]: null,
+    [TableType.CURRENCIES]: null,
+    [TableType.DIGITAL_ASSETS]: null,
+    [TableType.CHAT]: null
+  });
+  
+  // Initialize Tableland when the user connects their wallet
+  useEffect(() => {
+    if (isConnected && address && !isInitialized && !isLoading) {
+      connect();
+    }
+  }, [isConnected, address, isInitialized, isLoading]);
+  
+  // Connect to Tableland
+  const connect = async () => {
+    if (isLoading || isInitialized || !address) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('Connecting to Tableland...');
+      
+      // Initialize Tableland client
+      const tablelandClient = await initTableland();
+      
+      if (!tablelandClient) {
+        throw new Error('Failed to initialize Tableland client');
+      }
+      
+      setClient(tablelandClient);
+      setIsInitialized(true);
+      console.log('Connected to Tableland');
+    } catch (err) {
+      console.error('Error connecting to Tableland:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error connecting to Tableland');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Disconnect from Tableland
+  const disconnect = () => {
+    setClient(null);
+    setIsInitialized(false);
+    setTableNames({
+      [TableType.PRIVATE]: null,
+      [TableType.MEDICAL]: null,
+      [TableType.ACCOUNTS]: null,
+      [TableType.CONTACTS]: null,
+      [TableType.AFFILIATIONS]: null,
+      [TableType.CURRENCIES]: null,
+      [TableType.DIGITAL_ASSETS]: null,
+      [TableType.CHAT]: null
+    });
+    console.log('Disconnected from Tableland');
+  };
+  
+  // Get table name for a specific type, checking if it exists and caching the result
+  const getTableName = async (modelType: TableType): Promise<string | null> => {
+    if (!isInitialized || !client || !address) {
+      console.error('Tableland not initialized');
+      return null;
+    }
+    
+    // If we already have the table name cached, return it
+    if (tableNames[modelType]) {
+      return tableNames[modelType];
+    }
+    
+    try {
+      // Check if table exists
+      const { exists, tableName } = await checkTableExists(client, modelType, address);
+      
+      if (exists) {
+        // Cache the table name
+        setTableNames(prev => ({
+          ...prev,
+          [modelType]: tableName
+        }));
+        return tableName;
+      }
+      
+      // If table doesn't exist, create it
+      const newTableName = await createTable(client, modelType, address);
+      
+      // Cache the new table name
+      setTableNames(prev => ({
+        ...prev,
+        [modelType]: newTableName
+      }));
+      
+      return newTableName;
+    } catch (error) {
+      console.error(`Error getting table name for ${modelType}:`, error);
+      setError(error instanceof Error ? error.message : `Unknown error getting table name for ${modelType}`);
+      return null;
+    }
+  };
+  
+  // Create a new model in Tableland
+  const createModel = async (
+    modelType: TableType, 
+    key: string,
+    value: string
+  ): Promise<TablelandModel | null> => {
+    return monitorAsync('createModel', 'tableland', async () => {
+      if (!isInitialized || !client || !address) {
+        console.error('Tableland not initialized');
+        return null;
+      }
+      
+      try {
+        // Get table name, creating it if necessary
+        const tableName = await getTableName(modelType);
+        
+        if (!tableName) {
+          throw new Error(`Failed to get table name for ${modelType}`);
+        }
+        
+        // Insert data
+        await insertData(client, modelType, tableName, key, value);
+        
+        // Get the newly created record (we'll just get all records and take the last one)
+        const records = await getData(client, modelType, tableName);
+        const newRecord = records[records.length - 1];
+        
+        if (!newRecord) {
+          throw new Error('Failed to retrieve newly created record');
+        }
+        
+        // Return in the expected format
+        return {
+          id: newRecord.id,
+          key: newRecord.key,
+          value: newRecord.value,
+          created_at: newRecord.created_at
+        };
+      } catch (error) {
+        console.error('Error creating model:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error creating model');
+        return null;
+      }
+    });
+  };
+  
+  // Get all models of a specific type
+  const getModels = async (modelType: TableType): Promise<TablelandModel[]> => {
+    return monitorAsync('getModels', 'tableland', async () => {
+      if (!isInitialized || !client || !address) {
+        console.error('Tableland not initialized');
+        return [];
+      }
+      
+      try {
+        // Get table name
+        const tableName = await getTableName(modelType);
+        
+        if (!tableName) {
+          // Table doesn't exist yet, return empty array
+          return [];
+        }
+        
+        // Get all records
+        const records = await getData(client, modelType, tableName);
+        
+        // Return in the expected format
+        return records.map(record => ({
+          id: record.id,
+          key: record.key,
+          value: record.value,
+          created_at: record.created_at
+        }));
+      } catch (error) {
+        console.error('Error getting models:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error getting models');
+        return [];
+      }
+    });
+  };
+  
+  // Update a model
+  const updateModel = async (
+    modelType: TableType, 
+    id: number, 
+    key: string,
+    value: string
+  ): Promise<TablelandModel | null> => {
+    return monitorAsync('updateModel', 'tableland', async () => {
+      if (!isInitialized || !client || !address) {
+        console.error('Tableland not initialized');
+        return null;
+      }
+      
+      try {
+        // Get table name
+        const tableName = await getTableName(modelType);
+        
+        if (!tableName) {
+          throw new Error(`Table for ${modelType} does not exist`);
+        }
+        
+        // In Tableland, we need to delete and re-insert to update
+        // First, delete the record
+        await client.prepare(`
+          DELETE FROM ${tableName} WHERE id = ${id}
+        `).run();
+        
+        // Then insert the new record with the same ID
+        const timestamp = new Date().toISOString();
+        await client.prepare(`
+          INSERT INTO ${tableName} (id, item_key, item_value, created_at)
+          VALUES (${id}, '${key}', '${value}', '${timestamp}')
+        `).run();
+        
+        // Return the updated record
+        return {
+          id,
+          key,
+          value,
+          created_at: timestamp
+        };
+      } catch (error) {
+        console.error('Error updating model:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error updating model');
+        return null;
+      }
+    });
+  };
+  
+  // Delete a model
+  const deleteModel = async (modelType: TableType, id: number): Promise<boolean> => {
+    return monitorAsync('deleteModel', 'tableland', async () => {
+      if (!isInitialized || !client || !address) {
+        console.error('Tableland not initialized');
+        return false;
+      }
+      
+      try {
+        // Get table name
+        const tableName = await getTableName(modelType);
+        
+        if (!tableName) {
+          throw new Error(`Table for ${modelType} does not exist`);
+        }
+        
+        // Delete the record
+        await client.prepare(`
+          DELETE FROM ${tableName} WHERE id = ${id}
+        `).run();
+        
+        return true;
+      } catch (error) {
+        console.error('Error deleting model:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error deleting model');
+        return false;
+      }
+    });
+  };
+  
+  // Clear all models of a specific type
+  const clearModels = async (modelType: TableType): Promise<boolean> => {
+    return monitorAsync('clearModels', 'tableland', async () => {
+      if (!isInitialized || !client || !address) {
+        console.error('Tableland not initialized');
+        return false;
+      }
+      
+      try {
+        // Get table name
+        const tableName = await getTableName(modelType);
+        
+        if (!tableName) {
+          // Table doesn't exist, nothing to clear
+          return true;
+        }
+        
+        // Clear the table
+        await clearData(client, modelType, tableName);
+        
+        return true;
+      } catch (error) {
+        console.error('Error clearing models:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error clearing models');
+        return false;
+      }
+    });
+  };
+  
+  return (
+    <TablelandContext.Provider
+      value={{
+        isInitialized,
+        isLoading,
+        error,
+        client,
+        address,
+        connect,
+        disconnect,
+        createModel,
+        getModels,
+        updateModel,
+        deleteModel,
+        clearModels,
+        getTableName
+      }}
+    >
+      {children}
+    </TablelandContext.Provider>
+  );
+};

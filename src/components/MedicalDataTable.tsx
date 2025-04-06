@@ -1,18 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { TableData } from '@/composedb/ceramic';
+
+interface MedicalTableData {
+  id: string | number;
+  name: string;
+  value: string;
+  date: string;
+}
 
 interface MedicalDataTableProps {
   sectionTitle: string;
-  data: TableData[];
+  data: MedicalTableData[];
 }
 
 export const MedicalDataTable: React.FC<MedicalDataTableProps> = ({ sectionTitle, data }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Group data by parameter
-  const parameterGroups: Record<string, TableData[]> = {};
+  const parameterGroups: Record<string, MedicalTableData[]> = {};
   data.forEach(item => {
     const parameter = item.name.split('|')[0]; // Format: "Parameter|Date"
     if (!parameterGroups[parameter]) {

@@ -3,80 +3,74 @@
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { 
-  Database,
-  DataType,
-  PrivateData,
-  initCeramic,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  clearCollection
-} from '@/composedb/ceramic';
-import { useCeramic } from '@/context/CeramicContext';
+  TableType,
+  TableData,
+  initTableland,
+  checkTableExists,
+  createTable,
+  getData,
+  insertData,
+  clearData
+} from '@/utils/tablelandUtils';
+import { useTableland } from '@/context/TablelandContext';
+import { useComposeDBEnabled, useTablelandEnabled } from '@/context/DataProviders';
 
 export const PrivateDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
   const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
   const [tableName, setTableName] = useState<string>('');
-  const [privateData, setPrivateData] = useState<PrivateData[]>([]);
+  const [privateData, setPrivateData] = useState<TableData[]>([]);
   const [newKey, setNewKey] = useState<string>('');
   const [newValue, setNewValue] = useState<string>('');
 
-  // Use the Ceramic context
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
+  // Use the Tableland context
+  const { client, isInitialized, isLoading: tablelandLoading, connect } = useTableland();
+  
+  // Check if we should use Tableland
+  const tablelandEnabled = useTablelandEnabled();
 
-  // Initialize Ceramic connection
+  // Initialize Tableland connection
   useEffect(() => {
     const init = async () => {
       try {
-        if (isConnected && address && !isInitialized && !ceramicLoading) {
+        if (isConnected && address && !isInitialized && !tablelandLoading && tablelandEnabled) {
           setLoading(true);
           setError('');
           
-          // Connect to Ceramic network
+          // Connect to Tableland
           await connect();
           
           setLoading(false);
         }
       } catch (err: any) {
-        console.error('Error initializing Ceramic:', err);
-        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
+        console.error('Error initializing Tableland:', err);
+        setError(err.message || 'Failed to initialize Tableland. Please try again.');
         setLoading(false);
       }
     };
     
     init();
-  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
+  }, [isConnected, address, isInitialized, tablelandLoading, connect, tablelandEnabled]);
   
-  // Load private data when Ceramic is initialized
+  // Load private data when Tableland is initialized
   useEffect(() => {
     const loadPrivateData = async () => {
       try {
-        if (isInitialized && ceramic && did) {
+        if (isInitialized && client && address && tablelandEnabled) {
           setLoading(true);
           
-          // Check if collection exists
-          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.PROFILE, did);
+          // Check if table exists
+          const { exists, tableName: existingTable } = await checkTableExists(client, TableType.PRIVATE, address);
           
-          if (exists) {
-            setTableName(collectionId);
+          if (exists && existingTable) {
+            setTableName(existingTable);
             
             // Get existing data
-            const records = await getRecords(ceramic, collectionId);
+            const records = await getData(client, TableType.PRIVATE, existingTable);
             
-            // Convert records to the format expected by the component
-            const formattedData: PrivateData[] = records.map((record, index) => ({
-              id: String(index),
-              type: DataType.PRIVATE,
-              content: record.content,
-              encrypted: false
-            }));
-            
-            setPrivateData(formattedData);
+            setPrivateData(records);
           }
           
           setLoading(false);
@@ -89,11 +83,11 @@ export const PrivateDataSection = () => {
     };
     
     loadPrivateData();
-  }, [isInitialized, ceramic, did]);
+  }, [isInitialized, client, address, tablelandEnabled]);
 
   const handleCreateTable = async () => {
-    if (!ceramic || !did) {
-      setError('Ceramic not initialized or no DID available.');
+    if (!client || !address) {
+      setError('Tableland not initialized or no address available.');
       return;
     }
     
@@ -101,21 +95,21 @@ export const PrivateDataSection = () => {
       setLoading(true);
       setError('');
       
-      // Create a new collection for private data
-      const { collectionId } = await createCollection(ceramic, DataType.PROFILE, did);
-      setTableName(collectionId);
+      // Create a new table for private data
+      const newTableName = await createTable(client, TableType.PRIVATE, address);
+      setTableName(newTableName);
       
       setLoading(false);
     } catch (err: any) {
-      console.error('Error creating collection:', err);
-      setError(err.message || 'Failed to create collection. Please try again.');
+      console.error('Error creating table:', err);
+      setError(err.message || 'Failed to create table. Please try again.');
       setLoading(false);
     }
   };
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ceramic || !tableName || !newKey || !newValue) {
+    if (!client || !tableName || !newKey || !newValue) {
       setError('Missing required information. Please check all fields.');
       return;
     }
@@ -124,22 +118,13 @@ export const PrivateDataSection = () => {
       setLoading(true);
       setError('');
       
-      // Create a record in the collection
-      const content = { key: newKey, value: newValue };
-      await createRecord(ceramic, DataType.PROFILE, tableName, content, ['private']);
+      // Insert data into the table
+      await insertData(client, TableType.PRIVATE, tableName, newKey, newValue);
       
       // Refresh data
-      const records = await getRecords(ceramic, tableName);
+      const records = await getData(client, TableType.PRIVATE, tableName);
       
-      // Convert records to the format expected by the component
-      const formattedData: PrivateData[] = records.map((record, index) => ({
-        id: String(index),
-        type: DataType.PRIVATE,
-        content: record.content,
-        encrypted: false
-      }));
-      
-      setPrivateData(formattedData);
+      setPrivateData(records);
       
       // Clear form
       setNewKey('');
@@ -153,8 +138,8 @@ export const PrivateDataSection = () => {
   };
 
   const handleClearPrivateData = async () => {
-    if (!ceramic || !tableName) {
-      setError('Ceramic not initialized or no collection available.');
+    if (!client || !tableName) {
+      setError('Tableland not initialized or no table available.');
       return;
     }
     
@@ -162,8 +147,8 @@ export const PrivateDataSection = () => {
       setLoading(true);
       setError('');
       
-      // Clear the collection
-      await clearCollection(ceramic, tableName);
+      // Clear the table
+      await clearData(client, TableType.PRIVATE, tableName);
       
       // Reset data
       setPrivateData([]);
@@ -182,13 +167,13 @@ export const PrivateDataSection = () => {
 
   return (
     <div className="legal-section">
-      <h2>Private Data (Ceramic)</h2>
+      <h2>Private Data (Tableland)</h2>
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Ceramic Network Integration:</strong> Your private data is securely stored on the Ceramic Network, 
-            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
-            and user experience compared to our previous implementation.
+            <strong>Tableland Integration:</strong> Your private data is securely stored on Tableland, 
+            a decentralized SQL database for Web3. This provides better reliability, performance, 
+            and compatibility with server-side rendering compared to Ceramic.
           </p>
         </div>
           <>
@@ -196,7 +181,7 @@ export const PrivateDataSection = () => {
             
             {!tableName ? (
               <div>
-                <p>You don't have a private data collection yet. Create one to store your private data on Ceramic Network.</p>
+                <p>You don't have a private data table yet. Create one to store your private data on Tableland.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
@@ -207,7 +192,7 @@ export const PrivateDataSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your private data is securely stored on the Ceramic Network.</p>
+                <p>Your private data is securely stored on Tableland.</p>
                 
                 <form onSubmit={handleAddData} className="private-data-form">
                   <div className="form-group">
@@ -271,10 +256,10 @@ export const PrivateDataSection = () => {
                       </thead>
                       <tbody>
                         {privateData.map((item) => (
-                          <tr key={item.id}>
-                            <td>{item.id}</td>
-                            <td>{typeof item.content === 'string' ? item.content : JSON.stringify(item.content)}</td>
-                            <td>{new Date().toLocaleString()}</td>
+                          <tr key={item.id || item.key}>
+                            <td>{item.key}</td>
+                            <td>{item.value}</td>
+                            <td>{item.created_at ? new Date(item.created_at).toLocaleString() : new Date().toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>

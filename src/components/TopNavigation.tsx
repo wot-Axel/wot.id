@@ -84,6 +84,15 @@ export const TopNavigation = () => {
               Me
             </Link>
             
+            {isConnected && (
+              <Link 
+                href="/migrate" 
+                className={`nav-link ${isActive('/migrate') ? 'active' : ''}`}
+              >
+                Migrate
+              </Link>
+            )}
+            
             {!isConnected && (
               <div className="connect-wrapper">
                 <button 

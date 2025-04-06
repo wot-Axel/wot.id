@@ -1,8 +1,8 @@
 /**
- * Ceramic Status Indicator
+ * Database Status Indicator
  * 
- * A component that displays the current status of the Ceramic connection.
- * Shows a visual indicator when using the mock implementation in production.
+ * A component that displays the current status of database connections (Ceramic/Tableland).
+ * Shows a visual indicator for connection status and implementation details.
  */
 
 import React from 'react';
@@ -21,9 +21,12 @@ const WarningIcon = ({ color }: { color?: string }) => (
   </svg>
 );
 
-interface CeramicStatusIndicatorProps {
-  client?: any;
-  isConnected?: boolean;
+interface DatabaseStatusIndicatorProps {
+  ceramicClient?: any;
+  tablelandClient?: any;
+  isCeramicConnected?: boolean;
+  isTablelandConnected?: boolean;
+  useTableland?: boolean;
 }
 
 /**
@@ -35,18 +38,33 @@ const isUsingMockImplementation = (client: any): boolean => {
 };
 
 /**
- * Component that displays the current status of the Ceramic connection
+ * Determine if the client is offline
  */
-const CeramicStatusIndicator: React.FC<CeramicStatusIndicatorProps> = ({ 
-  client, 
-  isConnected = false 
+const isClientOffline = (client: any): boolean => {
+  if (!client) return true;
+  return client.isOffline === true;
+};
+
+/**
+ * Component that displays the current status of database connections
+ */
+const DatabaseStatusIndicator: React.FC<DatabaseStatusIndicatorProps> = ({ 
+  ceramicClient, 
+  tablelandClient,
+  isCeramicConnected = false,
+  isTablelandConnected = false,
+  useTableland = true
 }) => {
-  const isMock = isUsingMockImplementation(client);
-  const isOffline = client?.isOffline === true;
+  const isCeramicMock = isUsingMockImplementation(ceramicClient);
+  const isCeramicOffline = isClientOffline(ceramicClient);
+  const isTablelandOffline = !tablelandClient || !isTablelandConnected;
+  
+  // Determine which database is active
+  const activeDatabase = useTableland ? 'Tableland' : 'Ceramic';
   
   // Determine status color and message
   let statusColor = 'gray.400';
-  let statusMessage = 'Ceramic: Disconnected';
+  let statusMessage = `${activeDatabase}: Disconnected`;
   let icon = <InfoIcon />;
   
   if (isConnected) {
@@ -87,4 +105,4 @@ const CeramicStatusIndicator: React.FC<CeramicStatusIndicatorProps> = ({
   );
 };
 
-export default CeramicStatusIndicator;
+export default DatabaseStatusIndicator;

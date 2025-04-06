@@ -3,18 +3,48 @@
 import { useState, useEffect } from 'react';
 import { useCeramic } from '@/context/CeramicContext';
 import { useComposeDB } from '@/context/ComposeDBContext';
-import { useComposeDBEnabled } from '@/context/DataProviders';
+import { useTableland } from '@/context/TablelandContext';
+import { useComposeDBEnabled, useTablelandEnabled } from '@/context/DataProviders';
 import { DataType } from '@/utils/ceramicUtils';
+import { TableType } from '@/utils/tablelandUtils';
 import { monitorAsync } from '@/utils/performanceMonitor';
 
 /**
  * Hook for accessing data from either Ceramic or ComposeDB
  * This abstracts away the underlying implementation and provides a consistent interface
  */
+// Map Ceramic DataType to Tableland TableType
+const mapDataTypeToTableType = (dataType: DataType): TableType => {
+  switch (dataType) {
+    case DataType.PROFILE:
+      return TableType.PRIVATE;
+    case DataType.DOCUMENTS:
+      return TableType.PRIVATE;
+    case DataType.DIGITAL_ASSETS:
+      return TableType.DIGITAL_ASSETS;
+    case DataType.REAL_WORLD_ASSETS:
+      return TableType.PRIVATE;
+    case DataType.MEDICAL:
+      return TableType.MEDICAL;
+    case DataType.CONNECTIONS:
+      return TableType.CONTACTS;
+    case DataType.ORGANIZATIONS:
+      return TableType.AFFILIATIONS;
+    case DataType.MESSAGES:
+      return TableType.CHAT;
+    case DataType.PRIVATE:
+      return TableType.PRIVATE;
+    default:
+      return TableType.PRIVATE;
+  }
+};
+
 export const useDataAccess = (dataType: DataType) => {
   const ceramic = useCeramic();
   const composeDB = useComposeDB();
+  const tableland = useTableland();
   const isComposeDBEnabled = useComposeDBEnabled();
+  const isTablelandEnabled = useTablelandEnabled();
   
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +56,25 @@ export const useDataAccess = (dataType: DataType) => {
     setError(null);
     
     try {
-      if (isComposeDBEnabled) {
+      if (isTablelandEnabled) {
+        // Use Tableland
+        if (!tableland.isInitialized) {
+          await tableland.connect();
+        }
+        
+        const tableType = mapDataTypeToTableType(dataType);
+        const models = await tableland.getModels(tableType);
+        
+        // Format data to match the expected structure
+        const formattedModels = models.map(model => ({
+          id: String(model.id),
+          key: model.key,
+          value: model.value,
+          created_at: model.created_at
+        }));
+        
+        setData(formattedModels);
+      } else if (isComposeDBEnabled) {
         // Use ComposeDB
         if (!composeDB.isInitialized) {
           await composeDB.connect();
@@ -54,7 +102,45 @@ export const useDataAccess = (dataType: DataType) => {
   // Create a new item
   const createItem = async (itemData: any, tags?: string[]) => {
     try {
-      if (isComposeDBEnabled) {
+      if (isTablelandEnabled) {
+        // Use Tableland
+        if (!tableland.isInitialized) {
+          await tableland.connect();
+        }
+        
+        const tableType = mapDataTypeToTableType(dataType);
+        
+        // For Tableland, we need to convert the content to key-value format
+        // If content is an object, use a meaningful key and stringify the value
+        let key = '';
+        let value = '';
+        
+        if (typeof itemData === 'object') {
+          // Use the first property as the key, or generate a unique key
+          const firstKey = Object.keys(itemData)[0];
+          key = itemData.key || itemData.id || firstKey || `${dataType}_${Date.now()}`;
+          
+          // Add tags to the content for searchability
+          const contentWithTags = { ...itemData, tags: tags || [] };
+          value = JSON.stringify(contentWithTags);
+        } else {
+          key = `${dataType}_${Date.now()}`;
+          value = String(itemData);
+        }
+        
+        const result = await tableland.createModel(tableType, key, value);
+        if (result) {
+          const formattedResult = {
+            id: String(result.id),
+            key: result.key,
+            value: result.value,
+            created_at: result.created_at
+          };
+          setData(prev => [...prev, formattedResult]);
+          return formattedResult;
+        }
+        return null;
+      } else if (isComposeDBEnabled) {
         // Use ComposeDB
         if (!composeDB.isInitialized) {
           await composeDB.connect();
@@ -87,7 +173,45 @@ export const useDataAccess = (dataType: DataType) => {
   // Update an existing item
   const updateItem = async (id: string, itemData: any, tags?: string[]) => {
     try {
-      if (isComposeDBEnabled) {
+      if (isTablelandEnabled) {
+        // Use Tableland
+        if (!tableland.isInitialized) {
+          await tableland.connect();
+        }
+        
+        const tableType = mapDataTypeToTableType(dataType);
+        
+        // Find the item in our local data to get the key
+        const item = data.find(item => item.id === id);
+        if (!item) {
+          throw new Error(`Item with ID ${id} not found`);
+        }
+        
+        // For Tableland, we need to convert the content to key-value format
+        let key = item.key;
+        let value = '';
+        
+        if (typeof itemData === 'object') {
+          // Add tags to the content for searchability
+          const contentWithTags = { ...itemData, tags: tags || [] };
+          value = JSON.stringify(contentWithTags);
+        } else {
+          value = String(itemData);
+        }
+        
+        const result = await tableland.updateModel(tableType, parseInt(id), key, value);
+        if (result) {
+          const formattedResult = {
+            id: String(result.id),
+            key: result.key,
+            value: result.value,
+            created_at: result.created_at
+          };
+          setData(prev => prev.map(item => item.id === id ? formattedResult : item));
+          return formattedResult;
+        }
+        return null;
+      } else if (isComposeDBEnabled) {
         // Use ComposeDB
         if (!composeDB.isInitialized) {
           await composeDB.connect();
@@ -120,7 +244,19 @@ export const useDataAccess = (dataType: DataType) => {
   // Delete an item
   const deleteItem = async (id: string) => {
     try {
-      if (isComposeDBEnabled) {
+      if (isTablelandEnabled) {
+        // Use Tableland
+        if (!tableland.isInitialized) {
+          await tableland.connect();
+        }
+        
+        const tableType = mapDataTypeToTableType(dataType);
+        const success = await tableland.deleteModel(tableType, parseInt(id));
+        if (success) {
+          setData(prev => prev.filter(item => item.id !== id));
+        }
+        return success;
+      } else if (isComposeDBEnabled) {
         // Use ComposeDB
         if (!composeDB.isInitialized) {
           await composeDB.connect();
@@ -158,7 +294,19 @@ export const useDataAccess = (dataType: DataType) => {
   // Clear all items for this data type
   const clearItems = async () => {
     try {
-      if (isComposeDBEnabled) {
+      if (isTablelandEnabled) {
+        // Use Tableland
+        if (!tableland.isInitialized) {
+          await tableland.connect();
+        }
+        
+        const tableType = mapDataTypeToTableType(dataType);
+        const success = await tableland.clearModels(tableType);
+        if (success) {
+          setData([]);
+        }
+        return success;
+      } else if (isComposeDBEnabled) {
         // Use ComposeDB
         if (!composeDB.isInitialized) {
           await composeDB.connect();
@@ -191,11 +339,13 @@ export const useDataAccess = (dataType: DataType) => {
   
   // Fetch data on mount and when dependencies change
   useEffect(() => {
-    if ((isComposeDBEnabled && composeDB.isInitialized) || 
-        (!isComposeDBEnabled && ceramic.isInitialized)) {
+    if ((isTablelandEnabled && tableland.isInitialized) ||
+        (isComposeDBEnabled && composeDB.isInitialized) || 
+        (!isComposeDBEnabled && !isTablelandEnabled && ceramic.isInitialized)) {
       fetchData();
     }
-  }, [dataType, isComposeDBEnabled, ceramic.isInitialized, composeDB.isInitialized]);
+  }, [dataType, isTablelandEnabled, isComposeDBEnabled, 
+      tableland.isInitialized, ceramic.isInitialized, composeDB.isInitialized]);
   
   return {
     data,
@@ -209,6 +359,8 @@ export const useDataAccess = (dataType: DataType) => {
     // Expose the underlying implementations for advanced use cases
     ceramic,
     composeDB,
-    usingComposeDB: isComposeDBEnabled
+    tableland,
+    usingComposeDB: isComposeDBEnabled,
+    usingTableland: isTablelandEnabled
   };
 };
