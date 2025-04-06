@@ -14,6 +14,7 @@ import { monitorAsync } from '@/utils/performanceMonitor';
 import { getCeramicNodeUrl, markNodeAsFailed, CERAMIC_NODES, isProduction } from './config';
 import { DataTypeToModelMap } from './models';
 import { DataType } from '@/utils/ceramicUtils';
+import { shouldUseMockImplementation, createMockCeramicClient } from './ceramic-mock';
 import type { 
   ContentRecord, 
   CollectionInfo, 
@@ -347,6 +348,26 @@ export const initComposeDB = async (forceSeed?: Uint8Array): Promise<any> => {
       return composeClient;
     }
 
+    // Check if we should use the mock implementation in production
+    if (shouldUseMockImplementation()) {
+      console.log('Using mock Ceramic implementation for ComposeDB in production');
+      const mockCeramic = createMockCeramicClient();
+      
+      // Create a minimal ComposeDB client with the mock Ceramic client
+      composeClient = {
+        ceramic: mockCeramic,
+        definition: mockDefinition,
+        did: mockCeramic.did,
+        isMockImplementation: true,
+        // Add mock methods for ComposeDB operations
+        executeQuery: async () => ({ data: {}, errors: [] }),
+        index: { findMany: async () => [] },
+        // Add any other methods needed by your application
+      };
+      
+      return composeClient;
+    }
+    
     // Get connection status for tracking
     const connectionStatus = getConnectionStatus();
     

@@ -15,6 +15,8 @@ import { Ed25519Provider } from 'key-did-provider-ed25519';
 import { getResolver } from 'key-did-resolver';
 // Using direct import with custom type declarations
 import { fromString } from 'uint8arrays/from-string';
+// Import fallback mechanisms
+import { createFallbackDID, attemptCeramicRecovery } from '../composedb/did-fallback';
 
 // Constants
 const CONNECTION_TIMEOUT = 10000; // 10 seconds
@@ -25,11 +27,21 @@ const LOCAL_STORAGE_KEYS = {
   DID_KEY: 'wot_did_private_key'
 };
 
+// Additional nodes to try
+const ADDITIONAL_NODES = [
+  'https://ceramic.composedb.com',    // ComposeDB node
+  'https://testnet-clay-1.ceramic.network', // Clay testnet alternative
+  'https://testnet-clay-2.ceramic.network', // Clay testnet alternative
+  'https://testnet-clay-3.ceramic.network'  // Clay testnet alternative
+];
+
 // Default nodes to try in order of priority
 const DEFAULT_NODES = [
-  'http://localhost:7007',           // Local node (if available)
-  'https://ceramic-clay.3boxlabs.com', // Clay testnet
-  'https://gateway.ceramic.network'   // Mainnet gateway
+  ...(typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+    ? ['http://localhost:7007'] : []), // Local node only in development
+  'https://ceramic-clay.3boxlabs.com', // Clay testnet (primary)
+  'https://gateway.ceramic.network',    // Mainnet gateway
+  ...ADDITIONAL_NODES
 ];
 
 /**
@@ -222,24 +234,39 @@ export const connectToCeramicNode = async (
 export const getPrioritizedNodes = (): string[] => {
   const nodes: string[] = [];
   const failedNodes = getFailedNodes();
+  const isProduction = typeof window !== 'undefined' && 
+    window.location.hostname !== 'localhost' && 
+    !window.location.hostname.includes('127.0.0.1');
   
   // First priority: Last successful node (if any)
   const lastSuccessfulNode = getLastSuccessfulNode();
   if (lastSuccessfulNode && !failedNodes.includes(lastSuccessfulNode)) {
-    nodes.push(lastSuccessfulNode);
+    // In production, skip localhost even if it was previously successful
+    if (!isProduction || !lastSuccessfulNode.includes('localhost')) {
+      nodes.push(lastSuccessfulNode);
+    }
   }
   
   // Second priority: Default nodes that aren't in the failed list
   for (const node of DEFAULT_NODES) {
+    // In production, skip localhost nodes
+    if (isProduction && node.includes('localhost')) {
+      continue;
+    }
+    
     if (!nodes.includes(node) && !failedNodes.includes(node)) {
       nodes.push(node);
     }
   }
   
-  // If we have no nodes to try (all have failed), try the default nodes anyway
+  // If we have no nodes to try (all have failed), try the public nodes anyway
   if (nodes.length === 0) {
-    console.warn('All known nodes have failed, trying default nodes anyway');
-    nodes.push(...DEFAULT_NODES);
+    console.warn('All known nodes have failed, trying public nodes anyway');
+    // In production, never fallback to localhost
+    const fallbackNodes = isProduction 
+      ? DEFAULT_NODES.filter(node => !node.includes('localhost'))
+      : DEFAULT_NODES;
+    nodes.push(...fallbackNodes);
   }
   
   return nodes;

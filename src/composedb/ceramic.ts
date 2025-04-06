@@ -15,6 +15,10 @@ import {
   resetFailedNodes, 
   getConnectionStatus 
 } from '../utils/ceramicConnector';
+import {
+  createMockCeramicClient,
+  shouldUseMockImplementation
+} from './ceramic-mock';
 
 // ==============================
 // Core Types and Interfaces
@@ -42,7 +46,7 @@ export enum DataType {
  */
 export type CeramicClient = CeramicHttpClient & {
   isOffline?: boolean;
-  did?: DID | { id: string };
+  did?: DID;
 };
 
 /**
@@ -110,15 +114,19 @@ const CERAMIC_STORAGE_KEY = 'ceramic_local_storage';
  */
 export const initCeramic = async (identity?: string): Promise<CeramicClient> => {
   return monitorAsync('initCeramic', 'ceramicUtils', async () => {
-    // Try to connect using our robust connection strategy
+    // Check if we should use the mock implementation in production
+    if (shouldUseMockImplementation()) {
+      console.log('Using mock Ceramic implementation in production environment');
+      return createMockCeramicClient();
+    }
+    
+    // In development, try to connect using our robust connection strategy
     const ceramic = await connectToCeramic(identity);
     
     if (!ceramic) {
       console.error('Failed to connect to any Ceramic node. Using fallback local implementation.');
-      // Return a minimal client for offline functionality
-      const client = new CeramicHttpClient() as CeramicClient;
-      client.isOffline = true;
-      return client;
+      // Return a mock client for offline functionality
+      return createMockCeramicClient();
     }
     
     return ceramic;
