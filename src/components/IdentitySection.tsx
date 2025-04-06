@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import dynamic from 'next/dynamic';
-import { useCeramic } from '@/context/CeramicContext';
-import { 
-  DataType,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  clearCollection,
-  TableData
-} from '@/composedb/ceramic';
+import { useDataAccess } from '@/hooks/useDataAccess';
+import { DataType } from '@/utils/ceramicUtils';
+
+// Define a common interface for data records
+interface DataRecord {
+  id: string;
+  key?: string;
+  value?: string;
+  created_at?: string;
+}
 
 // Dynamically import the ScannerModal component with no SSR
 const ScannerModal = dynamic(() => import('./ScannerModal'), {
@@ -41,98 +41,84 @@ const identityFields: IdentityField[] = [
 
 export const IdentitySection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, error: ceramicError } = useCeramic();
+  const { 
+    data: identityData, 
+    isLoading: dataLoading, 
+    error: dataError, 
+    createItem, 
+    updateItem, 
+    refreshData: fetchData 
+  } = useDataAccess(DataType.PROFILE);
+  
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [collectionId, setCollectionId] = useState<string>('');
-  const [identityData, setIdentityData] = useState<TableData[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
 
-  // Define initCeramicCollection with useCallback to avoid dependency issues
-  const initCeramicCollection = useCallback(async () => {
+  // Initialize data access when needed
+  const initDataAccess = useCallback(async () => {
     try {
-      if (!ceramic || !did) {
-        setError('Ceramic not initialized or no DID available.');
-        return;
-      }
-
       setLoading(true);
       setError('');
       
-      // Check if collection exists
-      const collectionCheck = await checkCollectionExists(ceramic, DataType.PROFILE, did);
-      
-      if (collectionCheck.exists) {
-        // Use the collection ID from the check result
-        setCollectionId(collectionCheck.collectionId);
-        
-        // Load existing data
-        await loadIdentityData(collectionCheck.collectionId);
-      } else {
-        // Create new collection
-        const result = await createCollection(ceramic, DataType.PROFILE, did);
-        setCollectionId(result.collectionId);
-      }
+      // Fetch data using the useDataAccess hook
+      await fetchData();
     } catch (err) {
-      console.error('Error initializing Ceramic:', err);
-      setError('Failed to initialize Ceramic. Please try again.');
+      console.error('Error initializing data access:', err);
+      setError('Failed to initialize data access. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [ceramic, did, setError, setLoading, setCollectionId]);
+  }, [fetchData]);
   
-  // Initialize Ceramic when connected
+  // Initialize data access when connected
   useEffect(() => {
-    if (isConnected && address && isInitialized && !loading && !ceramicLoading) {
-      initCeramicCollection();
+    if (isConnected && address && !loading && !dataLoading) {
+      initDataAccess();
     }
-  }, [isConnected, address, isInitialized, loading, ceramicLoading, initCeramicCollection]);
+  }, [isConnected, address, loading, dataLoading, initDataAccess]);
 
 
 
-  const loadIdentityData = useCallback(async (collectionId: string) => {
-    try {
-      if (!ceramic) {
-        setError('Ceramic not initialized.');
-        return;
+  // Process identity data when it changes
+  useEffect(() => {
+    if (identityData && identityData.length > 0) {
+      try {
+        // Extract form data from records
+        const extractedData: Record<string, string> = {};
+        
+        identityData.forEach(record => {
+          try {
+            if (record.key && record.value) {
+              // For simple key-value pairs
+              extractedData[record.key] = record.value;
+              
+              // Also try to parse JSON values
+              try {
+                const parsedValue = JSON.parse(record.value);
+                if (typeof parsedValue === 'object' && parsedValue !== null) {
+                  Object.entries(parsedValue).forEach(([key, value]) => {
+                    if (typeof value === 'string') {
+                      extractedData[key] = value;
+                    }
+                  });
+                }
+              } catch (e) {
+                // Not JSON, use as is
+              }
+            }
+          } catch (e) {
+            console.error('Error processing record:', e);
+          }
+        });
+        
+        setFormData(extractedData);
+      } catch (err) {
+        console.error('Error processing identity data:', err);
       }
-      
-      setLoading(true);
-      
-      // Get all profile data
-      const records = await getRecords(ceramic, collectionId);
-      
-      // Convert records to the format expected by the component
-      const formattedData: TableData[] = records.map((record, index) => ({
-        id: String(index),
-        name: record.id,
-        value: typeof record.content === 'string' ? record.content : JSON.stringify(record.content),
-        date: record.createdAt || new Date().toISOString()
-      }));
-      
-      setIdentityData(formattedData);
-      
-      // Populate form data from existing data
-      const initialFormData: Record<string, string> = {};
-      records.forEach(record => {
-        const content = record.content as Record<string, string>;
-        if (content) {
-          Object.keys(content).forEach(key => {
-            initialFormData[key] = content[key];
-          });
-        }
-      });
-      
-      setFormData(initialFormData);
-    } catch (err) {
-      console.error('Error loading identity data:', err);
-      setError('Failed to load identity data. Please try again.');
-    } finally {
-      setLoading(false);
     }
-  }, [ceramic, setLoading, setError, setIdentityData, setFormData]);
+  }, [identityData]);
 
   const handleInputChange = (fieldId: string, value: string) => {
     setFormData(prev => ({
@@ -212,33 +198,30 @@ export const IdentitySection = () => {
   };
 
   const saveIdentityData = async () => {
-    if (!ceramic || !collectionId) {
-      setError('Ceramic not initialized. Please try again.');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
       
-      // Clear existing collection
-      await clearCollection(ceramic, collectionId);
-      
-      // Combine all field values into a single document record
-      const identityDataObj: Record<string, string> = {};
-      Object.keys(formData).forEach(key => {
-        if (formData[key]) {
-          identityDataObj[key] = formData[key];
+      // Create or update data for each form field
+      for (const [key, value] of Object.entries(formData)) {
+        if (value) {
+          // Find if this key already exists
+          const existingItem = identityData.find(item => item.key === key);
+          
+          if (existingItem) {
+            // Update existing item
+            await updateItem(existingItem.id, { [key]: value });
+          } else {
+            // Create new item
+            await createItem({ [key]: value });
+          }
         }
-      });
-      
-      // Create a new record with all identity data
-      if (Object.keys(identityDataObj).length > 0) {
-        await createRecord(ceramic, DataType.PROFILE, collectionId, identityDataObj, ['identity']);
       }
       
-      // Reload data to show updated values
-      await loadIdentityData(collectionId);
+      // Reload data
+      await fetchData();
+      
+      // Exit edit mode
       setIsEditing(false);
     } catch (err) {
       console.error('Error saving identity data:', err);
@@ -270,7 +253,7 @@ export const IdentitySection = () => {
           ) : error ? (
             <div className="error-message">
               <p>{error}</p>
-              <button onClick={initCeramicCollection} className="button-primary logged-in-button">
+              <button onClick={initDataAccess} className="button-primary logged-in-button">
                 Try Again
               </button>
             </div>

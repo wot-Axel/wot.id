@@ -1,8 +1,6 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { CeramicProvider } from './CeramicContext';
-import { ComposeDBProvider } from './ComposeDBContext';
 import { TablelandProvider } from './TablelandContext';
 
 /**
@@ -11,23 +9,18 @@ import { TablelandProvider } from './TablelandContext';
  */
 export const DataProviders = ({ children }: { children: ReactNode }) => {
   return (
-    <CeramicProvider>
-      <ComposeDBProvider>
-        <TablelandProvider>
-          {children}
-        </TablelandProvider>
-      </ComposeDBProvider>
-    </CeramicProvider>
+    <TablelandProvider>
+      {children}
+    </TablelandProvider>
   );
 };
 
 /**
  * Hook to determine if we should use ComposeDB
- * This can be controlled by a feature flag, user preference, or environment variable
+ * This is kept for backward compatibility but always returns false
  */
 export const useComposeDBEnabled = (): boolean => {
-  // We're transitioning away from ComposeDB back to Tableland
-  // This will be set to false once the migration is complete
+  // Migration complete - ComposeDB is no longer used
   return false;
 };
 

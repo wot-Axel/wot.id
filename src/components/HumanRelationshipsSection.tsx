@@ -1,123 +1,73 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { 
-  DataType,
-  initCeramic,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  clearCollection,
-  Database, 
-  PrivateData
-} from '@/composedb/ceramic';
-import { useCeramic } from '@/context/CeramicContext';
+import { useDataAccess } from '@/hooks/useDataAccess';
+import { DataType } from '@/utils/ceramicUtils';
 
 export const HumanRelationshipsSection = () => {
   const { address, isConnected } = useAppKitAccount();
+  const { 
+    data: contactsData, 
+    isLoading: dataLoading, 
+    error: dataError, 
+    createItem, 
+    updateItem, 
+    refreshData: fetchData,
+    clearItems
+  } = useDataAccess(DataType.CONNECTIONS);
+  
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [contactsData, setContactsData] = useState<PrivateData[]>([]);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
-  // Use the Ceramic context
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
-
-  // Initialize Ceramic connection
-  useEffect(() => {
-    const init = async () => {
-      try {
-        if (isConnected && address && !isInitialized && !ceramicLoading) {
-          setLoading(true);
-          setError('');
-          
-          // Connect to Ceramic network
-          await connect();
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error initializing Ceramic:', err);
-        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    init();
-  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
-  
-  // Load contacts data when Ceramic is initialized
-  useEffect(() => {
-    const loadContactsData = async () => {
-      try {
-        if (isInitialized && ceramic && did) {
-          setLoading(true);
-          
-          // Check if collection exists
-          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.CONNECTIONS, did);
-          
-          if (exists) {
-            setTableName(collectionId);
-            
-            // Get existing data
-            const records = await getRecords(ceramic, collectionId);
-            
-            // Convert records to the format expected by the component
-            const formattedData: PrivateData[] = records.map((record, index) => ({
-              id: String(index),
-              type: DataType.CONNECTIONS,
-              content: record.content,
-              encrypted: false
-            }));
-            
-            setContactsData(formattedData);
-          }
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error loading contacts data:', err);
-        setError(err.message || 'Failed to load contacts data. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    loadContactsData();
-  }, [isInitialized, ceramic, did]);
-
-  const handleCreateTable = async () => {
-    if (!ceramic || !did) {
-      setError('Ceramic not initialized or no DID available.');
-      return;
-    }
-    
+  // Initialize data access when needed
+  const initDataAccess = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Create a new collection for contacts data
-      const { collectionId } = await createCollection(ceramic, DataType.CONNECTIONS, did);
-      setTableName(collectionId);
-      
-      setLoading(false);
+      // Fetch data using the useDataAccess hook
+      await fetchData();
     } catch (err: any) {
-      console.error('Error creating collection:', err);
-      setError(err.message || 'Failed to create collection. Please try again.');
+      console.error('Error initializing data access:', err);
+      setError(err.message || 'Failed to initialize data access. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchData]);
+  
+  // Initialize data access when connected
+  useEffect(() => {
+    if (isConnected && address && !loading && !dataLoading) {
+      initDataAccess();
+    }
+  }, [isConnected, address, loading, dataLoading, initDataAccess]);
+  
+
+
+  const handleCreateTable = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Initialize data access
+      await initDataAccess();
+    } catch (err: any) {
+      console.error('Error creating table:', err);
+      setError(err.message || 'Failed to create table. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ceramic || !tableName || !name) {
-      setError('Missing required information. Please check all fields.');
+    if (!name) {
+      setError('Name is required. Please enter a name.');
       return;
     }
     
@@ -125,7 +75,7 @@ export const HumanRelationshipsSection = () => {
       setLoading(true);
       setError('');
       
-      // Create a record in the collection
+      // Create a contact record
       const content = {
         name,
         email,
@@ -133,65 +83,62 @@ export const HumanRelationshipsSection = () => {
         notes
       };
       
-      await createRecord(ceramic, DataType.CONNECTIONS, tableName, content, ['contact']);
+      await createItem(content, ['contact']);
       
       // Refresh data
-      const records = await getRecords(ceramic, tableName);
-      
-      // Convert records to the format expected by the component
-      const formattedData: PrivateData[] = records.map((record, index) => ({
-        id: String(index),
-        type: DataType.CONNECTIONS,
-        content: record.content,
-        encrypted: false
-      }));
-      
-      setContactsData(formattedData);
+      await fetchData();
       
       // Clear form
       setName('');
       setEmail('');
       setPhone('');
       setNotes('');
-      setLoading(false);
     } catch (err: any) {
       console.error('Error adding contact data:', err);
       setError(err.message || 'Failed to add contact data. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
   const handleClearContactsData = async () => {
-    if (!ceramic || !tableName) {
-      setError('Ceramic not initialized or no collection available.');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
       
-      // Clear the collection
-      await clearCollection(ceramic, tableName);
-      
-      // Reset data
-      setContactsData([]);
-      
-      setLoading(false);
+      // Clear all items
+      await clearItems();
     } catch (err: any) {
       console.error('Error clearing contacts data:', err);
       setError(err.message || 'Failed to clear contacts data. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
   // Parse the JSON data from the value field
-  const parseContactData = (jsonString: string) => {
+  const parseContactData = (item: any) => {
     try {
-      return JSON.parse(jsonString);
+      // If the item has a value field, try to parse it
+      if (item.value) {
+        return JSON.parse(item.value);
+      }
+      // If the item has content, use that directly
+      if (item.content && typeof item.content === 'object') {
+        return item.content;
+      }
+      // Try to parse the item itself if it's a string
+      if (typeof item === 'string') {
+        return JSON.parse(item);
+      }
+      // If item is already an object, return it
+      if (typeof item === 'object' && item !== null) {
+        return item;
+      }
     } catch (err) {
-      return { name: '', email: '', phone: '', notes: '' };
+      // If parsing fails, return default object
     }
+    return { name: '', email: '', phone: '', notes: '' };
   };
 
   if (!isConnected) {
@@ -212,15 +159,15 @@ export const HumanRelationshipsSection = () => {
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!tableName ? (
+            {contactsData.length === 0 ? (
               <div>
-                <p>You don't have a relationships collection yet. Create one to store your human relationships securely on Tableland.</p>
+                <p>You don't have any relationships saved yet. Add some to store your human relationships securely on Tableland.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
-                  disabled={loading}
+                  disabled={loading || dataLoading}
                 >
-                  {loading ? 'Creating...' : 'Create Relationships Table'}
+                  {loading || dataLoading ? 'Initializing...' : 'Initialize Relationships'}
                 </button>
               </div>
             ) : (
@@ -286,9 +233,9 @@ export const HumanRelationshipsSection = () => {
                   <button 
                     className="button-primary"
                     onClick={handleClearContactsData}
-                    disabled={loading}
+                    disabled={loading || dataLoading}
                   >
-                    {loading ? 'Clearing...' : 'Clear All Relationships'}
+                    {loading || dataLoading ? 'Clearing...' : 'Clear All Relationships'}
                   </button>
                   <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
                     This will remove all saved relationships.
@@ -313,14 +260,14 @@ export const HumanRelationshipsSection = () => {
                       </thead>
                       <tbody>
                         {contactsData.map((item) => {
-                          const contactInfo = parseContactData(typeof item.content === 'string' ? item.content : JSON.stringify(item.content));
+                          const contactInfo = parseContactData(item);
                           return (
                             <tr key={item.id}>
                               <td>{contactInfo.name}</td>
                               <td>{contactInfo.email || '-'}</td>
                               <td>{contactInfo.phone || '-'}</td>
                               <td>{contactInfo.notes || '-'}</td>
-                              <td>{new Date().toLocaleString()}</td>
+                              <td>{item.created_at ? new Date(item.created_at).toLocaleString() : new Date().toLocaleString()}</td>
                             </tr>
                           );
                         })}

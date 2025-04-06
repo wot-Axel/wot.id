@@ -7,7 +7,7 @@ import { useTableland } from '@/context/TablelandContext';
 import { useComposeDBEnabled, useTablelandEnabled } from '@/context/DataProviders';
 import { DataType } from '@/utils/ceramicUtils';
 import { TableType } from '@/utils/tablelandUtils';
-import { monitorAsync } from '@/utils/performanceMonitor';
+import { monitorAsync, getMetrics, getPerformanceComparison } from '@/utils/performanceMonitor';
 
 /**
  * Hook for accessing data from either Ceramic or ComposeDB
@@ -57,23 +57,31 @@ export const useDataAccess = (dataType: DataType) => {
     
     try {
       if (isTablelandEnabled) {
-        // Use Tableland
-        if (!tableland.isInitialized) {
-          await tableland.connect();
-        }
-        
-        const tableType = mapDataTypeToTableType(dataType);
-        const models = await tableland.getModels(tableType);
-        
-        // Format data to match the expected structure
-        const formattedModels = models.map(model => ({
-          id: String(model.id),
-          key: model.key,
-          value: model.value,
-          created_at: model.created_at
-        }));
-        
-        setData(formattedModels);
+        // Use Tableland with performance monitoring
+        return await monitorAsync(
+          'fetchData',
+          'useDataAccess',
+          'tableland',
+          async () => {
+            if (!tableland.isInitialized) {
+              await tableland.connect();
+            }
+            
+            const tableType = mapDataTypeToTableType(dataType);
+            const models = await tableland.getModels(tableType);
+            
+            // Format data to match the expected structure
+            const formattedModels = models.map(model => ({
+              id: String(model.id),
+              key: model.key,
+              value: model.value,
+              created_at: model.created_at
+            }));
+            
+            setData(formattedModels);
+            return formattedModels;
+          }
+        );
       } else if (isComposeDBEnabled) {
         // Use ComposeDB
         if (!composeDB.isInitialized) {
@@ -103,65 +111,86 @@ export const useDataAccess = (dataType: DataType) => {
   const createItem = async (itemData: any, tags?: string[]) => {
     try {
       if (isTablelandEnabled) {
-        // Use Tableland
-        if (!tableland.isInitialized) {
-          await tableland.connect();
-        }
-        
-        const tableType = mapDataTypeToTableType(dataType);
-        
-        // For Tableland, we need to convert the content to key-value format
-        // If content is an object, use a meaningful key and stringify the value
-        let key = '';
-        let value = '';
-        
-        if (typeof itemData === 'object') {
-          // Use the first property as the key, or generate a unique key
-          const firstKey = Object.keys(itemData)[0];
-          key = itemData.key || itemData.id || firstKey || `${dataType}_${Date.now()}`;
-          
-          // Add tags to the content for searchability
-          const contentWithTags = { ...itemData, tags: tags || [] };
-          value = JSON.stringify(contentWithTags);
-        } else {
-          key = `${dataType}_${Date.now()}`;
-          value = String(itemData);
-        }
-        
-        const result = await tableland.createModel(tableType, key, value);
-        if (result) {
-          const formattedResult = {
-            id: String(result.id),
-            key: result.key,
-            value: result.value,
-            created_at: result.created_at
-          };
-          setData(prev => [...prev, formattedResult]);
-          return formattedResult;
-        }
-        return null;
+        // Use Tableland with performance monitoring
+        return await monitorAsync(
+          'createItem',
+          'useDataAccess',
+          'tableland',
+          async () => {
+            if (!tableland.isInitialized) {
+              await tableland.connect();
+            }
+            
+            const tableType = mapDataTypeToTableType(dataType);
+            
+            // For Tableland, we need to convert the content to key-value format
+            // If content is an object, use a meaningful key and stringify the value
+            let key = '';
+            let value = '';
+            
+            if (typeof itemData === 'object') {
+              // Use the first property as the key, or generate a unique key
+              const firstKey = Object.keys(itemData)[0];
+              key = itemData.key || itemData.id || firstKey || `${dataType}_${Date.now()}`;
+              
+              // Add tags to the content for searchability
+              const contentWithTags = { ...itemData, tags: tags || [] };
+              value = JSON.stringify(contentWithTags);
+            } else {
+              key = `${dataType}_${Date.now()}`;
+              value = String(itemData);
+            }
+            
+            const result = await tableland.createModel(tableType, key, value);
+            if (result) {
+              const formattedResult = {
+                id: String(result.id),
+                key: result.key,
+                value: result.value,
+                created_at: result.created_at
+              };
+              setData(prev => [...prev, formattedResult]);
+              return formattedResult;
+            }
+            return null;
+          }
+        );
       } else if (isComposeDBEnabled) {
-        // Use ComposeDB
-        if (!composeDB.isInitialized) {
-          await composeDB.connect();
-        }
-        
-        const result = await composeDB.createModel(dataType, itemData, tags);
-        if (result) {
-          setData(prev => [...prev, result]);
-        }
-        return result;
+        // Use ComposeDB with performance monitoring
+        return await monitorAsync(
+          'createItem',
+          'useDataAccess',
+          'composedb',
+          async () => {
+            if (!composeDB.isInitialized) {
+              await composeDB.connect();
+            }
+            
+            const result = await composeDB.createModel(dataType, itemData, tags);
+            if (result) {
+              setData(prev => [...prev, result]);
+            }
+            return result;
+          }
+        );
       } else {
-        // Use original Ceramic implementation
-        if (!ceramic.isInitialized) {
-          await ceramic.connect();
-        }
-        
-        const result = await ceramic.createModel(dataType, itemData);
-        if (result) {
-          setData(prev => [...prev, result]);
-        }
-        return result;
+        // Use original Ceramic implementation with performance monitoring
+        return await monitorAsync(
+          'createItem',
+          'useDataAccess',
+          'ceramic',
+          async () => {
+            if (!ceramic.isInitialized) {
+              await ceramic.connect();
+            }
+            
+            const result = await ceramic.createModel(dataType, itemData);
+            if (result) {
+              setData(prev => [...prev, result]);
+            }
+            return result;
+          }
+        );
       }
     } catch (err) {
       console.error(`Error creating ${dataType} item:`, err);
@@ -174,65 +203,86 @@ export const useDataAccess = (dataType: DataType) => {
   const updateItem = async (id: string, itemData: any, tags?: string[]) => {
     try {
       if (isTablelandEnabled) {
-        // Use Tableland
-        if (!tableland.isInitialized) {
-          await tableland.connect();
-        }
-        
-        const tableType = mapDataTypeToTableType(dataType);
-        
-        // Find the item in our local data to get the key
-        const item = data.find(item => item.id === id);
-        if (!item) {
-          throw new Error(`Item with ID ${id} not found`);
-        }
-        
-        // For Tableland, we need to convert the content to key-value format
-        let key = item.key;
-        let value = '';
-        
-        if (typeof itemData === 'object') {
-          // Add tags to the content for searchability
-          const contentWithTags = { ...itemData, tags: tags || [] };
-          value = JSON.stringify(contentWithTags);
-        } else {
-          value = String(itemData);
-        }
-        
-        const result = await tableland.updateModel(tableType, parseInt(id), key, value);
-        if (result) {
-          const formattedResult = {
-            id: String(result.id),
-            key: result.key,
-            value: result.value,
-            created_at: result.created_at
-          };
-          setData(prev => prev.map(item => item.id === id ? formattedResult : item));
-          return formattedResult;
-        }
-        return null;
+        // Use Tableland with performance monitoring
+        return await monitorAsync(
+          'updateItem',
+          'useDataAccess',
+          'tableland',
+          async () => {
+            if (!tableland.isInitialized) {
+              await tableland.connect();
+            }
+            
+            const tableType = mapDataTypeToTableType(dataType);
+            
+            // Find the item in our local data to get the key
+            const item = data.find(item => item.id === id);
+            if (!item) {
+              throw new Error(`Item with ID ${id} not found`);
+            }
+            
+            // For Tableland, we need to convert the content to key-value format
+            let key = item.key;
+            let value = '';
+            
+            if (typeof itemData === 'object') {
+              // Add tags to the content for searchability
+              const contentWithTags = { ...itemData, tags: tags || [] };
+              value = JSON.stringify(contentWithTags);
+            } else {
+              value = String(itemData);
+            }
+            
+            const result = await tableland.updateModel(tableType, parseInt(id), key, value);
+            if (result) {
+              const formattedResult = {
+                id: String(result.id),
+                key: result.key,
+                value: result.value,
+                created_at: result.created_at
+              };
+              setData(prev => prev.map(item => item.id === id ? formattedResult : item));
+              return formattedResult;
+            }
+            return null;
+          }
+        );
       } else if (isComposeDBEnabled) {
-        // Use ComposeDB
-        if (!composeDB.isInitialized) {
-          await composeDB.connect();
-        }
-        
-        const result = await composeDB.updateModel(dataType, id, itemData, tags);
-        if (result) {
-          setData(prev => prev.map(item => item.id === id ? result : item));
-        }
-        return result;
+        // Use ComposeDB with performance monitoring
+        return await monitorAsync(
+          'updateItem',
+          'useDataAccess',
+          'composedb',
+          async () => {
+            if (!composeDB.isInitialized) {
+              await composeDB.connect();
+            }
+            
+            const result = await composeDB.updateModel(dataType, id, itemData, tags);
+            if (result) {
+              setData(prev => prev.map(item => item.id === id ? result : item));
+            }
+            return result;
+          }
+        );
       } else {
-        // Use original Ceramic implementation
-        if (!ceramic.isInitialized) {
-          await ceramic.connect();
-        }
-        
-        const result = await ceramic.updateModel(dataType, id, itemData);
-        if (result) {
-          setData(prev => prev.map(item => item.id === id ? result : item));
-        }
-        return result;
+        // Use original Ceramic implementation with performance monitoring
+        return await monitorAsync(
+          'updateItem',
+          'useDataAccess',
+          'ceramic',
+          async () => {
+            if (!ceramic.isInitialized) {
+              await ceramic.connect();
+            }
+            
+            const result = await ceramic.updateModel(dataType, id, itemData);
+            if (result) {
+              setData(prev => prev.map(item => item.id === id ? result : item));
+            }
+            return result;
+          }
+        );
       }
     } catch (err) {
       console.error(`Error updating ${dataType} item:`, err);
@@ -245,39 +295,60 @@ export const useDataAccess = (dataType: DataType) => {
   const deleteItem = async (id: string) => {
     try {
       if (isTablelandEnabled) {
-        // Use Tableland
-        if (!tableland.isInitialized) {
-          await tableland.connect();
-        }
-        
-        const tableType = mapDataTypeToTableType(dataType);
-        const success = await tableland.deleteModel(tableType, parseInt(id));
-        if (success) {
-          setData(prev => prev.filter(item => item.id !== id));
-        }
-        return success;
+        // Use Tableland with performance monitoring
+        return await monitorAsync(
+          'deleteItem',
+          'useDataAccess',
+          'tableland',
+          async () => {
+            if (!tableland.isInitialized) {
+              await tableland.connect();
+            }
+            
+            const tableType = mapDataTypeToTableType(dataType);
+            const success = await tableland.deleteModel(tableType, parseInt(id));
+            if (success) {
+              setData(prev => prev.filter(item => item.id !== id));
+            }
+            return success;
+          }
+        );
       } else if (isComposeDBEnabled) {
-        // Use ComposeDB
-        if (!composeDB.isInitialized) {
-          await composeDB.connect();
-        }
-        
-        const success = await composeDB.deleteModel(dataType, id);
-        if (success) {
-          setData(prev => prev.filter(item => item.id !== id));
-        }
-        return success;
+        // Use ComposeDB with performance monitoring
+        return await monitorAsync(
+          'deleteItem',
+          'useDataAccess',
+          'composedb',
+          async () => {
+            if (!composeDB.isInitialized) {
+              await composeDB.connect();
+            }
+            
+            const success = await composeDB.deleteModel(dataType, id);
+            if (success) {
+              setData(prev => prev.filter(item => item.id !== id));
+            }
+            return success;
+          }
+        );
       } else {
-        // Use original Ceramic implementation
-        if (!ceramic.isInitialized) {
-          await ceramic.connect();
-        }
-        
-        const success = await ceramic.deleteModel(dataType, id);
-        if (success) {
-          setData(prev => prev.filter(item => item.id !== id));
-        }
-        return success;
+        // Use original Ceramic implementation with performance monitoring
+        return await monitorAsync(
+          'deleteItem',
+          'useDataAccess',
+          'ceramic',
+          async () => {
+            if (!ceramic.isInitialized) {
+              await ceramic.connect();
+            }
+            
+            const success = await ceramic.deleteModel(dataType, id);
+            if (success) {
+              setData(prev => prev.filter(item => item.id !== id));
+            }
+            return success;
+          }
+        );
       }
     } catch (err) {
       console.error(`Error deleting ${dataType} item:`, err);
@@ -295,40 +366,61 @@ export const useDataAccess = (dataType: DataType) => {
   const clearItems = async () => {
     try {
       if (isTablelandEnabled) {
-        // Use Tableland
-        if (!tableland.isInitialized) {
-          await tableland.connect();
-        }
-        
-        const tableType = mapDataTypeToTableType(dataType);
-        const success = await tableland.clearModels(tableType);
-        if (success) {
-          setData([]);
-        }
-        return success;
+        // Use Tableland with performance monitoring
+        return await monitorAsync(
+          'clearItems',
+          'useDataAccess',
+          'tableland',
+          async () => {
+            if (!tableland.isInitialized) {
+              await tableland.connect();
+            }
+            
+            const tableType = mapDataTypeToTableType(dataType);
+            const success = await tableland.clearModels(tableType);
+            if (success) {
+              setData([]);
+            }
+            return success;
+          }
+        );
       } else if (isComposeDBEnabled) {
-        // Use ComposeDB
-        if (!composeDB.isInitialized) {
-          await composeDB.connect();
-        }
-        
-        // For ComposeDB, we'll delete each item individually
-        const promises = data.map(item => composeDB.deleteModel(dataType, item.id));
-        await Promise.all(promises);
-        setData([]);
-        return true;
+        // Use ComposeDB with performance monitoring
+        return await monitorAsync(
+          'clearItems',
+          'useDataAccess',
+          'composedb',
+          async () => {
+            if (!composeDB.isInitialized) {
+              await composeDB.connect();
+            }
+            
+            // For ComposeDB, we'll delete each item individually
+            const promises = data.map(item => composeDB.deleteModel(dataType, item.id));
+            await Promise.all(promises);
+            setData([]);
+            return true;
+          }
+        );
       } else {
-        // Use original Ceramic implementation
-        if (!ceramic.isInitialized) {
-          await ceramic.connect();
-        }
-        
-        // For Ceramic, we need to delete items individually since clearCollection isn't directly exposed
-        // in the context interface
-        const promises = data.map(item => ceramic.deleteModel(dataType, item.id));
-        await Promise.all(promises);
-        setData([]);
-        return true;
+        // Use original Ceramic implementation with performance monitoring
+        return await monitorAsync(
+          'clearItems',
+          'useDataAccess',
+          'ceramic',
+          async () => {
+            if (!ceramic.isInitialized) {
+              await ceramic.connect();
+            }
+            
+            // For Ceramic, we need to delete items individually since clearCollection isn't directly exposed
+            // in the context interface
+            const promises = data.map(item => ceramic.deleteModel(dataType, item.id));
+            await Promise.all(promises);
+            setData([]);
+            return true;
+          }
+        );
       }
     } catch (err) {
       console.error(`Error clearing ${dataType} items:`, err);
@@ -361,6 +453,9 @@ export const useDataAccess = (dataType: DataType) => {
     composeDB,
     tableland,
     usingComposeDB: isComposeDBEnabled,
-    usingTableland: isTablelandEnabled
+    usingTableland: isTablelandEnabled,
+    // Performance monitoring functions
+    getPerformanceMetrics: () => getMetrics(isTablelandEnabled ? 'tableland' : isComposeDBEnabled ? 'composedb' : 'ceramic'),
+    getPerformanceComparison: () => getPerformanceComparison('fetchData')
   };
 };

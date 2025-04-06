@@ -1,19 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { 
-  Database,
-  DataType,
-  PrivateData,
-  initCeramic,
-  checkCollectionExists,
-  createCollection,
-  getRecords,
-  createRecord,
-  clearCollection
-} from '@/composedb/ceramic';
-import { useCeramic } from '@/context/CeramicContext';
+import { useDataAccess } from '@/hooks/useDataAccess';
+import { DataType } from '@/utils/ceramicUtils';
 
 // Define asset fields
 interface AssetField {
@@ -32,116 +22,84 @@ const assetFields: AssetField[] = [
 
 export const RealWorldAssetsSection = () => {
   const { address, isConnected } = useAppKitAccount();
+  const { 
+    data: assetsData, 
+    isLoading: dataLoading, 
+    error: dataError, 
+    createItem, 
+    updateItem, 
+    refreshData: fetchData,
+    clearItems
+  } = useDataAccess(DataType.REAL_WORLD_ASSETS);
+  
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [db, setDb] = useState<Database | null>(null);
-  const [tableName, setTableName] = useState<string>('');
-  const [assetsData, setAssetsData] = useState<PrivateData[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // Use the Ceramic context
-  const { ceramic, did, isInitialized, isLoading: ceramicLoading, connect } = useCeramic();
-
-  // Initialize Ceramic connection
-  useEffect(() => {
-    const init = async () => {
-      try {
-        if (isConnected && address && !isInitialized && !ceramicLoading) {
-          setLoading(true);
-          setError('');
-          
-          // Connect to Ceramic network
-          await connect();
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error initializing Ceramic:', err);
-        setError(err.message || 'Failed to initialize Ceramic. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    init();
-  }, [isConnected, address, isInitialized, ceramicLoading, connect]);
-
-    // Load assets data when Ceramic is initialized
-  useEffect(() => {
-    const loadAssetsData = async () => {
-      try {
-        if (isInitialized && ceramic && did) {
-          setLoading(true);
-          
-          // Check if collection exists
-          const { exists, collectionId } = await checkCollectionExists(ceramic, DataType.REAL_WORLD_ASSETS, did);
-          
-          if (exists) {
-            setTableName(collectionId);
-            
-            // Get existing data
-            const records = await getRecords(ceramic, collectionId);
-            
-            // Convert records to the format expected by the component
-            const formattedData: PrivateData[] = records.map((record, index) => ({
-              id: String(index),
-              type: DataType.REAL_WORLD_ASSETS,
-              content: record.content,
-              encrypted: false
-            }));
-            
-            setAssetsData(formattedData);
-            
-            // Populate form data from existing records
-            const initialFormData: Record<string, string> = {};
-            records.forEach(record => {
-              const content = record.content as Record<string, string>;
-              Object.keys(content).forEach(key => {
-                initialFormData[key] = content[key];
-              });
-            });
-            
-            setFormData(initialFormData);
-          } else {
-            // Create a new collection if it doesn't exist
-            console.log('Creating new collection for real world assets');
-            const result = await createCollection(ceramic, DataType.REAL_WORLD_ASSETS, did);
-            setTableName(result.collectionId);
-          }
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error loading real world assets data:', err);
-        setError(err.message || 'Failed to load real world assets data. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    loadAssetsData();
-  }, [isInitialized, ceramic, did]);
-
-  const handleCreateTable = async () => {
-    if (!ceramic || !did) {
-      setError('Ceramic not initialized or no DID available.');
-      return;
-    }
-    
+  // Initialize data access when needed
+  const initDataAccess = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Create a new collection for real world assets data
-      const { collectionId } = await createCollection(ceramic, DataType.REAL_WORLD_ASSETS, did);
-      setTableName(collectionId);
-      
-      setLoading(false);
+      // Fetch data using the useDataAccess hook
+      await fetchData();
     } catch (err: any) {
-      console.error('Error creating collection:', err);
-      setError(err.message || 'Failed to create collection. Please try again.');
+      console.error('Error initializing data access:', err);
+      setError(err.message || 'Failed to initialize data access. Please try again.');
+    } finally {
       setLoading(false);
     }
-  };
+  }, [fetchData]);
+  
+  // Initialize data access when connected
+  useEffect(() => {
+    if (isConnected && address && !loading && !dataLoading) {
+      initDataAccess();
+    }
+  }, [isConnected, address, loading, dataLoading, initDataAccess]);
+
+  // Process assets data when it changes
+  useEffect(() => {
+    if (assetsData && assetsData.length > 0) {
+      try {
+        // Extract form data from records
+        const extractedData: Record<string, string> = {};
+        
+        assetsData.forEach(record => {
+          try {
+            if (record.key && record.value) {
+              // For simple key-value pairs
+              extractedData[record.key] = record.value;
+              
+              // Also try to parse JSON values
+              try {
+                const parsedValue = JSON.parse(record.value);
+                if (typeof parsedValue === 'object' && parsedValue !== null) {
+                  Object.entries(parsedValue).forEach(([key, value]) => {
+                    if (typeof value === 'string') {
+                      extractedData[key] = value;
+                    }
+                  });
+                }
+              } catch (e) {
+                // Not JSON, use as is
+              }
+            }
+          } catch (e) {
+            console.error('Error processing record:', e);
+          }
+        });
+        
+        setFormData(extractedData);
+      } catch (err) {
+        console.error('Error processing assets data:', err);
+      }
+    }
+  }, [assetsData]);
+
+
 
   const handleInputChange = (fieldId: string, value: string) => {
     setFormData(prev => ({
@@ -151,87 +109,48 @@ export const RealWorldAssetsSection = () => {
   };
 
   const saveAssetsData = async () => {
-    if (!ceramic || !did) {
-      setError('Ceramic not initialized or no DID available.');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
       
-      // Check if we have a table name, if not create a collection
-      let currentTableName = tableName;
-      if (!currentTableName) {
-        console.log('No collection found, creating a new one');
-        const result = await createCollection(ceramic, DataType.REAL_WORLD_ASSETS, did);
-        currentTableName = result.collectionId;
-        setTableName(currentTableName);
-      }
+      // First clear existing items to avoid duplicates
+      await clearItems();
       
-      // Create a record with all asset data
-      const assetData: Record<string, string> = {};
-      
-      // Only include fields that have values
-      assetFields.forEach(field => {
-        const value = formData[field.id];
+      // Create or update data for each form field
+      for (const [key, value] of Object.entries(formData)) {
         if (value) {
-          assetData[field.id] = value;
+          // Create new item for each field with value
+          await createItem({ [key]: value });
         }
-      });
-      
-      // Clear existing collection
-      await clearCollection(ceramic, currentTableName);
-      
-      // Create a new record with all asset data
-      if (Object.keys(assetData).length > 0) {
-        console.log('Creating record with data:', assetData);
-        await createRecord(ceramic, DataType.REAL_WORLD_ASSETS, currentTableName, assetData, ['asset']);
       }
       
-      // Refresh data
-      const records = await getRecords(ceramic, currentTableName);
-      console.log('Retrieved records after save:', records);
+      // Reload data
+      await fetchData();
       
-      // Convert records to the format expected by the component
-      const formattedData: PrivateData[] = records.map((record, index) => ({
-        id: String(index),
-        type: DataType.REAL_WORLD_ASSETS,
-        content: record.content,
-        encrypted: false
-      }));
-      
-      setAssetsData(formattedData);
+      // Exit edit mode
       setIsEditing(false);
-      setLoading(false);
     } catch (err: any) {
       console.error('Error saving assets data:', err);
       setError(err.message || 'Failed to save assets data. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
   const handleClearAssets = async () => {
-    if (!ceramic || !tableName) {
-      setError('Ceramic not initialized or no collection available.');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
       
-      // Clear the collection
-      await clearCollection(ceramic, tableName);
+      // Clear all items
+      await clearItems();
       
-      // Reset data
-      setAssetsData([]);
+      // Reset form data
       setFormData({});
-      
-      setLoading(false);
     } catch (err: any) {
       console.error('Error clearing assets data:', err);
       setError(err.message || 'Failed to clear assets data. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
@@ -253,12 +172,12 @@ export const RealWorldAssetsSection = () => {
               and compatibility with server-side rendering compared to our previous implementation.
             </p>
           </div>
-          {loading ? (
+          {loading || dataLoading ? (
             <p>Loading...</p>
-          ) : error ? (
+          ) : error || dataError ? (
             <div className="error-message">
-              <p>{error}</p>
-              <button onClick={() => connect()} className="button-primary logged-in-button">
+              <p>{error || dataError}</p>
+              <button onClick={initDataAccess} className="button-primary logged-in-button">
                 Try Again
               </button>
             </div>
@@ -302,16 +221,8 @@ export const RealWorldAssetsSection = () => {
                     <>
                       <div className="assets-fields">
                         {assetFields.map(field => {
-                          const dataItem = assetsData.find(item => {
-                            if (typeof item.content === 'object' && item.content !== null) {
-                              return field.id in item.content;
-                            }
-                            return false;
-                          });
-                          
-                          const value = dataItem && typeof dataItem.content === 'object' && dataItem.content !== null
-                            ? dataItem.content[field.id]
-                            : '';
+                          // Look for the field in form data
+                          const value = formData[field.id] || '';
                           
                           // Only show fields that have values
                           if (!value) return null;
