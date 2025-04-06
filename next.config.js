@@ -34,8 +34,8 @@ const nextConfig = {
 
     return config
   },
-  // Disable server-side rendering for components that use XMTP
-  reactStrictMode: true,
+  // Disable server-side rendering for all components
+  reactStrictMode: false,
   
   // Exclude Ceramic and ComposeDB files from the build
   eslint: {
@@ -46,6 +46,8 @@ const nextConfig = {
   },
   // Define page extensions
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  // Completely disable source maps in production
+  productionBrowserSourceMaps: false,
   
   // Allow cross-origin requests in development mode for authentication
   allowedDevOrigins: process.env.NODE_ENV === 'development' ? [

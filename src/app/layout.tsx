@@ -2,11 +2,10 @@ import React from 'react';
 import type { Metadata } from "next";
 import { headers } from 'next/headers';
 import './globals.css';
-import ContextProvider from '@/context';
-import { XmtpProvider } from '@/context/XmtpContext';
-import { DataProviders } from '@/context/DataProviders';
-import { TopNavigation } from '@/components/TopNavigation';
-import { Footer } from '@/components/Footer';
+import dynamic from 'next/dynamic';
+
+// Use dynamic import with ssr: false to ensure client-side only rendering
+const ClientLayout = dynamic(() => import('@/components/ClientLayout').then(mod => mod.ClientLayout), { ssr: false });
 
 export const metadata: Metadata = {
   title: "wot.id",
@@ -29,22 +28,15 @@ export default async function RootLayout({
   children}: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Get cookies from server-side
   const { cookies, isLoggedIn } = await getServerData();
 
   return (
     <html lang="en">
       <body className={isLoggedIn ? 'logged-in' : ''}>
-        <ContextProvider cookies={cookies}>
-          <XmtpProvider>
-            <DataProviders>
-              <TopNavigation />
-              <main className="main-content">
-                {children}
-              </main>
-              <Footer />
-            </DataProviders>
-          </XmtpProvider>
-        </ContextProvider>
+        <ClientLayout cookies={cookies}>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   );
