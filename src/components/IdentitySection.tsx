@@ -260,9 +260,9 @@ export const IdentitySection = () => {
         <div className="section-content">
           <div className="info-box" style={{ marginBottom: '1rem' }}>
             <p>
-              <strong>Ceramic Network:</strong> Your identity data is securely stored on the Ceramic Network, 
-              a decentralized data network built specifically for Web3 applications. Ceramic provides better 
-              performance, lower costs, and enhanced privacy for your sensitive identity information.
+              <strong>Tableland:</strong> Your identity data is securely stored on Tableland, 
+              a decentralized SQL database for Web3. This provides better reliability, performance, 
+              and compatibility with server-side rendering for your sensitive identity information.
             </p>
           </div>
           {loading ? (

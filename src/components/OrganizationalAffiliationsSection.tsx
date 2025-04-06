@@ -108,9 +108,9 @@ export const OrganizationalAffiliationsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Ceramic Network Integration:</strong> Your organizational affiliations data is securely stored on the Ceramic Network, 
-            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
-            and user experience compared to our previous implementation.
+            <strong>Tableland Integration:</strong> Your organizational affiliations data is securely stored on Tableland, 
+            a decentralized SQL database for Web3. This provides better reliability, performance, 
+            and compatibility with server-side rendering compared to our previous implementation.
           </p>
         </div>
           <>
@@ -129,7 +129,7 @@ export const OrganizationalAffiliationsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your organizational affiliations are stored securely on the Ceramic Network.</p>
+                <p>Your organizational affiliations are stored securely on Tableland.</p>
                 
                 <form onSubmit={handleAddAffiliation} className="private-data-form">
                   <div className="form-group">

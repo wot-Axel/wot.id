@@ -248,9 +248,9 @@ export const RealWorldAssetsSection = () => {
         <div className="section-content">
           <div className="info-box" style={{ marginBottom: '1rem' }}>
             <p>
-              <strong>Ceramic Network Integration:</strong> Your real-world assets data is securely stored on the Ceramic Network, 
-              a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
-              and user experience compared to our previous implementation.
+              <strong>Tableland Integration:</strong> Your real-world assets data is securely stored on Tableland, 
+              a decentralized SQL database for Web3. This provides better reliability, performance, 
+              and compatibility with server-side rendering compared to our previous implementation.
             </p>
           </div>
           {loading ? (

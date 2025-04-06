@@ -204,9 +204,9 @@ export const HumanRelationshipsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Ceramic Network Integration:</strong> Your relationships data is securely stored on the Ceramic Network, 
-            a decentralized data network built specifically for Web3 user data. This provides better privacy, security, 
-            and user experience compared to our previous implementation.
+            <strong>Tableland Integration:</strong> Your relationships data is securely stored on Tableland, 
+            a decentralized SQL database for Web3. This provides better reliability, performance, 
+            and compatibility with server-side rendering compared to our previous implementation.
           </p>
         </div>
           <>
@@ -214,7 +214,7 @@ export const HumanRelationshipsSection = () => {
             
             {!tableName ? (
               <div>
-                <p>You don't have a relationships collection yet. Create one to store your human relationships securely on Ceramic Network.</p>
+                <p>You don't have a relationships collection yet. Create one to store your human relationships securely on Tableland.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
@@ -225,7 +225,7 @@ export const HumanRelationshipsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your relationship information is stored securely on the Ceramic Network.</p>
+                <p>Your relationship information is stored securely on Tableland.</p>
                 
                 <form onSubmit={handleAddContact} className="private-data-form">
                   <div className="form-group">

@@ -255,7 +255,7 @@ export const DigitalAssetsSection = () => {
   // Set network information for display purposes
   useEffect(() => {
     // We're using Ceramic now, so we don't need to check the network
-    // Just set to false as we're using Ceramic Network instead of Optimism
+    // Just set to false as we're using Tableland instead of Optimism
     setIsOptimismNetwork(false);
   }, [isConnected]);
   
@@ -265,7 +265,7 @@ export const DigitalAssetsSection = () => {
       <div className="info-box">
         <p>
           <strong>Multi-Chain Support:</strong> Your digital assets can be from any blockchain network.
-          The asset data is securely stored on Ceramic Network for improved identity integration, while your wallet remains 
+          The asset data is securely stored on Tableland for improved identity integration, while your wallet remains 
           connected to your preferred network. Our cross-chain technology handles all network interactions 
           behind the scenes - no network switching required.
         </p>
@@ -394,7 +394,7 @@ export const DigitalAssetsSection = () => {
       <p className="section-description" style={{ marginBottom: '1rem' }}>
         Securely store and manage your digital assets from multiple blockchains including Ethereum, Polygon, and more.
         <span className="network-info" style={{ display: 'block', fontSize: '0.9rem', marginTop: '0.5rem', color: '#666' }}>
-          Data is stored on Ceramic Network for better identity integration and data management while keeping your main wallet connection unchanged.
+          Data is stored on Tableland for better identity integration and data management while keeping your main wallet connection unchanged.
         </span>
       </p>
       <div className="section-content">

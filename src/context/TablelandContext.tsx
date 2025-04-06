@@ -59,7 +59,8 @@ const TablelandContext = createContext<TablelandContextType>({
 export const useTableland = () => useContext(TablelandContext);
 
 export const TablelandProvider = ({ children }: { children: ReactNode }) => {
-  const { address, isConnected } = useAppKitAccount();
+  const { address: walletAddress, isConnected } = useAppKitAccount();
+  const address = walletAddress || null; // Convert undefined to null to match our type definition
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
