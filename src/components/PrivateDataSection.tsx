@@ -171,8 +171,8 @@ export const PrivateDataSection = () => {
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
             <strong>Tableland Integration:</strong> Your private data is securely stored on Tableland, 
-            a decentralized SQL database for Web3. This provides better reliability, performance, 
-            and compatibility with server-side rendering compared to Ceramic.
+            a decentralized SQL database for Web3. This provides excellent reliability, performance, 
+            and compatibility with server-side rendering.
           </p>
         </div>
           <>

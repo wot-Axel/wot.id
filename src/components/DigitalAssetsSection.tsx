@@ -253,8 +253,8 @@ export const DigitalAssetsSection = () => {
 
   // Set network information for display purposes
   useEffect(() => {
-    // We're using Ceramic now, so we don't need to check the network
-    // Just set to false as we're using Tableland instead of Optimism
+    // We're using Tableland for data storage, so we don't need to check the network
+    // Just set to false as we're not requiring Optimism network
     setIsOptimismNetwork(false);
   }, [isConnected]);
   
@@ -272,7 +272,7 @@ export const DigitalAssetsSection = () => {
     );
   };
 
-  // No need for Ceramic context initialization or data loading as useDataAccess handles that
+  // Data loading is handled by the useDataAccess hook
 
   // We no longer need to switch networks as we're using a dedicated Optimism provider
   // Instead, we provide information about which network is being used for data storage

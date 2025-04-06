@@ -1,6 +1,6 @@
 /**
  * Encryption utilities for client-side encryption of sensitive data
- * This provides functionality to encrypt and decrypt data before storing in Ceramic
+ * This provides functionality to encrypt and decrypt data before storing in Tableland
  */
 
 import { monitorAsync } from './performanceMonitor';

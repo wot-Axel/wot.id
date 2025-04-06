@@ -9,21 +9,10 @@
     "build:lint": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:ceramic": "node test-ceramic.js",
-    "test:did": "npx ts-node scripts/test-did-persistence.ts",
-    "test:composedb": "npx ts-node-esm test-composedb-comprehensive.ts",
-    "verify:composedb": "node scripts/verify-composedb-deployment.js",
-    "check:deployment": "node scripts/check-deployment-readiness.js",
-    "ceramic:daemon": "npx ceramic daemon --config ceramic-config.json",
-    "ceramic:admin": "npx composedb admin:create --ceramic-url=http://localhost:7007",
-    "ceramic:start": "node scripts/start-ceramic-dev.js",
-    "predeploy": "npm run verify:composedb"
+    "check:deployment": "node scripts/check-deployment-readiness.js"
   },
   "dependencies": {
-    "@ceramicnetwork/http-client": "^6.4.0",
-    "@ceramicnetwork/stream-tile": "^6.4.0",
     "@chakra-ui/react": "^3.15.0",
-    "@composedb/client": "^0.7.1",
     "@ethereum-attestation-service/eas-sdk": "^2.7.0",
     "@reown/appkit": "^1.7.1",
     "@reown/appkit-adapter-wagmi": "^1.7.1",
@@ -46,10 +35,7 @@
     "wagmi": "^2.14.15"
   },
   "devDependencies": {
-    "@ceramicnetwork/cli": "^6.11.0",
-    "@composedb/cli": "^0.7.1",
-    "@composedb/devtools": "^0.7.1",
-    "@composedb/devtools-node": "^0.7.1",
+
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",

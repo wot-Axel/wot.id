@@ -116,7 +116,7 @@ const About = () => {
                 <li>Next.js for a fast, responsive frontend framework</li>
                 <li>Ethereum Attestation Service for verifiable blockchain attestations</li>
                 <li>Multi-chain architecture leveraging Ethereum L1 and Optimism L2</li>
-                <li>Ceramic Network for structured, decentralized data storage</li>
+                <li>Tableland for structured, decentralized SQL data storage</li>
                 <li>Reown AppKit for secure wallet connection</li>
                 <li>Dedicated RPC providers for seamless cross-chain operations</li>
               </ul>

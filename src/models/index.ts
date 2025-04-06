@@ -1,6 +1,5 @@
-// For MVP, we'll use a simplified approach to model definitions
-// In a production environment, we would generate proper ComposeDB models
-// using the ComposeDB CLI
+// Schema definitions for our data models
+// These are used for validation before storing data in Tableland
 
 // Map data types to model names for easier reference
 export const DataTypeToModelMap = {
@@ -66,7 +65,7 @@ export const MedicalDataSchema = {
 };
 
 // For the MVP, we'll use a simplified definition
-// This will be replaced with proper ComposeDB models in the future
+// This is used for schema validation with Tableland
 export const CombinedModel = {
   schemas: {
     DigitalAsset: DigitalAssetSchema,

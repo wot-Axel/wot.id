@@ -16,15 +16,14 @@ import { Wallet } from 'ethers';
  * - Send and receive messages
  * - List conversations
  * 
- * Phase 2 (Planned): Add persistent storage with Ceramic
- * - Store message history in Ceramic
+ * Phase 2 (Planned): Add persistent storage with Tableland
+ * - Store message history in Tableland
  * - Retrieve message history when reconnecting
  * - Implement message encryption for privacy
  */
 
 // Phase 2 imports (will be uncommented when implemented)
-// import { Database } from '../utils/ceramicUtils';
-// import { TableType, checkTableExists, createTable, insertData, getData } from '../utils/ceramicUtils';
+// import { createTable, insertData, getData } from '../utils/tablelandUtils';
 
 // Use dynamic import to prevent server-side rendering of XMTP client
 // which uses WebAssembly and can cause issues on the server
@@ -151,11 +150,11 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<Error | null>(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [loadingConversations, setLoadingConversations] = useState<boolean>(false);
-  // Phase 2: Ceramic state (commented out until implementation)
+  // Phase 2: Tableland state (commented out until implementation)
   // const [db, setDb] = useState<Database | null>(null);
   // const [tableName, setTableName] = useState<string>('');
 
-  // Phase 1: Setup mock ethereum provider without Ceramic initialization
+  // Phase 1: Setup mock ethereum provider without Tableland initialization
   useEffect(() => {
     // Setup mock ethereum provider when wallet is connected
     if (isConnected && address && walletClient) {
@@ -164,7 +163,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isConnected, address, walletClient]);
 
-  // Phase 2: Ceramic collection setup (commented out until implementation)
+  // Phase 2: Tableland table setup (commented out until implementation)
   /*
   useEffect(() => {
     const setupChatTable = async () => {
@@ -646,8 +645,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Simplified conversation loading without Ceramic integration
-  // In Phase 2, this will be updated to use Ceramic for persistent storage
+  // Simplified conversation loading without Tableland integration
+  // In Phase 2, this will be updated to use Tableland for persistent storage
   const loadConversations = async (xmtpClient: Client) => {
     if (!xmtpClient) return;
 
@@ -655,7 +654,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       setLoadingConversations(true);
       const convos = await xmtpClient.conversations.list();
       
-      // Use conversations directly from XMTP without Ceramic metadata
+      // Use conversations directly from XMTP without Tableland metadata
       const conversationsWithBasicMetadata = await Promise.all(convos.map(async (convo) => {
         // Get the most recent message for each conversation to use as preview
         let lastMessagePreview = 'No messages yet';
@@ -728,7 +727,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       // Create conversation in XMTP
       const conversation = await client.conversations.newConversation(peerAddress);
       
-      // In Phase 2, we'll add Ceramic integration for metadata storage
+      // In Phase 2, we'll add Tableland integration for metadata storage
       
       // Refresh conversations
       await loadConversations(client);
