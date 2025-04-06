@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { DataType } from '@/utils/ceramicUtils';
-import { useDataAccess } from '@/hooks/useDataAccess';
+import { useDataAccess, DataType } from '@/hooks/useDataAccess';
 
 // Types for digital assets
 interface DigitalAsset {

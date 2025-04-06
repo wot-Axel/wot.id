@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { DataType, TableData } from '@/utils/ceramicUtils';
-import { useDataAccess } from '@/hooks/useDataAccess';
+import { useDataAccess, DataType } from '@/hooks/useDataAccess';
+import { TableData } from '@/utils/tablelandUtils';
 
 // Define document fields
 interface DocumentField {
@@ -29,10 +29,7 @@ export const DocumentsSection = () => {
     createItem,
     updateItem,
     deleteItem,
-    refreshData,
-    ceramic,
-    composeDB,
-    usingComposeDB
+    refreshData
   } = useDataAccess(DataType.DOCUMENTS);
   
   const [loading, setLoading] = useState<boolean>(false);

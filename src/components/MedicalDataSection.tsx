@@ -13,7 +13,6 @@ import {
   TableData
 } from '@/utils/tablelandUtils';
 import { useTableland } from '@/context/TablelandContext';
-import { useTablelandEnabled } from '@/context/DataProviders';
 import { MedicalDataTable } from './MedicalDataTable';
 
 export const MedicalDataSection = () => {
@@ -29,7 +28,7 @@ export const MedicalDataSection = () => {
   const { client, isInitialized, isLoading: tablelandLoading, connect } = useTableland();
   
   // Check if we should use Tableland
-  const tablelandEnabled = useTablelandEnabled();
+  const tablelandEnabled = true; // Always using Tableland now
 
   // Initialize Tableland connection
   useEffect(() => {

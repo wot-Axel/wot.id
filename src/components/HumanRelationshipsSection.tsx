@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { useDataAccess } from '@/hooks/useDataAccess';
-import { DataType } from '@/utils/ceramicUtils';
+import { useDataAccess, DataType } from '@/hooks/useDataAccess';
 
 export const HumanRelationshipsSection = () => {
   const { address, isConnected } = useAppKitAccount();

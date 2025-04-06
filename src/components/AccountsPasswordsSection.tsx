@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { DataType } from '@/utils/ceramicUtils';
-import { useDataAccess } from '@/hooks/useDataAccess';
+import { useDataAccess, DataType } from '@/hooks/useDataAccess';
 
 export const AccountsPasswordsSection = () => {
   const { isConnected } = useAppKitAccount();

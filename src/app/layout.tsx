@@ -2,10 +2,7 @@ import React from 'react';
 import type { Metadata } from "next";
 import { headers } from 'next/headers';
 import './globals.css';
-import dynamic from 'next/dynamic';
-
-// Use dynamic import with ssr: false to ensure client-side only rendering
-const ClientLayout = dynamic(() => import('@/components/ClientLayout').then(mod => mod.ClientLayout), { ssr: false });
+import { ClientLayout } from '@/components/ClientLayout';
 
 export const metadata: Metadata = {
   title: "wot.id",

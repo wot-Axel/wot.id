@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { DataType, PrivateData } from '@/utils/ceramicUtils';
-import { useDataAccess } from '@/hooks/useDataAccess';
+import { useDataAccess, DataType } from '@/hooks/useDataAccess';
+import { PrivateData } from '@/utils/tablelandUtils';
 
 export const OrganizationalAffiliationsSection = () => {
   const { address, isConnected } = useAppKitAccount();

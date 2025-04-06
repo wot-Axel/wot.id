@@ -8,7 +8,6 @@ import { createAppKit } from '@reown/appkit/react'
 import * as React from 'react'
 import type { ReactNode } from 'react'
 import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi'
-import { CeramicProvider } from './CeramicContext'
 
 // Set up queryClient
 const queryClient = new QueryClient()
@@ -75,9 +74,7 @@ function ContextProvider({ children, cookies }: ContextProviderProps) {
   return (
     <WagmiProvider config={wagmiAdapter.wagmiConfig as Config} initialState={initialState}>
       <QueryClientProvider client={queryClient}>
-        <CeramicProvider>
-          {children}
-        </CeramicProvider>
+        {children}
       </QueryClientProvider>
     </WagmiProvider>
   )

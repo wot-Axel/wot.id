@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import dynamic from 'next/dynamic';
-import { useDataAccess } from '@/hooks/useDataAccess';
-import { DataType } from '@/utils/ceramicUtils';
+import { useDataAccess, DataType } from '@/hooks/useDataAccess';
 
 // Define a common interface for data records
 interface DataRecord {

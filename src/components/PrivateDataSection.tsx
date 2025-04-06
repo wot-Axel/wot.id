@@ -13,7 +13,6 @@ import {
   clearData
 } from '@/utils/tablelandUtils';
 import { useTableland } from '@/context/TablelandContext';
-import { useComposeDBEnabled, useTablelandEnabled } from '@/context/DataProviders';
 
 export const PrivateDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
@@ -29,7 +28,7 @@ export const PrivateDataSection = () => {
   const { client, isInitialized, isLoading: tablelandLoading, connect } = useTableland();
   
   // Check if we should use Tableland
-  const tablelandEnabled = useTablelandEnabled();
+  const tablelandEnabled = true; // Always using Tableland now
 
   // Initialize Tableland connection
   useEffect(() => {

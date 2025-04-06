@@ -4,7 +4,7 @@ import React from 'react';
 // Import ContextProvider with proper type handling
 import ContextProvider from '@/context';
 import { XmtpProvider } from '@/context/XmtpContext';
-import { DataProviders } from '@/context/DataProviders';
+import { TablelandProvider } from '@/context/TablelandContext';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Footer } from '@/components/Footer';
 
@@ -19,13 +19,13 @@ export function ClientLayout({
     <>
       <ContextProvider cookies={cookies || null}>
         <XmtpProvider>
-          <DataProviders>
+          <TablelandProvider>
             <TopNavigation />
             <main className="main-content">
               {children}
             </main>
             <Footer />
-          </DataProviders>
+          </TablelandProvider>
         </XmtpProvider>
       </ContextProvider>
     </>
