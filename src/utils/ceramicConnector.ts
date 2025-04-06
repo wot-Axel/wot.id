@@ -79,6 +79,9 @@ export const checkNodeHealth = async (nodeUrl: string): Promise<boolean> => {
  * @returns Array of failed node URLs
  */
 export const getFailedNodes = (): string[] => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return [];
+  }
   try {
     const failedNodesStr = localStorage.getItem(LOCAL_STORAGE_KEYS.FAILED_NODES);
     return failedNodesStr ? JSON.parse(failedNodesStr) : [];
@@ -93,6 +96,9 @@ export const getFailedNodes = (): string[] => {
  * @param nodeUrl URL of the failed node
  */
 export const addFailedNode = (nodeUrl: string): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
   try {
     const failedNodes = getFailedNodes();
     if (!failedNodes.includes(nodeUrl)) {
@@ -109,6 +115,9 @@ export const addFailedNode = (nodeUrl: string): void => {
  * @param nodeUrl URL of the node to remove
  */
 export const removeFailedNode = (nodeUrl: string): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
   try {
     const failedNodes = getFailedNodes();
     const updatedNodes = failedNodes.filter(node => node !== nodeUrl);
@@ -123,6 +132,9 @@ export const removeFailedNode = (nodeUrl: string): void => {
  * @returns URL of the last successful node, or null if none
  */
 export const getLastSuccessfulNode = (): string | null => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return null;
+  }
   return localStorage.getItem(LOCAL_STORAGE_KEYS.SUCCESSFUL_NODE);
 };
 
@@ -131,6 +143,9 @@ export const getLastSuccessfulNode = (): string | null => {
  * @param nodeUrl URL of the successful node
  */
 export const setLastSuccessfulNode = (nodeUrl: string): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
   localStorage.setItem(LOCAL_STORAGE_KEYS.SUCCESSFUL_NODE, nodeUrl);
   // Also remove from failed nodes if it was previously failed
   removeFailedNode(nodeUrl);
@@ -161,6 +176,9 @@ export const generateDeterministicDIDKey = (identity: string): Uint8Array => {
  * @param privateKey Private key as hex string
  */
 export const storeDIDKey = (privateKey: string): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
   localStorage.setItem(LOCAL_STORAGE_KEYS.DID_KEY, privateKey);
 };
 
@@ -169,6 +187,9 @@ export const storeDIDKey = (privateKey: string): void => {
  * @returns Private key as hex string, or null if not found
  */
 export const getStoredDIDKey = (): string | null => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return null;
+  }
   return localStorage.getItem(LOCAL_STORAGE_KEYS.DID_KEY);
 };
 

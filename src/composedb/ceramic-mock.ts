@@ -34,6 +34,12 @@ const STORAGE_KEYS = {
  * Create a mock DID for the mock Ceramic client
  */
 const createMockDID = (): DID => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    // Return a static mock DID for server-side rendering
+    return createDIDFromId('did:key:mock-server-side');
+  }
+
   // Check if we have a stored DID
   const storedDID = localStorage.getItem(STORAGE_KEYS.DID);
   if (storedDID) {
@@ -66,13 +72,12 @@ export const createMockCeramicClient = (): CeramicClient => {
   // Set a mock DID
   mockClient.did = createMockDID();
   
+  // Check if we're in a browser environment
+  const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+  
   // Add mock methods for document operations
   (mockClient as any).createDocument = async (doctype: string, content: any) => {
     console.log(`[Mock Ceramic] Creating document of type ${doctype}`);
-    
-    // Get existing documents
-    const storedDocumentsJson = localStorage.getItem(STORAGE_KEYS.DOCUMENTS) || '[]';
-    const storedDocuments: StoredDocument[] = JSON.parse(storedDocumentsJson);
     
     // Create a new document
     const streamId = generateMockStreamId();
@@ -87,9 +92,16 @@ export const createMockCeramicClient = (): CeramicClient => {
       tags: content.tags || []
     };
     
-    // Store the document
-    storedDocuments.push(newDocument);
-    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(storedDocuments));
+    // Only attempt to use localStorage in browser environment
+    if (isBrowser) {
+      // Get existing documents
+      const storedDocumentsJson = localStorage.getItem(STORAGE_KEYS.DOCUMENTS) || '[]';
+      const storedDocuments: StoredDocument[] = JSON.parse(storedDocumentsJson);
+      
+      // Store the document
+      storedDocuments.push(newDocument);
+      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(storedDocuments));
+    }
     
     // Return a mock document object that matches the Ceramic API
     return {
@@ -114,6 +126,27 @@ export const createMockCeramicClient = (): CeramicClient => {
   // Add mock method for loading documents
   (mockClient as any).loadDocument = async (streamId: string | StreamID) => {
     console.log(`[Mock Ceramic] Loading document ${streamId}`);
+    
+    // For server-side rendering, return an empty document
+    if (!isBrowser) {
+      return {
+        id: streamId.toString(),
+        content: {},
+        metadata: {
+          controllers: ['server-side-mock'],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        state: {
+          content: {},
+          metadata: {
+            controllers: ['server-side-mock'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        }
+      };
+    }
     
     // Get existing documents
     const storedDocumentsJson = localStorage.getItem(STORAGE_KEYS.DOCUMENTS) || '[]';
@@ -155,22 +188,26 @@ export const createMockCeramicClient = (): CeramicClient => {
  * Check if the environment should use the mock implementation
  */
 export const shouldUseMockImplementation = (): boolean => {
-  // Always use mock in production
-  if (typeof window !== 'undefined') {
-    const isProduction = 
-      window.location.hostname !== 'localhost' && 
-      !window.location.hostname.includes('127.0.0.1');
-    
-    return isProduction;
+  // During server-side rendering, return false to avoid browser API calls
+  if (typeof window === 'undefined') {
+    return false;
   }
+
+  // Always use mock in production
+  const isProduction = 
+    window.location.hostname !== 'localhost' && 
+    !window.location.hostname.includes('127.0.0.1');
   
-  return false;
+  return isProduction;
 };
 
 /**
  * Get all documents stored in the mock implementation
  */
 export const getAllMockDocuments = (): StoredDocument[] => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return [];
+  }
   const storedDocumentsJson = localStorage.getItem(STORAGE_KEYS.DOCUMENTS) || '[]';
   return JSON.parse(storedDocumentsJson);
 };
@@ -179,6 +216,10 @@ export const getAllMockDocuments = (): StoredDocument[] => {
  * Clear all mock data (useful for testing)
  */
 export const clearMockData = (): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
   localStorage.removeItem(STORAGE_KEYS.DOCUMENTS);
   localStorage.removeItem(STORAGE_KEYS.COLLECTIONS);
+  localStorage.removeItem(STORAGE_KEYS.DID);
 };

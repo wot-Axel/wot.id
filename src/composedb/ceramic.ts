@@ -157,6 +157,9 @@ export const getCeramicStatus = (): {
  * @returns The storage object
  */
 const getStorage = (): Record<string, ContentRecord[]> => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return {};
+  }
   try {
     const storage = localStorage.getItem(CERAMIC_STORAGE_KEY);
     return storage ? JSON.parse(storage) : {};
@@ -171,6 +174,9 @@ const getStorage = (): Record<string, ContentRecord[]> => {
  * @param storage The storage object to save
  */
 const saveStorage = (storage: Record<string, ContentRecord[]>): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
   try {
     localStorage.setItem(CERAMIC_STORAGE_KEY, JSON.stringify(storage));
   } catch (error) {
