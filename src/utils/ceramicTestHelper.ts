@@ -42,7 +42,8 @@ export const initTestCeramic = async (): Promise<CeramicClient> => {
  * Get test data for a specific data type
  */
 export const getTestData = (dataType: DataType): any => {
-  const testData = {
+  // Using a Record type to ensure type safety with DataType enum
+  const testData: Partial<Record<DataType, any>> = {
     [DataType.PROFILE]: {
       firstName: 'John',
       lastName: 'Doe',
@@ -71,5 +72,6 @@ export const getTestData = (dataType: DataType): any => {
     }
   };
 
-  return testData[dataType] || {};
+  // Use type assertion to handle all possible DataType values
+  return (testData as Record<DataType, any>)[dataType] || {};
 };
