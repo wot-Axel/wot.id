@@ -136,54 +136,95 @@ export const initTableland = async (): Promise<Database> => {
     throw new Error('Tableland initialization is not supported during server-side rendering');
   }
   
-  try {
-    debugLog('Starting Tableland initialization');
-    
-    // Check if window.ethereum is available
-    if (typeof window.ethereum === 'undefined') {
-      const errorMsg = 'No Ethereum provider found. Please install a wallet like MetaMask.';
-      debugLog(errorMsg);
-      throw new Error(errorMsg);
-    }
-    
-    debugLog('Ethereum provider detected', { 
-      provider: typeof window.ethereum,
-      isMetaMask: window.ethereum.isMetaMask,
-      chainId: window.ethereum.chainId
-    });
-    
-    // Create a new instance of Database with default options
-    // This will use the connected wallet's address automatically
-    debugLog('Creating new Database instance');
-    const db = new Database();
-    
-    // Log database instance details
-    debugLog('Database instance created successfully', {
-      dbType: typeof db,
-      hasProperties: db ? Object.keys(db) : 'none'
-    });
-    
-    // Add global access for debugging
-    if (typeof window !== 'undefined') {
-      (window as any).tablelandDb = db;
-      (window as any).getTablelandLogs = exportTablelandLogs;
-      (window as any).checkTablelandDb = () => {
-        return {
-          dbExists: !!db,
-          dbType: typeof db,
-          properties: db ? Object.keys(db) : 'none',
-          methods: db ? Object.getOwnPropertyNames(Object.getPrototypeOf(db)) : 'none'
+  // Maximum number of retries for Ethereum provider
+  const MAX_RETRIES = 3;
+  let retryCount = 0;
+  let lastError: Error | null = null;
+  
+  // Retry loop for Ethereum provider
+  while (retryCount < MAX_RETRIES) {
+    try {
+      debugLog(`Starting Tableland initialization (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      
+      // Check if window.ethereum is available
+      if (typeof window.ethereum === 'undefined') {
+        // Wait a moment and try again - the provider might be initializing
+        debugLog('Ethereum provider not found, waiting 500ms before retry...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Check again after waiting
+        if (typeof window.ethereum === 'undefined') {
+          const errorMsg = 'No Ethereum provider found. Please install a wallet like MetaMask.';
+          debugLog(errorMsg);
+          lastError = new Error(errorMsg);
+          retryCount++;
+          continue; // Try again
+        }
+      }
+      
+      // Provider is available
+      debugLog('Ethereum provider detected', { 
+        provider: typeof window.ethereum,
+        isMetaMask: window.ethereum.isMetaMask,
+        chainId: window.ethereum.chainId
+      });
+      
+      // Create a new instance of Database with default options
+      // This will use the connected wallet's address automatically
+      debugLog('Creating new Database instance');
+      const db = new Database();
+      
+      // Verify the database instance
+      if (!db) {
+        throw new Error('Database instance creation failed');
+      }
+      
+      // Log database instance details
+      debugLog('Database instance created successfully', {
+        dbType: typeof db,
+        hasProperties: db ? Object.keys(db) : 'none'
+      });
+      
+      // Add global access for debugging
+      if (typeof window !== 'undefined') {
+        (window as any).tablelandDb = db;
+        (window as any).getTablelandLogs = exportTablelandLogs;
+        (window as any).checkTablelandDb = () => {
+          return {
+            dbExists: !!db,
+            dbType: typeof db,
+            properties: db ? Object.keys(db) : 'none',
+            methods: db ? Object.getOwnPropertyNames(Object.getPrototypeOf(db)) : 'none'
+          };
         };
-      };
+      }
+      
+      // Success - return the database instance
+      return db;
+    } catch (error) {
+      // Log the error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      debugLog(`Error initializing Tableland (attempt ${retryCount + 1}/${MAX_RETRIES}): ${errorMessage}`, error);
+      console.error(`Error initializing Tableland (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error);
+      
+      // Store the error for potential re-throw
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // Increment retry counter
+      retryCount++;
+      
+      // Wait longer between retries
+      if (retryCount < MAX_RETRIES) {
+        const waitTime = 1000 * retryCount; // Exponential backoff
+        debugLog(`Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
-    
-    return db;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    debugLog(`Error initializing Tableland: ${errorMessage}`, error);
-    console.error('Error initializing Tableland:', error);
-    throw error;
   }
+  
+  // If we've exhausted all retries, throw the last error
+  debugLog('All initialization attempts failed');
+  throw lastError || new Error('Failed to initialize Tableland after multiple attempts');
 };
 
 // Generic function to create a table
