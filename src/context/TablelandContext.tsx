@@ -15,6 +15,34 @@ import {
 } from '@/utils/tablelandUtils';
 import { Database } from '@tableland/sdk';
 
+// Enhanced logging utility for debugging
+const DEBUG_MODE = true;
+const debugLog = (message: string, data?: any) => {
+  if (DEBUG_MODE) {
+    const timestamp = new Date().toISOString();
+    const logPrefix = `[TABLELAND DEBUG ${timestamp}]`;
+    if (data) {
+      console.log(logPrefix, message, data);
+    } else {
+      console.log(logPrefix, message);
+    }
+    
+    // Add to debug log in localStorage for retrieval
+    try {
+      const existingLogs = localStorage.getItem('tableland_debug_logs') || '[]';
+      const logs = JSON.parse(existingLogs);
+      logs.push({ timestamp, message, data: data ? JSON.stringify(data) : undefined });
+      // Keep only the last 100 logs to prevent localStorage from getting too large
+      if (logs.length > 100) {
+        logs.shift();
+      }
+      localStorage.setItem('tableland_debug_logs', JSON.stringify(logs));
+    } catch (e) {
+      console.error('Failed to save debug log to localStorage:', e);
+    }
+  }
+};
+
 // Define types for our Tableland models
 export interface TablelandModel {
   id: number;
@@ -87,31 +115,39 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
   const connect = async () => {
     // Skip initialization on server-side
     if (typeof window === 'undefined') {
-      console.log('Server-side rendering detected, skipping Tableland initialization');
+      debugLog('Server-side rendering detected, skipping Tableland initialization');
       return;
     }
     
-    if (isLoading || isInitialized || !address) return;
+    if (isLoading || isInitialized || !address) {
+      debugLog(`Skipping connection - isLoading: ${isLoading}, isInitialized: ${isInitialized}, address: ${address ? 'present' : 'missing'}`);
+      return;
+    }
     
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('Connecting to Tableland...');
+      debugLog(`Connecting to Tableland with address: ${address}`);
       
       // Initialize Tableland client
+      debugLog('Calling initTableland()');
       const tablelandClient = await initTableland();
       
       if (!tablelandClient) {
+        debugLog('Tableland client initialization returned null or undefined');
         throw new Error('Failed to initialize Tableland client');
       }
       
+      debugLog('Tableland client initialized successfully', tablelandClient);
       setClient(tablelandClient);
       setIsInitialized(true);
-      console.log('Connected to Tableland');
+      debugLog('Connected to Tableland');
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error connecting to Tableland';
+      debugLog(`Error connecting to Tableland: ${errorMessage}`, err);
       console.error('Error connecting to Tableland:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error connecting to Tableland');
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -138,12 +174,13 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
   const getTableName = async (modelType: TableType): Promise<string | null> => {
     // Skip if we're on the server side
     if (typeof window === 'undefined') {
-      console.log('Server-side rendering detected, skipping getTableName');
+      debugLog(`Server-side rendering detected, skipping getTableName for ${modelType}`);
       // Return a placeholder for server-side rendering
       return `${modelType.toString().toLowerCase()}_placeholder`;
     }
     
     if (!isInitialized || !client || !address) {
+      debugLog(`Tableland not initialized for getTableName - isInitialized: ${isInitialized}, client: ${client ? 'present' : 'missing'}, address: ${address ? 'present' : 'missing'}`);
       console.error('Tableland not initialized');
       return `${modelType.toString().toLowerCase()}_uninit`;
     }
@@ -163,8 +200,11 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
       // Check if table exists
       let result = null;
       try {
+        debugLog(`Checking if table exists for ${modelType} with address ${address}`);
         result = await checkTableExists(client, modelType, address);
+        debugLog(`Table exists check result for ${modelType}:`, result);
       } catch (checkError) {
+        debugLog(`Error checking if table exists for ${modelType}:`, checkError);
         console.error(`Error checking if table exists for ${modelType}:`, checkError);
         return fallbackName;
       }
@@ -190,10 +230,13 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
       
       // If table doesn't exist, create it
       try {
+        debugLog(`Creating table for ${modelType} with address ${address}`);
         const newTableName = await createTable(client, modelType, address);
+        debugLog(`Table creation result for ${modelType}:`, newTableName);
         
         // Handle case where newTableName might be null or undefined
         if (!newTableName) {
+          debugLog(`Null result from createTable for ${modelType}`);
           console.warn(`Null result from createTable for ${modelType}`);
           return fallbackName;
         }
@@ -420,6 +463,33 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
+  // Add a global function to retrieve debug logs
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).getTablelandDebugLogs = () => {
+        try {
+          const logs = localStorage.getItem('tableland_debug_logs') || '[]';
+          return JSON.parse(logs);
+        } catch (e) {
+          console.error('Failed to retrieve debug logs:', e);
+          return [];
+        }
+      };
+      
+      // Add a function to check Tableland client state
+      (window as any).checkTablelandState = () => {
+        return {
+          isInitialized,
+          isLoading,
+          error,
+          clientExists: !!client,
+          address,
+          tableNames
+        };
+      };
+    }
+  }, [isInitialized, isLoading, error, client, address, tableNames]);
+
   return (
     <TablelandContext.Provider
       value={{

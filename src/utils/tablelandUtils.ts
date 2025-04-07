@@ -31,15 +31,76 @@ export enum TableType {
   CHAT = 'chat'
 }
 
+// Enhanced logging utility for debugging
+const DEBUG_MODE = true;
+const debugLog = (message: string, data?: any) => {
+  if (DEBUG_MODE) {
+    const timestamp = new Date().toISOString();
+    const logPrefix = `[TABLELAND UTILS ${timestamp}]`;
+    if (data) {
+      console.log(logPrefix, message, data);
+    } else {
+      console.log(logPrefix, message);
+    }
+    
+    // Add to debug log in localStorage for retrieval
+    try {
+      if (typeof window !== 'undefined') {
+        const existingLogs = localStorage.getItem('tableland_utils_logs') || '[]';
+        const logs = JSON.parse(existingLogs);
+        logs.push({ timestamp, message, data: data ? JSON.stringify(data) : undefined });
+        // Keep only the last 100 logs to prevent localStorage from getting too large
+        if (logs.length > 100) {
+          logs.shift();
+        }
+        localStorage.setItem('tableland_utils_logs', JSON.stringify(logs));
+      }
+    } catch (e) {
+      console.error('Failed to save debug log to localStorage:', e);
+    }
+  }
+};
+
+// Utility function to retrieve all debug logs
+export const getTablelandDebugLogs = () => {
+  if (typeof window === 'undefined') return { utils: [], context: [] };
+  
+  try {
+    const utilsLogs = localStorage.getItem('tableland_utils_logs') || '[]';
+    const contextLogs = localStorage.getItem('tableland_debug_logs') || '[]';
+    return {
+      utils: JSON.parse(utilsLogs),
+      context: JSON.parse(contextLogs)
+    };
+  } catch (e) {
+    console.error('Failed to retrieve debug logs:', e);
+    return { utils: [], context: [] };
+  }
+};
+
+// Function to export logs to console for easy copying
+export const exportTablelandLogs = () => {
+  if (typeof window === 'undefined') return;
+  
+  const logs = getTablelandDebugLogs();
+  console.log('========== TABLELAND DEBUG LOGS ==========');
+  console.log(JSON.stringify(logs, null, 2));
+  console.log('=========================================');
+  return logs;
+};
+
 // Utility function to execute a database operation with retry logic
 export const executeWithRetry = async <T>(operation: () => Promise<T>, tableType: TableType): Promise<T> => {
   let lastError: Error | null = null;
   
   for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
     try {
+      debugLog(`Attempt ${attempt}/${MAX_RETRY_ATTEMPTS} for ${tableType} operation`);
       return await operation();
     } catch (error) {
       lastError = error as Error;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      debugLog(`Attempt ${attempt}/${MAX_RETRY_ATTEMPTS} failed for ${tableType} operation: ${errorMessage}`, error);
       console.error(`Attempt ${attempt}/${MAX_RETRY_ATTEMPTS} failed for ${tableType} operation:`, error);
       
       // If this is the last attempt, don't delay, just throw
@@ -47,6 +108,7 @@ export const executeWithRetry = async <T>(operation: () => Promise<T>, tableType
       
       // Exponential backoff delay
       const delay = RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
+      debugLog(`Retrying after ${delay}ms delay`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -69,17 +131,56 @@ export const sanitizeInput = (input: string): string => {
 export const initTableland = async (): Promise<Database> => {
   // Skip initialization on server-side
   if (typeof window === 'undefined') {
+    debugLog('Server-side rendering detected, skipping Tableland initialization');
     console.log('Server-side rendering detected, skipping Tableland initialization');
     throw new Error('Tableland initialization is not supported during server-side rendering');
   }
   
   try {
+    debugLog('Starting Tableland initialization');
+    
+    // Check if window.ethereum is available
+    if (typeof window.ethereum === 'undefined') {
+      const errorMsg = 'No Ethereum provider found. Please install a wallet like MetaMask.';
+      debugLog(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    debugLog('Ethereum provider detected', { 
+      provider: typeof window.ethereum,
+      isMetaMask: window.ethereum.isMetaMask,
+      chainId: window.ethereum.chainId
+    });
+    
     // Create a new instance of Database with default options
     // This will use the connected wallet's address automatically
+    debugLog('Creating new Database instance');
     const db = new Database();
+    
+    // Log database instance details
+    debugLog('Database instance created successfully', {
+      dbType: typeof db,
+      hasProperties: db ? Object.keys(db) : 'none'
+    });
+    
+    // Add global access for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).tablelandDb = db;
+      (window as any).getTablelandLogs = exportTablelandLogs;
+      (window as any).checkTablelandDb = () => {
+        return {
+          dbExists: !!db,
+          dbType: typeof db,
+          properties: db ? Object.keys(db) : 'none',
+          methods: db ? Object.getOwnPropertyNames(Object.getPrototypeOf(db)) : 'none'
+        };
+      };
+    }
     
     return db;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    debugLog(`Error initializing Tableland: ${errorMessage}`, error);
     console.error('Error initializing Tableland:', error);
     throw error;
   }
@@ -90,9 +191,12 @@ export const createTable = async (db: Database, tableType: TableType, address: s
   return executeWithRetry(async () => {
     // Skip if we're on the server side
     if (typeof window === 'undefined') {
+      debugLog(`Server-side rendering detected, skipping table creation for ${tableType}`);
       console.log('Server-side rendering detected, skipping table creation');
       return `${tableType}_placeholder`;
     }
+    
+    debugLog(`Creating table for ${tableType} with address ${address}`, { dbExists: !!db });
     
     try {
       // Create a real Tableland table with the appropriate schema
@@ -109,21 +213,33 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       const tableName = `${safeTableType}_${prefix}`;
       
       // Create the table
-      const createResult = await db.prepare(`
+      debugLog(`Preparing to create table ${tableName} with SQL statement`);
+      const createStatement = `
         CREATE TABLE ${tableName} (
           id INTEGER PRIMARY KEY,
           item_key TEXT NOT NULL,
           item_value TEXT NOT NULL,
           created_at TEXT NOT NULL
         )
-      `).run();
+      `;
+      debugLog(`SQL statement for table creation: ${createStatement}`);
+      
+      const createResult = await db.prepare(createStatement).run();
+      debugLog(`Table creation result:`, createResult);
       
       // Safely access the meta property
       const meta = createResult?.meta;
+      debugLog(`Table creation meta:`, meta);
       
       // Wait for transaction to complete if it exists
       if (meta?.txn) {
+        // Avoid accessing hash property directly as it may not exist on all transaction types
+        const txInfo = meta.txn ? JSON.stringify(meta.txn).substring(0, 100) : 'no transaction info';
+        debugLog(`Waiting for transaction to complete: ${txInfo}...`);
         await meta.txn.wait();
+        debugLog(`Transaction completed for table creation`);
+      } else {
+        debugLog(`No transaction to wait for in table creation`);
       }
       
       // Return the actual table name from Tableland or fall back to our constructed name
@@ -147,9 +263,13 @@ export const insertData = async (
   value: string
 ): Promise<void> => {
   return executeWithRetry(async () => {
+    debugLog(`Inserting data into ${tableType} table ${tableName}`, { keyLength: key?.length, valueLength: value?.length });
+    
     // Validate inputs to prevent SQL injection
     if (!key || !value) {
-      throw new Error('Key and value must not be empty');
+      const errorMsg = 'Key and value must not be empty';
+      debugLog(`Validation error: ${errorMsg}`, { key, value });
+      throw new Error(errorMsg);
     }
     
     // Sanitize inputs using our utility function
@@ -172,9 +292,12 @@ export const insertData = async (
 export const getData = async (db: Database, tableType: TableType, tableName: string): Promise<TableData[]> => {
   // Skip if we're on the server side
   if (typeof window === 'undefined') {
+    debugLog(`Server-side rendering detected, skipping getData for ${tableType}`);
     console.log('Server-side rendering detected, skipping getData');
     return [];
   }
+  
+  debugLog(`Getting data for ${tableType} from table ${tableName}`, { dbExists: !!db });
   
   // Validate inputs
   if (!db) {
@@ -220,6 +343,7 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
 export const checkTableExists = async (db: Database, tableType: TableType, address: string): Promise<{exists: boolean, tableName: string}> => {
   // Skip if we're on the server side
   if (typeof window === 'undefined') {
+    debugLog(`Server-side rendering detected, skipping table check for ${tableType}`);
     console.log('Server-side rendering detected, skipping table check');
     // Return a default response for server-side rendering
     return { exists: false, tableName: `${tableType}_placeholder` };
@@ -227,14 +351,21 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
   
   // Validate inputs
   if (!db) {
+    debugLog(`Database instance is null or undefined for ${tableType} table check`);
     console.error('Database instance is null or undefined');
     return { exists: false, tableName: `${tableType}_error` };
   }
   
   if (!address) {
+    debugLog(`Address is null or undefined for ${tableType} table check`);
     console.error('Address is null or undefined');
     return { exists: false, tableName: `${tableType}_error` };
   }
+  
+  debugLog(`Starting table existence check for ${tableType} with address ${address}`, {
+    dbType: typeof db,
+    hasProperties: db ? Object.keys(db) : 'none'
+  });
   
   try {
     // Format the address correctly - remove 0x prefix and use lowercase
@@ -247,20 +378,48 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
     const tableName = `${safeTableType}_${prefix}`;
     
+    debugLog(`Constructed table name for check: ${tableName} for type ${tableType} and address ${address}`);
+    
     try {
       // Check if the table exists by trying to query it
       // This will throw an error if the table doesn't exist
-      const result = await db.prepare(`SELECT * FROM ${tableName} LIMIT 1`).all();
+      debugLog(`Preparing to query table ${tableName} to check existence`);
+      const sqlQuery = `SELECT * FROM ${tableName} LIMIT 1`;
+      debugLog(`SQL query for table check: ${sqlQuery}`);
+      
+      const result = await db.prepare(sqlQuery).all();
+      const hasResults = result?.results?.length > 0;
+      
+      debugLog(`Table ${tableName} exists, query returned results: ${hasResults}`, result);
       
       // If we get here, the table exists
       return { exists: true, tableName };
     } catch (queryError) {
-      // Specific error for table not found
+      // Extract error message
+      const errorMessage = queryError instanceof Error ? queryError.message : String(queryError);
+      
+      // Log detailed error information
+      debugLog(`Error checking if table ${tableName} exists: ${errorMessage}`, queryError);
+      
+      // Check if the error is specifically about the table not existing
+      const isTableNotFoundError = 
+        errorMessage.includes('does not exist') || 
+        errorMessage.includes('no such table') ||
+        errorMessage.includes('not found');
+      
+      if (isTableNotFoundError) {
+        debugLog(`Table ${tableName} confirmed not to exist (expected error)`);
+      } else {
+        debugLog(`Unexpected error during table check for ${tableName}: ${errorMessage}`);
+      }
+      
       console.log(`Table ${tableName} does not exist:`, queryError);
       return { exists: false, tableName };
     }
   } catch (error) {
     // Handle any other errors
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    debugLog(`Unexpected error in checkTableExists for ${tableType}: ${errorMessage}`, error);
     console.error(`Error checking if table ${tableType} exists:`, error);
     
     // Ensure we return a valid tableName even in error case
@@ -272,6 +431,7 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
       tableName = `${safeTableType}_${prefix}`;
     }
     
+    debugLog(`Returning fallback table name: ${tableName}`);
     return { exists: false, tableName };
   }
 };
