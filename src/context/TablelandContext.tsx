@@ -194,7 +194,8 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
     const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
     const addressPrefix = cleanAddress.toLowerCase().slice(0, 8);
     const safeModelType = modelType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    const fallbackName = `${safeModelType}_${addressPrefix}`;
+    // Always use lowercase for the entire table name to ensure consistency
+    const fallbackName = `${safeModelType}_${addressPrefix}`.toLowerCase();
     
     try {
       // Check if table exists
@@ -369,14 +370,16 @@ export const TablelandProvider = ({ children }: { children: ReactNode }) => {
         
         // In Tableland, we need to delete and re-insert to update
         // First, delete the record
+        // Ensure table name is lowercase for consistency
+        const safeTableName = tableName.toLowerCase();
         await client.prepare(`
-          DELETE FROM ${tableName} WHERE id = ${id}
+          DELETE FROM ${safeTableName} WHERE id = ${id}
         `).run();
         
         // Then insert the new record with the same ID
         const timestamp = new Date().toISOString();
         await client.prepare(`
-          INSERT INTO ${tableName} (id, item_key, item_value, created_at)
+          INSERT INTO ${safeTableName} (id, item_key, item_value, created_at)
           VALUES (${id}, '${key}', '${value}', '${timestamp}')
         `).run();
         

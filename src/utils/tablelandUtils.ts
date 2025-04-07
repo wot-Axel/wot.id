@@ -246,12 +246,14 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       
       // Ensure address is properly formatted
       const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
+      // Always use lowercase for the prefix to ensure consistency
       const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
       
       // Ensure tableName follows Tableland naming conventions
       // Tableland requires lowercase names with only alphanumeric characters and underscores
       const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      const tableName = `${safeTableType}_${prefix}`;
+      // Always use lowercase for the entire table name to ensure consistency
+      const tableName = `${safeTableType}_${prefix}`.toLowerCase();
       
       // Create the table
       debugLog(`Preparing to create table ${tableName} with SQL statement`);
@@ -284,13 +286,14 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       }
       
       // Return the actual table name from Tableland or fall back to our constructed name
-      return (meta?.txn?.name) || tableName;
+      // Always ensure the returned table name is lowercase
+      return ((meta?.txn?.name) || tableName).toLowerCase();
     } catch (error) {
       console.error(`Error creating table for ${tableType}:`, error);
       // Return a fallback name in case of error
-      const fallbackPrefix = address ? (address.startsWith('0x') ? address.slice(2, 10) : address.slice(0, 8)) : 'error';
+      const fallbackPrefix = address ? (address.startsWith('0x') ? address.slice(2, 10) : address.slice(0, 8)).toLowerCase() : 'error';
       const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      return `${safeTableType}_${fallbackPrefix}`;
+      return `${safeTableType}_${fallbackPrefix}`.toLowerCase();
     }
   }, tableType);
 };
@@ -354,6 +357,7 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
   try {
     // Ensure tableName follows Tableland naming conventions
     // Tableland requires lowercase names with only alphanumeric characters and underscores
+    // Always convert to lowercase to ensure consistency
     const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
     
     // Query data from the Tableland table
@@ -451,6 +455,7 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     // Format the address correctly - remove 0x prefix and use lowercase
     // Handle case where address might not start with 0x
     const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
+    // Always use lowercase for the prefix to ensure consistency
     const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
     
     // Ensure tableName follows Tableland naming conventions
