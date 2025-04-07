@@ -357,23 +357,62 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
     const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
     
     // Query data from the Tableland table
+    debugLog(`Executing query on table ${safeTableName}`);
     const queryResult = await db.prepare(`
       SELECT id, item_key, item_value, created_at FROM ${safeTableName} ORDER BY id ASC
     `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
     
-    // Safely access the results property
-    const results = queryResult?.results || [];
+    // Log the structure of queryResult to help debug
+    debugLog(`Query result structure: ${JSON.stringify(Object.keys(queryResult || {}))}`);
+    
+    // Handle different response structures from Tableland SDK
+    let results: Array<{id: number, item_key: string, item_value: string, created_at: string} | any> = [];
+    
+    // Check if queryResult is an array directly
+    if (Array.isArray(queryResult)) {
+      debugLog('Query result is an array directly');
+      results = queryResult;
+    }
+    // Check if queryResult has a results property that is an array
+    else if (queryResult && Array.isArray((queryResult as any).results)) {
+      debugLog('Query result has a results array property');
+      results = (queryResult as any).results;
+    }
+    // Check if queryResult has a rows property that is an array (some versions use this)
+    else if (queryResult && 'rows' in queryResult && Array.isArray((queryResult as any).rows)) {
+      debugLog('Query result has a rows array property');
+      results = (queryResult as any).rows;
+    }
+    // Check if queryResult has a data property that is an array (some versions use this)
+    else if (queryResult && 'data' in queryResult && Array.isArray((queryResult as any).data)) {
+      debugLog('Query result has a data array property');
+      results = (queryResult as any).data;
+    }
+    // If we can't determine the structure, log it and return empty array
+    else {
+      debugLog(`Unable to determine query result structure: ${JSON.stringify(queryResult)}`);
+      results = [];
+    }
+    
+    debugLog(`Found ${results.length} results`);
     
     // Map the results to match the TableData interface
-    const mappedResults = results.map(item => ({
-      id: item.id || 0,
-      key: item.item_key || '',
-      value: item.item_value || '',
-      created_at: item.created_at || new Date().toISOString()
-    }));
+    const mappedResults = results.map((item: {id?: number, item_key?: string, item_value?: string, created_at?: string} | null | undefined) => {
+      // Handle potential missing properties safely
+      if (!item) return { id: 0, key: '', value: '', created_at: new Date().toISOString() };
+      
+      return {
+        id: typeof item.id === 'number' ? item.id : 0,
+        key: item.item_key || '',
+        value: item.item_value || '',
+        created_at: item.created_at || new Date().toISOString()
+      };
+    });
     
     return mappedResults;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    debugLog(`Error getting data from ${tableType} table: ${errorMessage}`, error);
     console.error(`Error getting data from ${tableType} table:`, error);
     // Return empty array instead of throwing to prevent UI crashes
     return [];
