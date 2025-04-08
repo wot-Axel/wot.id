@@ -368,18 +368,26 @@ export const createTable = async (db: Database, tableType: TableType, address: s
         console.log(`[TABLELAND] Table creation result:`, createResult);
         debugLog(`Table creation result:`, createResult);
         
-        // If we get here, the table was created successfully
-        return createResult?.meta?.txn?.name || `${tablePrefix}_10_mockdev`;
+        // Get the table name from the result or construct it manually using the correct format
+        let tableName = createResult?.meta?.txn?.name;
+        
+        // If we don't have a valid table name from the result, construct it manually
+        if (!tableName) {
+          // Format: tablename_chainid_addressprefix
+          tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
+          console.log(`[TABLELAND] Constructed table name: ${tableName}`);
+        }
+        
+        return tableName;
       } catch (error) {
         // Check if this is the mock provider error
         const errorMsg = error instanceof Error ? error.message : String(error);
         if (errorMsg.includes('eth_blockNumber not implemented in mock provider')) {
           // We're in a development environment with a mock provider
-          // Create a mock table name for development purposes
-          console.log(`[TABLELAND] Mock provider detected, using development table name`);
-          const mockTableName = `${tablePrefix}_10_mockdev`;
-          console.log(`[TABLELAND] Using mock table name: ${mockTableName}`);
-          return mockTableName;
+          // Construct a proper table name using the correct format
+          const tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
+          console.log(`[TABLELAND] Mock provider detected, using constructed table name: ${tableName}`);
+          return tableName;
         } else {
           // This is a different error, rethrow it
           throw error;
@@ -506,12 +514,15 @@ export const insertData = async (
       // Check if this is the mock provider error
       if (errorMessage.includes('eth_blockNumber not implemented in mock provider')) {
         // We're in a development environment with a mock provider
-        console.log(`[TABLELAND] Mock provider detected, simulating successful insert for testing`);
-        debugLog(`Mock provider detected, simulating successful insert for testing`);
-        console.log(`[TABLELAND] In production, this would insert: Key=${key}, Value=${value}`);
+        // Instead of simulating success, we should try to use the correct table name format
+        console.log(`[TABLELAND] Mock provider detected, attempting to handle the error`);
+        debugLog(`Mock provider detected, attempting to handle the error`);
         
-        // Return without throwing an error to simulate success
-        return;
+        // Log the error for debugging purposes
+        console.error(`[TABLELAND] Error details:`, error);
+        
+        // Re-throw the error to be handled properly
+        throw new Error(`Failed to insert data: ${errorMessage}. Please ensure the table exists with the correct name format.`);
       }
       
       // For other errors, log and rethrow
