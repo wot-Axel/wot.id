@@ -7,6 +7,7 @@ import { XmtpProvider } from '@/context/XmtpContext';
 import { TablelandProvider } from '@/context/TablelandContext';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Footer } from '@/components/Footer';
+import { LogCaptureInitializer } from '@/components/LogCaptureInitializer';
 
 export function ClientLayout({ 
   children,
@@ -20,6 +21,8 @@ export function ClientLayout({
       <ContextProvider cookies={cookies || null}>
         <XmtpProvider>
           <TablelandProvider>
+            {/* Initialize log capture system */}
+            <LogCaptureInitializer />
             <TopNavigation />
             <main className="main-content">
               {children}
