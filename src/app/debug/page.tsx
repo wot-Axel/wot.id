@@ -5,10 +5,31 @@ import { useTableland } from '@/context/TablelandContext';
 import { getTablelandDebugLogs, exportTablelandLogs } from '@/utils/tablelandUtils';
 import { TableType } from '@/utils/tablelandUtils';
 
+// Interface for parsed server logs
+interface ServerLog {
+  timeUTC: string;
+  timestampInMs: string;
+  requestPath: string;
+  requestMethod: string;
+  responseStatusCode: string;
+  requestId: string;
+  requestUserAgent: string;
+  level: string;
+  environment: string;
+  host: string;
+  deploymentDomain: string;
+  message?: string;
+}
+
 const DebugPage = () => {
   const [logs, setLogs] = useState<any>({ utils: [], context: [] });
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
   const [tableNames, setTableNames] = useState<Record<string, string | null>>({});
+  const [serverLogs, setServerLogs] = useState<ServerLog[]>([]);
+  const [serverLogsInput, setServerLogsInput] = useState('');
+  const [filterPath, setFilterPath] = useState('');
+  const [filterMethod, setFilterMethod] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const tableland = useTableland();
 
   useEffect(() => {
@@ -74,11 +95,83 @@ const DebugPage = () => {
     }
   };
 
+  // Parse server logs from CSV format
+  const parseServerLogs = () => {
+    if (!serverLogsInput) return;
+    
+    try {
+      // Split by newlines to get rows
+      const rows = serverLogsInput.trim().split('\n');
+      
+      // Get headers from first row
+      const headers = rows[0].split(',').map(h => h.replace(/"/g, ''));
+      
+      // Parse data rows
+      const parsedLogs: ServerLog[] = [];
+      
+      for (let i = 1; i < rows.length; i++) {
+        // Handle CSV properly (respect quoted values)
+        const row = rows[i];
+        const values: string[] = [];
+        let insideQuote = false;
+        let currentValue = '';
+        
+        for (let j = 0; j < row.length; j++) {
+          const char = row[j];
+          
+          if (char === '"') {
+            insideQuote = !insideQuote;
+          } else if (char === ',' && !insideQuote) {
+            values.push(currentValue);
+            currentValue = '';
+          } else {
+            currentValue += char;
+          }
+        }
+        
+        // Add the last value
+        values.push(currentValue);
+        
+        // Create log object
+        const logEntry: any = {};
+        headers.forEach((header, index) => {
+          if (index < values.length) {
+            logEntry[header] = values[index].replace(/"/g, '');
+          }
+        });
+        
+        parsedLogs.push(logEntry as ServerLog);
+      }
+      
+      setServerLogs(parsedLogs);
+    } catch (error) {
+      console.error('Error parsing server logs:', error);
+      alert('Error parsing logs. Please check the format.');
+    }
+  };
+  
+  // Filter logs based on criteria
+  const getFilteredLogs = () => {
+    return serverLogs.filter(log => {
+      const pathMatch = !filterPath || log.requestPath?.includes(filterPath);
+      const methodMatch = !filterMethod || log.requestMethod === filterMethod;
+      const statusMatch = !filterStatus || log.responseStatusCode === filterStatus;
+      return pathMatch && methodMatch && statusMatch;
+    });
+  };
+  
+  // Clear filters
+  const clearFilters = () => {
+    setFilterPath('');
+    setFilterMethod('');
+    setFilterStatus('');
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Tableland Debug</h1>
       
-      <div className="mb-6 flex gap-4">
+      <div className="mb-6 flex flex-wrap gap-4">
         <button 
           onClick={refreshLogs}
           className="px-4 py-2 bg-blue-500 text-white rounded"
@@ -192,6 +285,121 @@ window.checkTablelandDb()
 window.tablelandDb`}
           </pre>
         </div>
+      </div>
+      
+      {/* Server Logs Parser */}
+      <div className="mt-8 border-t pt-6">
+        <h2 className="text-2xl font-bold mb-4">Server Logs Parser</h2>
+        
+        <div className="mb-4">
+          <label className="block mb-2 font-medium">Paste Server Logs (CSV format)</label>
+          <textarea
+            className="w-full h-40 p-2 border rounded"
+            value={serverLogsInput}
+            onChange={(e) => setServerLogsInput(e.target.value)}
+            placeholder="Paste CSV logs here..."
+          />
+          <div className="mt-2 flex gap-2">
+            <button 
+              onClick={parseServerLogs}
+              className="px-4 py-2 bg-blue-500 text-white rounded"
+            >
+              Parse Logs
+            </button>
+            <button 
+              onClick={() => setServerLogsInput('')}
+              className="px-4 py-2 bg-gray-500 text-white rounded"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+        
+        {serverLogs.length > 0 && (
+          <>
+            <div className="mb-4 flex flex-wrap gap-4">
+              <div>
+                <label className="block text-sm mb-1">Filter by Path</label>
+                <input
+                  type="text"
+                  className="border rounded p-2"
+                  value={filterPath}
+                  onChange={(e) => setFilterPath(e.target.value)}
+                  placeholder="/path"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Filter by Method</label>
+                <select
+                  className="border rounded p-2"
+                  value={filterMethod}
+                  onChange={(e) => setFilterMethod(e.target.value)}
+                >
+                  <option value="">All</option>
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="HEAD">HEAD</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Filter by Status</label>
+                <select
+                  className="border rounded p-2"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="">All</option>
+                  <option value="200">200</option>
+                  <option value="404">404</option>
+                  <option value="500">500</option>
+                </select>
+              </div>
+              <div className="self-end">
+                <button 
+                  onClick={clearFilters}
+                  className="px-4 py-2 bg-gray-500 text-white rounded"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border">
+                <thead>
+                  <tr className="bg-gray-100 text-left">
+                    <th className="p-2 border">Time (UTC)</th>
+                    <th className="p-2 border">Path</th>
+                    <th className="p-2 border">Method</th>
+                    <th className="p-2 border">Status</th>
+                    <th className="p-2 border">User Agent</th>
+                    <th className="p-2 border">Host</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getFilteredLogs().map((log, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                      <td className="p-2 border">{log.timeUTC}</td>
+                      <td className="p-2 border">{log.requestPath}</td>
+                      <td className="p-2 border">{log.requestMethod}</td>
+                      <td className="p-2 border">
+                        <span className={`px-2 py-1 rounded ${log.responseStatusCode === '200' ? 'bg-green-100' : log.responseStatusCode === '404' ? 'bg-red-100' : 'bg-yellow-100'}`}>
+                          {log.responseStatusCode}
+                        </span>
+                      </td>
+                      <td className="p-2 border text-xs">{log.requestUserAgent}</td>
+                      <td className="p-2 border">{log.host}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="mt-4">
+              <p className="text-sm">Showing {getFilteredLogs().length} of {serverLogs.length} logs</p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

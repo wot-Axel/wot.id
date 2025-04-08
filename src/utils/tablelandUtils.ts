@@ -128,7 +128,7 @@ export const sanitizeInput = (input: string): string => {
 };
 
 // Initialize Tableland database with Optimism chain
-export const initTableland = async (): Promise<Database> => {
+export const initTableland = async (forceAddress?: string): Promise<Database> => {
   console.log('[TABLELAND] Starting Tableland initialization');
   
   // Skip initialization on server-side
@@ -185,7 +185,24 @@ export const initTableland = async (): Promise<Database> => {
       debugLog('Creating new Database instance');
       
       try {
-        const db = new Database();
+        // Create database with specific options if address is provided
+        let db: Database;
+        
+        if (forceAddress) {
+          console.log(`[TABLELAND] Creating Database with specific address: ${forceAddress}`);
+          debugLog(`Creating Database with specific address: ${forceAddress}`);
+          
+          // For now, just create a standard database
+          // The address will be used in the checkTableExists and createTable functions
+          db = new Database();
+          
+          // Log that we're using a forced address
+          console.log(`[TABLELAND] Will use forced address for table operations: ${forceAddress}`);
+          debugLog(`Will use forced address for table operations: ${forceAddress}`);
+        } else {
+          console.log('[TABLELAND] Creating Database with default options');
+          db = new Database();
+        }
         
         // Verify the database instance
         if (!db) {

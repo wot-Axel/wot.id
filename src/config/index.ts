@@ -13,8 +13,8 @@ if (!projectId) {
 // For server-side rendering, we need to use a fixed network order
 // The account-debug page will handle dynamic network ordering on the client side
 
-// Default to mainnet first for the initial configuration
-export const networks = [mainnet, optimism] as [AppKitNetwork, ...AppKitNetwork[]];
+// Default to Optimism first for consistent address generation
+export const networks = [optimism, mainnet] as [AppKitNetwork, ...AppKitNetwork[]];
 
 // Export individual network configurations for client-side use
 export const networkConfigs = {

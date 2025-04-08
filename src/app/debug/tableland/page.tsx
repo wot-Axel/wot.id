@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAppKit } from '@/context';
+import { useAppKitAccount } from '@reown/appkit-controllers/react';
+import { useDisconnect } from '@reown/appkit/react';
+import { ensureCorrectAddress, getStoredCorrectAddress } from '@/utils/addressUtils';
 import { Database } from '@tableland/sdk';
 import { 
   initTableland, 
@@ -12,7 +14,8 @@ import {
 } from '@/utils/tablelandUtils';
 
 export default function TablelandDebugPage() {
-  const { account, isConnected } = useAppKit();
+  const { address: accountAddress, isConnected } = useAppKitAccount();
+  const { disconnect } = useDisconnect();
   const [db, setDb] = useState<Database | null>(null);
   const [address, setAddress] = useState<string>('');
   const [status, setStatus] = useState<string>('Disconnected');
@@ -20,7 +23,7 @@ export default function TablelandDebugPage() {
   const [tableInfo, setTableInfo] = useState<any>(null);
   const [testKey, setTestKey] = useState<string>('test_key');
   const [testValue, setTestValue] = useState<string>('test_value');
-  const [tableType, setTableType] = useState<TableType>(TableType.PROFILE);
+  const [tableType, setTableType] = useState<TableType>(TableType.PRIVATE);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Add a log entry
@@ -30,23 +33,49 @@ export default function TablelandDebugPage() {
 
   // Initialize when connected
   useEffect(() => {
-    if (isConnected && account) {
-      setAddress(account.address);
+    // Log the current account address whenever it changes
+    addLog(`Account address changed: ${accountAddress || 'Not connected'}`);
+    console.log('Account address in Tableland debug:', accountAddress);
+    
+    if (isConnected && accountAddress) {
+      // Get the correct address (either stored or current)
+      const correctAddress = ensureCorrectAddress(accountAddress);
+      console.log('Using address for Tableland:', correctAddress);
+      
+      // If we have a stored address that's different, use that instead
+      if (correctAddress && correctAddress !== accountAddress) {
+        addLog(`Using stored correct address instead of current: ${correctAddress}`);
+        console.warn(`Address mismatch in Tableland! Using stored: ${correctAddress} instead of current: ${accountAddress}`);
+      }
+      
+      setAddress(correctAddress || accountAddress);
       initDb();
     } else {
       setDb(null);
       setStatus('Disconnected');
     }
-  }, [isConnected, account]);
+  }, [isConnected, accountAddress]);
 
   // Initialize Tableland database
   const initDb = async () => {
+    // Get the stored correct address if available
+    const storedAddress = getStoredCorrectAddress();
+    
+    // Double-check that we're using the correct address
+    if (storedAddress && address !== storedAddress) {
+      addLog(`WARNING: Address mismatch! Using: ${address}, Stored: ${storedAddress}`);
+      // Update to use the stored address
+      setAddress(storedAddress);
+      // Wait a moment for the state to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
     try {
       setStatus('Initializing Tableland...');
       addLog('Initializing Tableland database...');
       setIsLoading(true);
       
-      const database = await initTableland();
+      // Pass the correct address to initTableland
+      const database = await initTableland(address);
       setDb(database);
       
       setStatus('Connected to Tableland');
@@ -284,6 +313,28 @@ export default function TablelandDebugPage() {
           </button>
           <button onClick={checkTables} disabled={!db || isLoading}>
             Refresh Table Info
+          </button>
+          <button 
+            onClick={async () => {
+              addLog('Force disconnecting...');
+              try {
+                await disconnect();
+                addLog('Disconnected successfully');
+                setDb(null);
+                setStatus('Disconnected');
+                setAddress('');
+                // Clear localStorage
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('wot_id_correct_address');
+                  addLog('Cleared stored address');
+                }
+              } catch (error) {
+                addLog(`Error disconnecting: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            }} 
+            style={{ background: '#ff4040' }}
+          >
+            Force Disconnect
           </button>
         </div>
       </div>

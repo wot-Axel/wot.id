@@ -1,10 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useAppKit } from '@/context';
+import { useAppKit } from '@reown/appkit/react';
+import { useAppKitAccount } from '@reown/appkit-controllers/react';
+import { useDisconnect } from '@reown/appkit/react';
+import { storeCorrectAddress, getStoredCorrectAddress } from '@/utils/addressUtils';
 
 export default function AddressDebugPage() {
-  const { kit, account, isConnected, connect, disconnect } = useAppKit();
+  const { address, isConnected } = useAppKitAccount();
+  const { disconnect } = useDisconnect();
+  const kit = useAppKit();
   const [addressInfo, setAddressInfo] = useState<any>(null);
   const [kitConfig, setKitConfig] = useState<any>(null);
 
@@ -27,27 +32,29 @@ export default function AddressDebugPage() {
   }, [kit]);
 
   useEffect(() => {
-    if (account && isConnected) {
+    if (address && isConnected) {
       // Get detailed account information
       const info = {
-        address: account.address,
-        chainId: account.chainId,
-        type: account.type,
-        connector: account.connector?.name,
+        address,
         isConnected,
         // Try to get more details about the account
-        details: JSON.stringify(account, (key, value) => {
-          if (key === 'connector' && value && typeof value === 'object') {
-            return { name: value.name, id: value.id };
-          }
-          return value;
-        }, 2)
+        details: JSON.stringify({ address, isConnected }, null, 2)
       };
       setAddressInfo(info);
+      
+      // Store this address as the correct one
+      console.log('Storing correct address from address debug page:', address);
+      storeCorrectAddress(address);
+      
+      // Log if this matches the previously stored address
+      const storedAddress = getStoredCorrectAddress();
+      if (storedAddress && storedAddress.toLowerCase() !== address.toLowerCase()) {
+        console.warn(`Address changed! Previous: ${storedAddress}, Current: ${address}`);
+      }
     } else {
       setAddressInfo(null);
     }
-  }, [account, isConnected]);
+  }, [address, isConnected]);
 
   const handleForceDisconnect = async () => {
     try {
@@ -76,12 +83,13 @@ export default function AddressDebugPage() {
     }
   };
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     try {
-      await connect();
+      // Open the AppKit modal
+      kit.open();
     } catch (error) {
-      console.error('Error during connect:', error);
-      alert(`Error during connect: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('Error opening connect modal:', error);
+      alert(`Error opening connect modal: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 

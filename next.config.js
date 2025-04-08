@@ -49,12 +49,30 @@ const nextConfig = {
   // Completely disable source maps in production
   productionBrowserSourceMaps: false,
   
-  // Allow cross-origin requests in development mode for authentication
-  allowedDevOrigins: process.env.NODE_ENV === 'development' ? [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:*',  // For browser preview
-  ] : [],
+  // Configure experimental features
+  experimental: {
+    // Allow cross-origin requests in development mode for authentication
+    allowedDevOrigins: process.env.NODE_ENV === 'development' ? [
+      'http://localhost:3001',
+      'http://127.0.0.1:3001',
+      'http://localhost:*',
+      'http://127.0.0.1:*',  // For browser preview
+    ] : [],
+  },
+  // Add headers to allow iframe embedding for social logins
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+        ],
+      },
+    ];
+  },
 }
 
 export default nextConfig

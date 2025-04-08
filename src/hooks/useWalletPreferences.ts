@@ -33,16 +33,40 @@ export const getLastUsedWallet = (): string | null => {
  * Hook that provides methods for interacting with the AppKit modal
  */
 export const useWalletPreferences = () => {
-  // Set up event listener for successful connections
+  // Set up event listener for connections and errors
   modal.subscribeEvents((event: any) => {
     if (event.name === 'CONNECT_SUCCESS' && event.data?.wallet?.id) {
       recordWalletUsage(event.data.wallet.id);
+      console.log('Connection successful with wallet:', event.data.wallet.id);
+    }
+    
+    // Log error events for debugging
+    if (event.name === 'ERROR') {
+      console.error('AppKit modal error:', event.data);
+    }
+    
+    // Log timeout events
+    if (event.name === 'TIMEOUT' || (event.data && event.data.error && event.data.error.includes('timeout'))) {
+      console.error('AppKit connection timed out:', event.data);
     }
   });
 
   return {
-    openModal: () => modal.open(),
-    closeModal: () => modal.close(),
+    openModal: () => {
+      try {
+        console.log('Opening AppKit modal...');
+        modal.open();
+      } catch (error) {
+        console.error('Error opening AppKit modal:', error);
+      }
+    },
+    closeModal: () => {
+      try {
+        modal.close();
+      } catch (error) {
+        console.error('Error closing AppKit modal:', error);
+      }
+    },
   };
 };
 
