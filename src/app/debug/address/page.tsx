@@ -42,14 +42,22 @@ export default function AddressDebugPage() {
       };
       setAddressInfo(info);
       
-      // Store this address as the correct one
-      console.log('Storing correct address from address debug page:', address);
+      // For first-time users, store their address as the correct one
+      // For existing users, this won't overwrite their stored address (due to our implementation)
+      console.log('Checking address from address debug page:', address);
       storeCorrectAddress(address);
       
       // Log if this matches the previously stored address
       const storedAddress = getStoredCorrectAddress();
-      if (storedAddress && storedAddress.toLowerCase() !== address.toLowerCase()) {
-        console.warn(`Address changed! Previous: ${storedAddress}, Current: ${address}`);
+      if (storedAddress) {
+        if (storedAddress.toLowerCase() !== address.toLowerCase()) {
+          console.warn(`Address mismatch! Current: ${address}, Stored: ${storedAddress}`);
+          console.log('Using stored address as the source of truth');
+        } else {
+          console.log(`Address match confirmed. Using: ${address}`);
+        }
+      } else {
+        console.log(`First-time user. Address ${address} has been stored as the correct address.`);
       }
     } else {
       setAddressInfo(null);
