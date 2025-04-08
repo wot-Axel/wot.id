@@ -1,6 +1,6 @@
 import { Database } from '@tableland/sdk';
 import { optimism } from '@reown/appkit/networks';
-import { getWalletClient } from '@wagmi/core';
+import { isOptimismChain, getTablelandNetworkRequirements } from './chainUtils';
 
 // Maximum number of retry attempts for blockchain transactions
 const MAX_RETRY_ATTEMPTS = 3;
@@ -205,8 +205,15 @@ export const initTableland = async (forceAddress?: string): Promise<Database> =>
         console.log('[TABLELAND] Creating standard Database instance');
         debugLog('Creating standard Database instance');
         
-        // Create a standard database
+        // Create a standard Database instance
+        // This will use the connected wallet's provider
         db = new Database();
+        
+        console.log('[TABLELAND] Created Database instance');
+        debugLog('Created Database instance');
+        
+        console.log('[TABLELAND] Created Database instance configured for Optimism');
+        debugLog('Created Database instance configured for Optimism');
         
         if (forceAddress) {
           console.log(`[TABLELAND] Will use forced address for table operations: ${forceAddress}`);
@@ -383,10 +390,11 @@ export const createTable = async (db: Database, tableType: TableType, address: s
         // Handle blockchain provider errors generically
         const errorMsg = error instanceof Error ? error.message : String(error);
         
-        // Check for provider-related errors without specifically mentioning mock providers
-        if (errorMsg.includes('eth_blockNumber') || errorMsg.includes('provider')) {
+        // Check for provider-related errors
+        if (errorMsg.includes('provider') || errorMsg.includes('network') || errorMsg.includes('chain') || errorMsg.includes('eth_')) {
           console.error(`[TABLELAND ERROR] Provider error during table creation:`, errorMsg);
-          throw new Error('Unable to create table due to blockchain provider issues. Please ensure you are connected to a supported network.');
+          const { chainName, chainId, helpMessage } = getTablelandNetworkRequirements();
+          throw new Error(`Unable to create table due to blockchain provider issues. Please ensure you are connected to ${chainName} network (Chain ID: ${chainId}) and try again. Your identity will still use your Ethereum mainnet address.`);
         }
         
         // Otherwise just rethrow the original error
@@ -522,9 +530,10 @@ export const insertData = async (
       debugLog(`Error inserting data into ${tableType} table ${tableName}: ${errorMessage}`, error);
       
       // Check for provider-related errors without specifically mentioning mock providers
-      if (errorMessage.includes('eth_blockNumber') || errorMessage.includes('provider')) {
+      if (errorMessage.includes('eth_blockNumber') || errorMessage.includes('provider') || errorMessage.includes('network') || errorMessage.includes('chain')) {
         console.error(`[TABLELAND ERROR] Provider error during data insertion:`, errorMessage);
-        throw new Error('Unable to insert data due to blockchain provider issues. Please ensure you are connected to a supported network.');
+        const { chainName, chainId } = getTablelandNetworkRequirements();
+        throw new Error(`Unable to insert data due to blockchain provider issues. Please ensure you are connected to ${chainName} network (Chain ID: ${chainId}) and try again. Your identity will still use your Ethereum mainnet address.`);
       }
       
       // Re-throw the error to be handled by executeWithRetry
