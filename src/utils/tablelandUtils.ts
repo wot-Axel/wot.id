@@ -206,18 +206,19 @@ export const initTableland = async (forceAddress?: string): Promise<Database> =>
         debugLog('Creating standard Database instance');
         
         try {
-          // Initialize Database with default options
-          // Since we're using AppKit, we don't need to explicitly create a provider or signer
-          // The SDK will use the connected wallet
-          console.log('[TABLELAND] Creating Database instance for chain ID:', optimism.id);
+          console.log('[TABLELAND] Creating Database instance for Optimism');
           
-          // Create a minimal configuration that works with the current wallet
-          db = new Database();
+          // Create a minimal configuration
+          // The autoWait option ensures transactions complete before returning
+          // This helps prevent timing issues with destructuring
+          db = new Database({
+            autoWait: true // Only use documented properties
+          });
           
-          console.log('[TABLELAND] Created Database instance');
-          debugLog('Created Database instance');
+          console.log('[TABLELAND] Created Database instance with autoWait enabled');
+          debugLog('Created Database instance with autoWait enabled');
           
-          // Confirm we're targeting Optimism for table operations
+          // Log that we're using Optimism for consistency in logs
           console.log('[TABLELAND] Tables will use Optimism chain ID:', optimism.id);
           debugLog(`Tables will use Optimism chain ID: ${optimism.id}`);
         } catch (error) {
