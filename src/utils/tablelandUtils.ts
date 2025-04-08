@@ -380,21 +380,8 @@ export const createTable = async (db: Database, tableType: TableType, address: s
         console.log(`[TABLELAND] Successfully created table with name: ${tableName}`);
         return tableName;
       } catch (error) {
-        // Check if this is the mock provider error
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        if (errorMsg.includes('eth_blockNumber not implemented in mock provider')) {
-          // We're in a development environment with a mock provider
-          console.error(`[TABLELAND ERROR] Cannot create table with mock provider: ${errorMsg}`);
-          throw new Error(
-            'Cannot create Tableland tables with a mock provider. ' +
-            'This typically happens when using Smart Accounts in a development environment. ' +
-            'To fix this, please connect to a supported network like Optimism or Ethereum Mainnet, ' +
-            'or use a real wallet instead of the development environment.'
-          );
-        } else {
-          // This is a different error, rethrow it
-          throw error;
-        }
+        // Just rethrow the error without any special handling for mock providers
+        throw error;
       }
       
       // This code should not be reached because we're returning from the try/catch block above
@@ -514,21 +501,7 @@ export const insertData = async (
       // Enhanced error logging
       const errorMessage = error instanceof Error ? error.message : String(error);
       
-      // Check if this is the mock provider error
-      if (errorMessage.includes('eth_blockNumber not implemented in mock provider')) {
-        // We're in a development environment with a mock provider
-        // Instead of simulating success, we should try to use the correct table name format
-        console.log(`[TABLELAND] Mock provider detected, attempting to handle the error`);
-        debugLog(`Mock provider detected, attempting to handle the error`);
-        
-        // Log the error for debugging purposes
-        console.error(`[TABLELAND] Error details:`, error);
-        
-        // Re-throw the error to be handled properly
-        throw new Error(`Failed to insert data: ${errorMessage}. Please ensure the table exists with the correct name format.`);
-      }
-      
-      // For other errors, log and rethrow
+      // Log and rethrow all errors without special handling for mock providers
       console.error(`[TABLELAND ERROR] Failed to insert data into ${tableType} table ${tableName}:`, {
         error: errorMessage,
         stack: error instanceof Error ? error.stack : 'No stack trace',
