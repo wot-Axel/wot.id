@@ -343,16 +343,16 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       // This is our strategic decision to benefit from lower gas costs
       const chainId = 10; // Optimism
       
-      // Always use lowercase for the entire table name to ensure consistency
-      // Format: tablename_chainid_addressprefix
-      const tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
+      // For table creation, we only specify the prefix and let Tableland append the chainId and tableId
+      // Format: tablename (Tableland will append _chainid_tableid automatically)
+      const tablePrefix = `${safeTableType}`.toLowerCase();
       
-      console.log(`[TABLELAND] Constructed table name: ${tableName}`);
+      console.log(`[TABLELAND] Using table prefix: ${tablePrefix}`);
       
       // Create the table
-      debugLog(`Preparing to create table ${tableName} with SQL statement`);
+      debugLog(`Preparing to create table with prefix ${tablePrefix} with SQL statement`);
       const createStatement = `
-        CREATE TABLE ${tableName} (
+        CREATE TABLE ${tablePrefix} (
           id INTEGER PRIMARY KEY,
           item_key TEXT NOT NULL,
           item_value TEXT NOT NULL,
@@ -392,9 +392,12 @@ export const createTable = async (db: Database, tableType: TableType, address: s
         debugLog(`No transaction to wait for in table creation`);
       }
       
-      // Return the actual table name from Tableland or fall back to our constructed name
-      // Always ensure the returned table name is lowercase
-      const finalTableName = ((meta?.txn?.name) || tableName).toLowerCase();
+      // Get the actual table name from Tableland which includes the chainId and tableId
+      // The format will be: {prefix}_{chainId}_{tableId}
+      const finalTableName = meta?.txn?.name;
+      if (!finalTableName) {
+        throw new Error('Table creation failed: No table name returned from Tableland');
+      }
       console.log(`[TABLELAND] Final table name: ${finalTableName}`);
       return finalTableName;
     } catch (error) {
@@ -408,17 +411,9 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       });
       debugLog(`Error creating table for ${tableType}: ${errorMessage}`, error);
       
-      // Return a fallback name in case of error
-      const fallbackPrefix = address ? (address.startsWith('0x') ? address.slice(2, 10) : address.slice(0, 8)).toLowerCase() : 'error';
-      const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      
-      // Use Optimism (Chain ID 10) for all Tableland operations
-      // This is our strategic decision to benefit from lower gas costs
-      const chainId = 10; // Optimism
-      
-      const fallbackTableName = `${safeTableType}_${chainId}_${fallbackPrefix}`.toLowerCase();
-      console.log(`[TABLELAND] Returning fallback table name: ${fallbackTableName}`);
-      return fallbackTableName;
+      // In case of error, we can't create a valid Tableland table name
+      // Just throw the error and let the caller handle it
+      throw error;
     }
   }, tableType);
 };
@@ -473,20 +468,19 @@ export const insertData = async (
       const sanitizedValue = sanitizeInput(value);
       const timestamp = new Date().toISOString();
       
-      // Ensure tableName follows Tableland naming conventions
-      // Always convert to lowercase to ensure consistency
-      const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
-      console.log(`[TABLELAND] Using table name: ${safeTableName}`);
+      // Use the table name as is - it's already properly formatted from createTable
+      // Just log it for debugging purposes
+      console.log(`[TABLELAND] Using table name: ${tableName}`);
       
       // Construct the SQL query
       const sqlQuery = `
-        INSERT INTO ${safeTableName} (item_key, item_value, created_at)
+        INSERT INTO ${tableName} (item_key, item_value, created_at)
         VALUES ('${sanitizedKey}', '${sanitizedValue}', '${timestamp}')
       `;
       console.log(`[TABLELAND] SQL Query: ${sqlQuery}`);
       
       // Insert data into the Tableland table with the new format (with chain ID 10)
-      debugLog(`Inserting into table ${safeTableName}`);
+      debugLog(`Inserting into table ${tableName}`);
       console.log(`[TABLELAND] Preparing to execute insert query`);
       
       // Execute the query
@@ -510,8 +504,8 @@ export const insertData = async (
         console.log(`[TABLELAND] No transaction to wait for, insert may have been completed immediately`);
       }
       
-      debugLog(`Successfully inserted data into table ${safeTableName}`);
-      console.log(`[TABLELAND] Successfully inserted data into table ${safeTableName}`);
+      debugLog(`Successfully inserted data into table ${tableName}`);
+      console.log(`[TABLELAND] Successfully inserted data into table ${tableName}`);
     } catch (error) {
       // Enhanced error logging
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -554,15 +548,11 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
   }
   
   try {
-    // Ensure tableName follows Tableland naming conventions
-    // Tableland requires lowercase names with only alphanumeric characters and underscores
-    // Always convert to lowercase to ensure consistency
-    const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    
-    // Query data from the Tableland table with the new format (with chain ID 10)
-    debugLog(`Executing query on table ${safeTableName}`);
+    // Use the table name as is - it's already properly formatted from createTable
+    // Just log it for debugging purposes
+    debugLog(`Executing query on table ${tableName}`);
     const queryResult = await db.prepare(`
-      SELECT id, item_key, item_value, created_at FROM ${safeTableName} ORDER BY id ASC
+      SELECT id, item_key, item_value, created_at FROM ${tableName} ORDER BY id ASC
     `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
     
     // Log the structure of queryResult to help debug
