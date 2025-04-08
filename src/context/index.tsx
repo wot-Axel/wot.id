@@ -45,6 +45,8 @@ export const modal = createAppKit({
   defaultAccountTypes: { 
     eip155: "smartAccount" // Use Smart Accounts by default for EVM chains
   },
+  // Note: Network order is controlled by the networks array in config/index.ts
+  // We've updated it to prioritize Ethereum mainnet (eip155:1) over Optimism (eip155:10)
   // Note: We're using Smart Accounts to ensure consistent address generation
   // Standard features
   features: {

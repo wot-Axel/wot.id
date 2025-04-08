@@ -131,6 +131,18 @@ export const sanitizeInput = (input: string): string => {
 export const initTableland = async (forceAddress?: string): Promise<Database> => {
   console.log('[TABLELAND] Starting Tableland initialization');
   
+  // Import here to avoid circular dependencies
+  const { getStoredCorrectAddress } = require('./addressUtils');
+  
+  // If no force address is provided, try to get the stored correct address
+  if (!forceAddress) {
+    const storedAddress = getStoredCorrectAddress();
+    if (storedAddress) {
+      console.log(`[TABLELAND] Using stored correct address: ${storedAddress}`);
+      forceAddress = storedAddress;
+    }
+  }
+  
   // Skip initialization on server-side
   if (typeof window === 'undefined') {
     debugLog('Server-side rendering detected, skipping Tableland initialization');

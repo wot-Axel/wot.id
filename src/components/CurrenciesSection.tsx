@@ -1,17 +1,32 @@
 'use client';
 
-import React from 'react';
-import { useAppKitAccount } from '@reown/appkit/react';
+import React, { useEffect, useState } from 'react';
+import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { formatEther } from 'viem';
 import { useBalance } from 'wagmi';
+import { getStoredCorrectAddress, ensureCorrectAddress } from '@/utils/addressUtils';
 
 export const CurrenciesSection = () => {
-  const { address, isConnected } = useAppKitAccount();
+  const { address: currentAddress, isConnected } = useAppKitAccount();
+  const [address, setAddress] = useState<string | undefined>(currentAddress);
+  
+  // Use the correct stored address if available
+  useEffect(() => {
+    const storedAddress = getStoredCorrectAddress();
+    if (storedAddress) {
+      console.log(`[CURRENCIES] Using stored correct address: ${storedAddress} instead of current: ${currentAddress}`);
+      setAddress(storedAddress);
+    } else if (currentAddress) {
+      setAddress(currentAddress);
+    }
+  }, [currentAddress]);
   
   // Fetch the user's ETH balance
-  const { data: ethBalanceData, isLoading, isError } = useBalance({
-    address: address as `0x${string}`,
-  });
+  const { data: ethBalanceData, isLoading, isError } = useBalance(
+    address ? {
+      address: address as `0x${string}`,
+    } : undefined
+  );
 
   if (!isConnected) {
     return null;
