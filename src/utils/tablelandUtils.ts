@@ -250,10 +250,16 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
       
       // Ensure tableName follows Tableland naming conventions
-      // Tableland requires lowercase names with only alphanumeric characters and underscores
+      // Tableland requires lowercase names with format tablename_chainid_uniqueid
       const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      
+      // Use Optimism (Chain ID 10) for all Tableland operations
+      // This is our strategic decision to benefit from lower gas costs
+      const chainId = 10; // Optimism
+      
       // Always use lowercase for the entire table name to ensure consistency
-      const tableName = `${safeTableType}_${prefix}`.toLowerCase();
+      // Format: tablename_chainid_addressprefix
+      const tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
       
       // Create the table
       debugLog(`Preparing to create table ${tableName} with SQL statement`);
@@ -293,7 +299,12 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       // Return a fallback name in case of error
       const fallbackPrefix = address ? (address.startsWith('0x') ? address.slice(2, 10) : address.slice(0, 8)).toLowerCase() : 'error';
       const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      return `${safeTableType}_${fallbackPrefix}`.toLowerCase();
+      
+      // Use Optimism (Chain ID 10) for all Tableland operations
+      // This is our strategic decision to benefit from lower gas costs
+      const chainId = 10; // Optimism
+      
+      return `${safeTableType}_${chainId}_${fallbackPrefix}`.toLowerCase();
     }
   }, tableType);
 };
@@ -360,11 +371,41 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
     // Always convert to lowercase to ensure consistency
     const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
     
-    // Query data from the Tableland table
-    debugLog(`Executing query on table ${safeTableName}`);
-    const queryResult = await db.prepare(`
-      SELECT id, item_key, item_value, created_at FROM ${safeTableName} ORDER BY id ASC
-    `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
+    let queryResult;
+    
+    try {
+      // First try with the new format (with chain ID 10)
+      debugLog(`Executing query on table ${safeTableName}`);
+      queryResult = await db.prepare(`
+        SELECT id, item_key, item_value, created_at FROM ${safeTableName} ORDER BY id ASC
+      `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
+    } catch (newFormatError) {
+      // If the new format fails, try the old format (without chain ID)
+      debugLog(`Error with new table format, trying legacy format: ${newFormatError}`);
+      
+      // Extract the table type and address prefix from the new format table name
+      const parts = safeTableName.split('_');
+      if (parts.length >= 3) {
+        // For a name like 'private_10_ed19f476', we want to try 'private_ed19f476'
+        const tableType = parts[0];
+        const addressPrefix = parts[parts.length - 1];
+        const oldFormatTableName = `${tableType}_${addressPrefix}`;
+        
+        debugLog(`Trying legacy table name: ${oldFormatTableName}`);
+        try {
+          queryResult = await db.prepare(`
+            SELECT id, item_key, item_value, created_at FROM ${oldFormatTableName} ORDER BY id ASC
+          `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
+          
+          debugLog(`Successfully retrieved data from legacy table ${oldFormatTableName}`);
+        } catch (legacyError) {
+          debugLog(`Legacy table format also failed: ${legacyError}`);
+          throw newFormatError; // Re-throw the original error
+        }
+      } else {
+        throw newFormatError; // Re-throw the original error if we can't parse the table name
+      }
+    }
     
     // Log the structure of queryResult to help debug
     debugLog(`Query result structure: ${JSON.stringify(Object.keys(queryResult || {}))}`);
@@ -459,9 +500,15 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
     
     // Ensure tableName follows Tableland naming conventions
-    // Tableland requires lowercase names with only alphanumeric characters and underscores
+    // Tableland requires lowercase names with format tablename_chainid_uniqueid
     const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    const tableName = `${safeTableType}_${prefix}`;
+    
+    // Use Optimism (Chain ID 10) for all Tableland operations
+    // This is our strategic decision to benefit from lower gas costs
+    const chainId = 10; // Optimism
+    
+    // Format: tablename_chainid_addressprefix
+    const tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
     
     debugLog(`Constructed table name for check: ${tableName} for type ${tableType} and address ${address}`);
     
