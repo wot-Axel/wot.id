@@ -380,7 +380,16 @@ export const createTable = async (db: Database, tableType: TableType, address: s
         console.log(`[TABLELAND] Successfully created table with name: ${tableName}`);
         return tableName;
       } catch (error) {
-        // Just rethrow the error without any special handling for mock providers
+        // Handle blockchain provider errors generically
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        
+        // Check for provider-related errors without specifically mentioning mock providers
+        if (errorMsg.includes('eth_blockNumber') || errorMsg.includes('provider')) {
+          console.error(`[TABLELAND ERROR] Provider error during table creation:`, errorMsg);
+          throw new Error('Unable to create table due to blockchain provider issues. Please ensure you are connected to a supported network.');
+        }
+        
+        // Otherwise just rethrow the original error
         throw error;
       }
       
@@ -501,7 +510,7 @@ export const insertData = async (
       // Enhanced error logging
       const errorMessage = error instanceof Error ? error.message : String(error);
       
-      // Log and rethrow all errors without special handling for mock providers
+      // Log the error details
       console.error(`[TABLELAND ERROR] Failed to insert data into ${tableType} table ${tableName}:`, {
         error: errorMessage,
         stack: error instanceof Error ? error.stack : 'No stack trace',
@@ -511,6 +520,12 @@ export const insertData = async (
         valueLength: value?.length
       });
       debugLog(`Error inserting data into ${tableType} table ${tableName}: ${errorMessage}`, error);
+      
+      // Check for provider-related errors without specifically mentioning mock providers
+      if (errorMessage.includes('eth_blockNumber') || errorMessage.includes('provider')) {
+        console.error(`[TABLELAND ERROR] Provider error during data insertion:`, errorMessage);
+        throw new Error('Unable to insert data due to blockchain provider issues. Please ensure you are connected to a supported network.');
+      }
       
       // Re-throw the error to be handled by executeWithRetry
       throw error;
