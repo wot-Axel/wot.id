@@ -43,14 +43,14 @@ export const modal = createAppKit({
   ],
   // Default account types
   defaultAccountTypes: { 
-    eip155: "eoa" // Use EOA accounts by default for EVM chains
+    eip155: "smartAccount" // Use Smart Accounts by default for EVM chains
   },
   // Standard features
   features: {
     analytics: true, // Optional - defaults to your Cloud configuration
     connectMethodsOrder: ["social", "wallet", "email"], // Control the order of connection methods
-    // Display social login options with Apple first
-    socials: ["apple", "google", "github", "x", "discord", "facebook", "farcaster"],
+    // Focus on Apple and Google for social logins
+    socials: ["apple", "google"],
     // Show all wallet options directly on the initial screen
     emailShowWallets: true
   },

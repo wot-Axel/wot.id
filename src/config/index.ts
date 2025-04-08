@@ -1,6 +1,6 @@
 import { cookieStorage, createStorage } from 'wagmi'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { mainnet, base, optimism } from '@reown/appkit/networks'
+import { mainnet, optimism } from '@reown/appkit/networks'
 import type { AppKitNetwork } from '@reown/appkit/networks'
 
 // Get projectId from https://cloud.reown.com
@@ -10,7 +10,17 @@ if (!projectId) {
   throw new Error('Project ID is not defined')
 }
 
-export const networks = [mainnet, base, optimism] as [AppKitNetwork, ...AppKitNetwork[]]
+// For server-side rendering, we need to use a fixed network order
+// The account-debug page will handle dynamic network ordering on the client side
+
+// Default to mainnet first for the initial configuration
+export const networks = [mainnet, optimism] as [AppKitNetwork, ...AppKitNetwork[]];
+
+// Export individual network configurations for client-side use
+export const networkConfigs = {
+  'mainnet-first': [mainnet, optimism] as [AppKitNetwork, ...AppKitNetwork[]],
+  'optimism-first': [optimism, mainnet] as [AppKitNetwork, ...AppKitNetwork[]]
+};
 
 //Set up the Wagmi Adapter (Config)
 export const wagmiAdapter = new WagmiAdapter({
