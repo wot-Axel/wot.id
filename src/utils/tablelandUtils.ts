@@ -129,10 +129,12 @@ export const sanitizeInput = (input: string): string => {
 
 // Initialize Tableland database with Optimism chain
 export const initTableland = async (): Promise<Database> => {
+  console.log('[TABLELAND] Starting Tableland initialization');
+  
   // Skip initialization on server-side
   if (typeof window === 'undefined') {
     debugLog('Server-side rendering detected, skipping Tableland initialization');
-    console.log('Server-side rendering detected, skipping Tableland initialization');
+    console.log('[TABLELAND] Server-side rendering detected, skipping Tableland initialization');
     throw new Error('Tableland initialization is not supported during server-side rendering');
   }
   
@@ -144,17 +146,20 @@ export const initTableland = async (): Promise<Database> => {
   // Retry loop for Ethereum provider
   while (retryCount < MAX_RETRIES) {
     try {
+      console.log(`[TABLELAND] Starting Tableland initialization (attempt ${retryCount + 1}/${MAX_RETRIES})`);
       debugLog(`Starting Tableland initialization (attempt ${retryCount + 1}/${MAX_RETRIES})`);
       
       // Check if window.ethereum is available
       if (typeof window.ethereum === 'undefined') {
         // Wait a moment and try again - the provider might be initializing
+        console.log('[TABLELAND] Ethereum provider not found, waiting 500ms before retry...');
         debugLog('Ethereum provider not found, waiting 500ms before retry...');
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Check again after waiting
         if (typeof window.ethereum === 'undefined') {
           const errorMsg = 'No Ethereum provider found. Please install a wallet like MetaMask.';
+          console.error(`[TABLELAND ERROR] ${errorMsg}`);
           debugLog(errorMsg);
           lastError = new Error(errorMsg);
           retryCount++;
@@ -163,6 +168,11 @@ export const initTableland = async (): Promise<Database> => {
       }
       
       // Provider is available
+      console.log('[TABLELAND] Ethereum provider detected', { 
+        provider: typeof window.ethereum,
+        isMetaMask: window.ethereum.isMetaMask,
+        chainId: window.ethereum.chainId
+      });
       debugLog('Ethereum provider detected', { 
         provider: typeof window.ethereum,
         isMetaMask: window.ethereum.isMetaMask,
@@ -171,36 +181,55 @@ export const initTableland = async (): Promise<Database> => {
       
       // Create a new instance of Database with default options
       // This will use the connected wallet's address automatically
+      console.log('[TABLELAND] Creating new Database instance');
       debugLog('Creating new Database instance');
-      const db = new Database();
       
-      // Verify the database instance
-      if (!db) {
-        throw new Error('Database instance creation failed');
-      }
-      
-      // Log database instance details
-      debugLog('Database instance created successfully', {
-        dbType: typeof db,
-        hasProperties: db ? Object.keys(db) : 'none'
-      });
-      
-      // Add global access for debugging
-      if (typeof window !== 'undefined') {
-        (window as any).tablelandDb = db;
-        (window as any).getTablelandLogs = exportTablelandLogs;
-        (window as any).checkTablelandDb = () => {
-          return {
-            dbExists: !!db,
-            dbType: typeof db,
-            properties: db ? Object.keys(db) : 'none',
-            methods: db ? Object.getOwnPropertyNames(Object.getPrototypeOf(db)) : 'none'
+      try {
+        const db = new Database();
+        
+        // Verify the database instance
+        if (!db) {
+          const errorMsg = 'Database instance creation failed';
+          console.error(`[TABLELAND ERROR] ${errorMsg}`);
+          throw new Error(errorMsg);
+        }
+        
+        // Log database instance details
+        console.log('[TABLELAND] Database instance created successfully', {
+          dbType: typeof db,
+          hasProperties: db ? Object.keys(db) : 'none',
+          methods: db ? Object.getOwnPropertyNames(Object.getPrototypeOf(db)).slice(0, 10) : 'none'
+        });
+        debugLog('Database instance created successfully', {
+          dbType: typeof db,
+          hasProperties: db ? Object.keys(db) : 'none'
+        });
+        
+        // Add global access for debugging
+        if (typeof window !== 'undefined') {
+          console.log('[TABLELAND] Adding global debugging helpers');
+          (window as any).tablelandDb = db;
+          (window as any).getTablelandLogs = exportTablelandLogs;
+          (window as any).checkTablelandDb = () => {
+            return {
+              dbExists: !!db,
+              dbType: typeof db,
+              properties: db ? Object.keys(db) : 'none',
+              methods: db ? Object.getOwnPropertyNames(Object.getPrototypeOf(db)) : 'none'
+            };
           };
-        };
+        }
+        
+        // Success - return the database instance
+        console.log('[TABLELAND] Database initialization completed successfully');
+        return db;
+      } catch (dbCreationError) {
+        const errorMsg = dbCreationError instanceof Error ? dbCreationError.message : String(dbCreationError);
+        console.error(`[TABLELAND ERROR] Failed to create Database instance: ${errorMsg}`, {
+          stack: dbCreationError instanceof Error ? dbCreationError.stack : 'No stack trace'
+        });
+        throw dbCreationError;
       }
-      
-      // Success - return the database instance
-      return db;
     } catch (error) {
       // Log the error
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -223,6 +252,7 @@ export const initTableland = async (): Promise<Database> => {
   }
   
   // If we've exhausted all retries, throw the last error
+  console.error('[TABLELAND ERROR] All initialization attempts failed');
   debugLog('All initialization attempts failed');
   throw lastError || new Error('Failed to initialize Tableland after multiple attempts');
 };
@@ -233,21 +263,48 @@ export const createTable = async (db: Database, tableType: TableType, address: s
     // Skip if we're on the server side
     if (typeof window === 'undefined') {
       debugLog(`Server-side rendering detected, skipping table creation for ${tableType}`);
-      console.log('Server-side rendering detected, skipping table creation');
+      console.log('[TABLELAND] Server-side rendering detected, skipping table creation');
       return `${tableType}_placeholder`;
     }
     
+    console.log(`[TABLELAND] Creating table for ${tableType} with address ${address}`);
     debugLog(`Creating table for ${tableType} with address ${address}`, { dbExists: !!db });
+    
+    // Validate database connection
+    if (!db) {
+      const errorMsg = 'Database instance is null or undefined';
+      console.error(`[TABLELAND ERROR] ${errorMsg}`);
+      debugLog(`Validation error: ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+    
+    // Check if the prepare method exists
+    if (typeof db.prepare !== 'function') {
+      const errorMsg = 'Database instance does not have a prepare method';
+      console.error(`[TABLELAND ERROR] ${errorMsg}`, { dbType: typeof db, methods: Object.keys(db) });
+      debugLog(`Validation error: ${errorMsg}`, { dbType: typeof db, methods: Object.keys(db) });
+      throw new Error(errorMsg);
+    }
     
     try {
       // Create a real Tableland table with the appropriate schema
       // All tables have the same schema: id, item_key, item_value, created_at
       // Note: We're using item_key instead of key because key is a reserved SQL keyword
       
+      // Validate address
+      if (!address) {
+        const errorMsg = 'Address must not be empty';
+        console.error(`[TABLELAND ERROR] ${errorMsg}`);
+        debugLog(`Validation error: ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+      
       // Ensure address is properly formatted
       const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
       // Always use lowercase for the prefix to ensure consistency
       const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
+      
+      console.log(`[TABLELAND] Processing address: ${address}, cleaned to: ${cleanAddress}, prefix: ${prefix}`);
       
       // Ensure tableName follows Tableland naming conventions
       // Tableland requires lowercase names with format tablename_chainid_uniqueid
@@ -261,6 +318,8 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       // Format: tablename_chainid_addressprefix
       const tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
       
+      console.log(`[TABLELAND] Constructed table name: ${tableName}`);
+      
       // Create the table
       debugLog(`Preparing to create table ${tableName} with SQL statement`);
       const createStatement = `
@@ -271,31 +330,55 @@ export const createTable = async (db: Database, tableType: TableType, address: s
           created_at TEXT NOT NULL
         )
       `;
+      console.log(`[TABLELAND] SQL statement for table creation: ${createStatement}`);
       debugLog(`SQL statement for table creation: ${createStatement}`);
       
+      console.log(`[TABLELAND] Executing table creation query`);
       const createResult = await db.prepare(createStatement).run();
+      console.log(`[TABLELAND] Table creation result:`, createResult);
       debugLog(`Table creation result:`, createResult);
       
       // Safely access the meta property
       const meta = createResult?.meta;
+      console.log(`[TABLELAND] Table creation meta:`, meta);
       debugLog(`Table creation meta:`, meta);
+      
+      // Check if meta exists
+      if (!meta) {
+        console.error(`[TABLELAND ERROR] Create result missing meta property`, createResult);
+        debugLog(`Create result missing meta property`, createResult);
+      }
       
       // Wait for transaction to complete if it exists
       if (meta?.txn) {
         // Avoid accessing hash property directly as it may not exist on all transaction types
         const txInfo = meta.txn ? JSON.stringify(meta.txn).substring(0, 100) : 'no transaction info';
+        console.log(`[TABLELAND] Waiting for transaction to complete: ${txInfo}...`);
         debugLog(`Waiting for transaction to complete: ${txInfo}...`);
         await meta.txn.wait();
+        console.log(`[TABLELAND] Transaction completed for table creation`);
         debugLog(`Transaction completed for table creation`);
       } else {
+        console.log(`[TABLELAND] No transaction to wait for in table creation`);
         debugLog(`No transaction to wait for in table creation`);
       }
       
       // Return the actual table name from Tableland or fall back to our constructed name
       // Always ensure the returned table name is lowercase
-      return ((meta?.txn?.name) || tableName).toLowerCase();
+      const finalTableName = ((meta?.txn?.name) || tableName).toLowerCase();
+      console.log(`[TABLELAND] Final table name: ${finalTableName}`);
+      return finalTableName;
     } catch (error) {
-      console.error(`Error creating table for ${tableType}:`, error);
+      // Enhanced error logging
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[TABLELAND ERROR] Failed to create table for ${tableType}:`, {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        tableType,
+        address
+      });
+      debugLog(`Error creating table for ${tableType}: ${errorMessage}`, error);
+      
       // Return a fallback name in case of error
       const fallbackPrefix = address ? (address.startsWith('0x') ? address.slice(2, 10) : address.slice(0, 8)).toLowerCase() : 'error';
       const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -304,7 +387,9 @@ export const createTable = async (db: Database, tableType: TableType, address: s
       // This is our strategic decision to benefit from lower gas costs
       const chainId = 10; // Optimism
       
-      return `${safeTableType}_${chainId}_${fallbackPrefix}`.toLowerCase();
+      const fallbackTableName = `${safeTableType}_${chainId}_${fallbackPrefix}`.toLowerCase();
+      console.log(`[TABLELAND] Returning fallback table name: ${fallbackTableName}`);
+      return fallbackTableName;
     }
   }, tableType);
 };
@@ -318,34 +403,102 @@ export const insertData = async (
   value: string
 ): Promise<void> => {
   return executeWithRetry(async () => {
-    debugLog(`Inserting data into ${tableType} table ${tableName}`, { keyLength: key?.length, valueLength: value?.length });
-    
-    // Validate inputs to prevent SQL injection
-    if (!key || !value) {
-      const errorMsg = 'Key and value must not be empty';
-      debugLog(`Validation error: ${errorMsg}`, { key, value });
-      throw new Error(errorMsg);
+    try {
+      console.log(`[TABLELAND] Inserting data into ${tableType} table ${tableName}`, { keyLength: key?.length, valueLength: value?.length });
+      debugLog(`Inserting data into ${tableType} table ${tableName}`, { keyLength: key?.length, valueLength: value?.length });
+      
+      // Validate database connection
+      if (!db) {
+        const errorMsg = 'Database instance is null or undefined';
+        console.error(`[TABLELAND ERROR] ${errorMsg}`);
+        debugLog(`Validation error: ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+      
+      // Check if the prepare method exists
+      if (typeof db.prepare !== 'function') {
+        const errorMsg = 'Database instance does not have a prepare method';
+        console.error(`[TABLELAND ERROR] ${errorMsg}`, { dbType: typeof db, methods: Object.keys(db) });
+        debugLog(`Validation error: ${errorMsg}`, { dbType: typeof db, methods: Object.keys(db) });
+        throw new Error(errorMsg);
+      }
+      
+      // Validate inputs to prevent SQL injection
+      if (!key || !value) {
+        const errorMsg = 'Key and value must not be empty';
+        console.error(`[TABLELAND ERROR] ${errorMsg}`, { key, value });
+        debugLog(`Validation error: ${errorMsg}`, { key, value });
+        throw new Error(errorMsg);
+      }
+      
+      // Validate table name
+      if (!tableName) {
+        const errorMsg = 'Table name must not be empty';
+        console.error(`[TABLELAND ERROR] ${errorMsg}`);
+        debugLog(`Validation error: ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+      
+      // Sanitize inputs using our utility function
+      const sanitizedKey = sanitizeInput(key);
+      const sanitizedValue = sanitizeInput(value);
+      const timestamp = new Date().toISOString();
+      
+      // Ensure tableName follows Tableland naming conventions
+      // Always convert to lowercase to ensure consistency
+      const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      console.log(`[TABLELAND] Using table name: ${safeTableName}`);
+      
+      // Construct the SQL query
+      const sqlQuery = `
+        INSERT INTO ${safeTableName} (item_key, item_value, created_at)
+        VALUES ('${sanitizedKey}', '${sanitizedValue}', '${timestamp}')
+      `;
+      console.log(`[TABLELAND] SQL Query: ${sqlQuery}`);
+      
+      // Insert data into the Tableland table with the new format (with chain ID 10)
+      debugLog(`Inserting into table ${safeTableName}`);
+      console.log(`[TABLELAND] Preparing to execute insert query`);
+      
+      // Execute the query
+      const result = await db.prepare(sqlQuery).run();
+      console.log(`[TABLELAND] Insert query executed`, result);
+      
+      // Check if meta exists
+      if (!result || !result.meta) {
+        console.error(`[TABLELAND ERROR] Insert result missing meta property`, result);
+        debugLog(`Insert result missing meta property`, result);
+      }
+      
+      // Wait for transaction to complete
+      if (result?.meta?.txn) {
+        console.log(`[TABLELAND] Waiting for transaction to complete`, { 
+          txDetails: JSON.stringify(result.meta.txn).substring(0, 100) + '...'
+        });
+        await result.meta.txn.wait();
+        console.log(`[TABLELAND] Transaction completed successfully`);
+      } else {
+        console.log(`[TABLELAND] No transaction to wait for, insert may have been completed immediately`);
+      }
+      
+      debugLog(`Successfully inserted data into table ${safeTableName}`);
+      console.log(`[TABLELAND] Successfully inserted data into table ${safeTableName}`);
+    } catch (error) {
+      // Enhanced error logging
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[TABLELAND ERROR] Failed to insert data into ${tableType} table ${tableName}:`, {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        tableType,
+        tableName,
+        keyLength: key?.length,
+        valueLength: value?.length
+      });
+      debugLog(`Error inserting data into ${tableType} table ${tableName}: ${errorMessage}`, error);
+      
+      // Re-throw the error to be handled by executeWithRetry
+      throw error;
     }
-    
-    // Sanitize inputs using our utility function
-    const sanitizedKey = sanitizeInput(key);
-    const sanitizedValue = sanitizeInput(value);
-    const timestamp = new Date().toISOString();
-    
-    // Ensure tableName follows Tableland naming conventions
-    // Always convert to lowercase to ensure consistency
-    const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    
-    // Insert data into the Tableland table with the new format (with chain ID 10)
-    debugLog(`Inserting into table ${safeTableName}`);
-    const { meta: insert } = await db.prepare(`
-      INSERT INTO ${safeTableName} (item_key, item_value, created_at)
-      VALUES ('${sanitizedKey}', '${sanitizedValue}', '${timestamp}')
-    `).run();
-    
-    // Wait for transaction to complete
-    await insert.txn?.wait();
-    debugLog(`Successfully inserted data into table ${safeTableName}`);
   }, tableType);
 };
 
@@ -442,26 +595,36 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
 
 // Generic function to check if a table exists
 export const checkTableExists = async (db: Database, tableType: TableType, address: string): Promise<{exists: boolean, tableName: string}> => {
+  console.log(`[TABLELAND] Checking if table exists for ${tableType} with address ${address}`);
+  
   // Skip if we're on the server side
   if (typeof window === 'undefined') {
     debugLog(`Server-side rendering detected, skipping table check for ${tableType}`);
-    console.log('Server-side rendering detected, skipping table check');
+    console.log('[TABLELAND] Server-side rendering detected, skipping table check');
     // Return a default response for server-side rendering
     return { exists: false, tableName: `${tableType}_placeholder` };
   }
   
   // Validate inputs
   if (!db) {
-    debugLog(`Database instance is null or undefined for ${tableType} table check`);
-    console.error('Database instance is null or undefined');
+    const errorMsg = `Database instance is null or undefined for ${tableType} table check`;
+    debugLog(errorMsg);
+    console.error(`[TABLELAND ERROR] ${errorMsg}`);
     return { exists: false, tableName: `${tableType}_error` };
   }
   
   if (!address) {
-    debugLog(`Address is null or undefined for ${tableType} table check`);
-    console.error('Address is null or undefined');
+    const errorMsg = `Address is null or undefined for ${tableType} table check`;
+    debugLog(errorMsg);
+    console.error(`[TABLELAND ERROR] ${errorMsg}`);
     return { exists: false, tableName: `${tableType}_error` };
   }
+  
+  console.log(`[TABLELAND] Starting table existence check for ${tableType} with address ${address}`, {
+    dbType: typeof db,
+    hasProperties: db ? Object.keys(db) : 'none',
+    address
+  });
   
   debugLog(`Starting table existence check for ${tableType} with address ${address}`, {
     dbType: typeof db,
@@ -475,6 +638,8 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     // Always use lowercase for the prefix to ensure consistency
     const prefix = cleanAddress.toLowerCase().slice(0, 8); // Take first 8 chars
     
+    console.log(`[TABLELAND] Processing address: ${address}, cleaned to: ${cleanAddress}, prefix: ${prefix}`);
+    
     // Ensure tableName follows Tableland naming conventions
     // Tableland requires lowercase names with format tablename_chainid_uniqueid
     const safeTableType = tableType.toString().toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -486,6 +651,7 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
     // Format: tablename_chainid_addressprefix
     const tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
     
+    console.log(`[TABLELAND] Constructed table name for check: ${tableName}`);
     debugLog(`Constructed table name for check: ${tableName} for type ${tableType} and address ${address}`);
     
     try {
@@ -493,11 +659,13 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
       // This will throw an error if the table doesn't exist
       debugLog(`Preparing to query table ${tableName} to check existence`);
       const sqlQuery = `SELECT * FROM ${tableName} LIMIT 1`;
+      console.log(`[TABLELAND] SQL query for table check: ${sqlQuery}`);
       debugLog(`SQL query for table check: ${sqlQuery}`);
       
       const result = await db.prepare(sqlQuery).all();
       const hasResults = result?.results?.length > 0;
       
+      console.log(`[TABLELAND] Table ${tableName} exists, query returned results: ${hasResults}`, result);
       debugLog(`Table ${tableName} exists, query returned results: ${hasResults}`, result);
       
       // If we get here, the table exists
@@ -507,6 +675,10 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
       const errorMessage = queryError instanceof Error ? queryError.message : String(queryError);
       
       // Log detailed error information
+      console.error(`[TABLELAND ERROR] Error checking if table ${tableName} exists:`, {
+        error: errorMessage,
+        stack: queryError instanceof Error ? queryError.stack : 'No stack trace'
+      });
       debugLog(`Error checking if table ${tableName} exists: ${errorMessage}`, queryError);
       
       // Check if the error is specifically about the table not existing
@@ -516,12 +688,13 @@ export const checkTableExists = async (db: Database, tableType: TableType, addre
         errorMessage.includes('not found');
       
       if (isTableNotFoundError) {
+        console.log(`[TABLELAND] Table ${tableName} confirmed not to exist (expected error)`);
         debugLog(`Table ${tableName} confirmed not to exist (expected error)`);
       } else {
+        console.error(`[TABLELAND ERROR] Unexpected error during table check for ${tableName}: ${errorMessage}`);
         debugLog(`Unexpected error during table check for ${tableName}: ${errorMessage}`);
       }
       
-      console.log(`Table ${tableName} does not exist:`, queryError);
       return { exists: false, tableName };
     }
   } catch (error) {
