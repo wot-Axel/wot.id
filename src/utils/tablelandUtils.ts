@@ -332,14 +332,20 @@ export const insertData = async (
     const sanitizedValue = sanitizeInput(value);
     const timestamp = new Date().toISOString();
     
-    // Insert data into the Tableland table
+    // Ensure tableName follows Tableland naming conventions
+    // Always convert to lowercase to ensure consistency
+    const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    
+    // Insert data into the Tableland table with the new format (with chain ID 10)
+    debugLog(`Inserting into table ${safeTableName}`);
     const { meta: insert } = await db.prepare(`
-      INSERT INTO ${tableName} (item_key, item_value, created_at)
+      INSERT INTO ${safeTableName} (item_key, item_value, created_at)
       VALUES ('${sanitizedKey}', '${sanitizedValue}', '${timestamp}')
     `).run();
     
     // Wait for transaction to complete
     await insert.txn?.wait();
+    debugLog(`Successfully inserted data into table ${safeTableName}`);
   }, tableType);
 };
 
@@ -371,41 +377,11 @@ export const getData = async (db: Database, tableType: TableType, tableName: str
     // Always convert to lowercase to ensure consistency
     const safeTableName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
     
-    let queryResult;
-    
-    try {
-      // First try with the new format (with chain ID 10)
-      debugLog(`Executing query on table ${safeTableName}`);
-      queryResult = await db.prepare(`
-        SELECT id, item_key, item_value, created_at FROM ${safeTableName} ORDER BY id ASC
-      `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
-    } catch (newFormatError) {
-      // If the new format fails, try the old format (without chain ID)
-      debugLog(`Error with new table format, trying legacy format: ${newFormatError}`);
-      
-      // Extract the table type and address prefix from the new format table name
-      const parts = safeTableName.split('_');
-      if (parts.length >= 3) {
-        // For a name like 'private_10_ed19f476', we want to try 'private_ed19f476'
-        const tableType = parts[0];
-        const addressPrefix = parts[parts.length - 1];
-        const oldFormatTableName = `${tableType}_${addressPrefix}`;
-        
-        debugLog(`Trying legacy table name: ${oldFormatTableName}`);
-        try {
-          queryResult = await db.prepare(`
-            SELECT id, item_key, item_value, created_at FROM ${oldFormatTableName} ORDER BY id ASC
-          `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
-          
-          debugLog(`Successfully retrieved data from legacy table ${oldFormatTableName}`);
-        } catch (legacyError) {
-          debugLog(`Legacy table format also failed: ${legacyError}`);
-          throw newFormatError; // Re-throw the original error
-        }
-      } else {
-        throw newFormatError; // Re-throw the original error if we can't parse the table name
-      }
-    }
+    // Query data from the Tableland table with the new format (with chain ID 10)
+    debugLog(`Executing query on table ${safeTableName}`);
+    const queryResult = await db.prepare(`
+      SELECT id, item_key, item_value, created_at FROM ${safeTableName} ORDER BY id ASC
+    `).all<{id: number, item_key: string, item_value: string, created_at: string}>();
     
     // Log the structure of queryResult to help debug
     debugLog(`Query result structure: ${JSON.stringify(Object.keys(queryResult || {}))}`);
