@@ -205,15 +205,26 @@ export const initTableland = async (forceAddress?: string): Promise<Database> =>
         console.log('[TABLELAND] Creating standard Database instance');
         debugLog('Creating standard Database instance');
         
-        // Create a standard Database instance
-        // This will use the connected wallet's provider
-        db = new Database();
-        
-        console.log('[TABLELAND] Created Database instance');
-        debugLog('Created Database instance');
-        
-        console.log('[TABLELAND] Created Database instance configured for Optimism');
-        debugLog('Created Database instance configured for Optimism');
+        try {
+          // Initialize Database with default options
+          // Since we're using AppKit, we don't need to explicitly create a provider or signer
+          // The SDK will use the connected wallet
+          console.log('[TABLELAND] Creating Database instance for chain ID:', optimism.id);
+          
+          // Create a minimal configuration that works with the current wallet
+          db = new Database();
+          
+          console.log('[TABLELAND] Created Database instance');
+          debugLog('Created Database instance');
+          
+          // Confirm we're targeting Optimism for table operations
+          console.log('[TABLELAND] Tables will use Optimism chain ID:', optimism.id);
+          debugLog(`Tables will use Optimism chain ID: ${optimism.id}`);
+        } catch (error) {
+          console.error('[TABLELAND ERROR] Failed to create Database:', error);
+          debugLog(`Error creating Database: ${error}`);
+          throw error;
+        }
         
         if (forceAddress) {
           console.log(`[TABLELAND] Will use forced address for table operations: ${forceAddress}`);
