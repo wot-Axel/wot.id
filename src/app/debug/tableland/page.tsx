@@ -114,24 +114,29 @@ export default function TablelandDebugPage() {
 
   // Initialize Tableland database
   const initDb = async () => {
-    // Get the stored correct address if available
-    const storedAddress = getStoredCorrectAddress();
-    
-    // Double-check that we're using the correct address
-    if (storedAddress && address !== storedAddress) {
-      addLog(`WARNING: Address mismatch! Using: ${address}, Stored: ${storedAddress}`);
-      // Update to use the stored address
-      setAddress(storedAddress);
-      // Wait a moment for the state to update
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
     try {
+      // Get the stored correct address if available
+      const storedAddress = getStoredCorrectAddress();
+      
+      // Always use the stored address if available
+      const addressToUse = storedAddress || address;
+      
+      // Log the address being used
+      if (storedAddress && address !== storedAddress) {
+        addLog(`Using stored address: ${storedAddress} instead of current address: ${address}`);
+      } else {
+        addLog(`Using address: ${addressToUse}`);
+      }
+      
+      // Update the state with the correct address
+      setAddress(addressToUse);
+      
       setStatus('Initializing Tableland...');
       addLog('Initializing Tableland database...');
       setIsLoading(true);
       
       // Pass the correct address to initTableland
-      const database = await initTableland(address);
+      const database = await initTableland(addressToUse);
       setDb(database);
       
       setStatus('Connected to Tableland');
