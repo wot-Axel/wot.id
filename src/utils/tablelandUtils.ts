@@ -208,6 +208,17 @@ export const initTableland = async (forceAddress?: string): Promise<Database> =>
         // Create a standard database
         db = new Database();
         
+        // Check if we're using a mock provider
+        const mockProviderDetected = await isMockProvider(db);
+        if (mockProviderDetected) {
+          console.warn(
+            '[TABLELAND WARNING] Mock provider detected. Tableland operations may fail. ' +
+            'This typically happens when using Smart Accounts in a development environment. ' +
+            'To fix this, please connect to a supported network like Optimism or Ethereum Mainnet.'
+          );
+          debugLog('Mock provider detected. Tableland operations may fail.');
+        }
+        
         if (forceAddress) {
           console.log(`[TABLELAND] Will use forced address for table operations: ${forceAddress}`);
           debugLog(`Will use forced address for table operations: ${forceAddress}`);
@@ -368,26 +379,29 @@ export const createTable = async (db: Database, tableType: TableType, address: s
         console.log(`[TABLELAND] Table creation result:`, createResult);
         debugLog(`Table creation result:`, createResult);
         
-        // Get the table name from the result or construct it manually using the correct format
-        let tableName = createResult?.meta?.txn?.name;
+        // Get the table name from the result - this is critical
+        // Tableland assigns the tableId, which is part of the full table name
+        const tableName = createResult?.meta?.txn?.name;
         
-        // If we don't have a valid table name from the result, construct it manually
         if (!tableName) {
-          // Format: tablename_chainid_addressprefix
-          tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
-          console.log(`[TABLELAND] Constructed table name: ${tableName}`);
+          console.error(`[TABLELAND ERROR] Table creation succeeded but no table name was returned`);
+          throw new Error('Table creation succeeded but no table name was returned from Tableland');
         }
         
+        console.log(`[TABLELAND] Successfully created table with name: ${tableName}`);
         return tableName;
       } catch (error) {
         // Check if this is the mock provider error
         const errorMsg = error instanceof Error ? error.message : String(error);
         if (errorMsg.includes('eth_blockNumber not implemented in mock provider')) {
           // We're in a development environment with a mock provider
-          // Construct a proper table name using the correct format
-          const tableName = `${safeTableType}_${chainId}_${prefix}`.toLowerCase();
-          console.log(`[TABLELAND] Mock provider detected, using constructed table name: ${tableName}`);
-          return tableName;
+          console.error(`[TABLELAND ERROR] Cannot create table with mock provider: ${errorMsg}`);
+          throw new Error(
+            'Cannot create Tableland tables with a mock provider. ' +
+            'This typically happens when using Smart Accounts in a development environment. ' +
+            'To fix this, please connect to a supported network like Optimism or Ethereum Mainnet, ' +
+            'or use a real wallet instead of the development environment.'
+          );
         } else {
           // This is a different error, rethrow it
           throw error;
