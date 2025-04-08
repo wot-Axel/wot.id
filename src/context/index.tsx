@@ -45,6 +45,8 @@ export const modal = createAppKit({
   defaultAccountTypes: { 
     eip155: "smartAccount" // Use Smart Accounts by default for EVM chains
   },
+  // Prevent automatic reconnection
+  autoConnect: false,
   // Standard features
   features: {
     analytics: true, // Optional - defaults to your Cloud configuration
