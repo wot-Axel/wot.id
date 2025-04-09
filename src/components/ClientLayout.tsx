@@ -5,6 +5,7 @@ import React from 'react';
 import ContextProvider from '@/context';
 import { XmtpProvider } from '@/context/XmtpContext';
 import { StorageProvider } from '@/context/StorageContext';
+import { DataProvider } from '@/context/DataContext';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Footer } from '@/components/Footer';
 import { LogCaptureInitializer } from '@/components/LogCaptureInitializer';
@@ -22,14 +23,17 @@ export function ClientLayout({
       <ContextProvider cookies={cookies || null}>
         <XmtpProvider>
           <StorageProvider>
-            {/* Initialize log capture system */}
-            <LogCaptureInitializer />
-            {/* Gun.js storage implementation now fully integrated */}
-            <TopNavigation />
-            <main className="main-content">
-              {children}
-            </main>
-            <Footer />
+            {/* Add DataProvider for centralized data management */}
+            <DataProvider>
+              {/* Initialize log capture system */}
+              <LogCaptureInitializer />
+              {/* Gun.js storage implementation now fully integrated */}
+              <TopNavigation />
+              <main className="main-content">
+                {children}
+              </main>
+              <Footer />
+            </DataProvider>
           </StorageProvider>
         </XmtpProvider>
       </ContextProvider>

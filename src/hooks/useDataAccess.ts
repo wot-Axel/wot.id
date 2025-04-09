@@ -97,6 +97,7 @@ export const useDataAccess = (dataType: DataType) => {
     } catch (err) {
       console.error(`Error fetching ${dataType} data:`, err);
       setError(err instanceof Error ? err.message : 'Unknown error fetching data');
+      return [];
     } finally {
       setIsLoading(false);
     }
@@ -268,27 +269,33 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // One-time data fetch only on mount
+  // One-time data fetch only on mount - improved to de-duplicate requests
   useEffect(() => {
     let isMounted = true;
+    let fetchTimeout: NodeJS.Timeout | null = null;
     
     const loadInitialData = async () => {
       if (!storage.isReady) return;
       
-      try {
-        await fetchData();
-      } catch (err) {
-        console.error(`[DATA ACCESS] Error loading initial data for ${dataType}:`, err);
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load initial data');
+      // Prevent multiple concurrent fetches by delaying slightly
+      // This prevents the throttling messages when all components load at once
+      fetchTimeout = setTimeout(async () => {
+        try {
+          await fetchData();
+        } catch (err) {
+          console.error(`[DATA ACCESS] Error loading initial data for ${dataType}:`, err);
+          if (isMounted) {
+            setError(err instanceof Error ? err.message : 'Failed to load initial data');
+          }
         }
-      }
+      }, Math.random() * 500); // Random delay up to 500ms to stagger requests
     };
     
     loadInitialData();
     
     return () => {
       isMounted = false;
+      if (fetchTimeout) clearTimeout(fetchTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -296,7 +303,9 @@ export const useDataAccess = (dataType: DataType) => {
   // This effect watches storage readiness but doesn't trigger extra fetches
   useEffect(() => {
     if (storage.isReady && dataRef.current.length === 0) {
-      fetchData();
+      const delay = Math.random() * 300; // Stagger requests to prevent collisions
+      const timeout = setTimeout(() => fetchData(), delay);
+      return () => clearTimeout(timeout);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storage.isReady]);
