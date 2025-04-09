@@ -48,69 +48,56 @@ const mapDataTypeToTableType = (dataType: DataType): TableType => {
   }
 };
 
+// Import the useData hook from DataContext
+import { useData } from '@/context/DataContext';
+
 export const useDataAccess = (dataType: DataType) => {
+  // Get direct access to the centralized data store
+  const { getData, isLoading: getIsLoading, error: getError, refreshData: refreshCentralData } = useData();
   const storage = useStorage();
   
-  // Use refs for state that shouldn't trigger re-renders
-  const dataRef = useRef<any[]>([]);
+  // Local state to maintain the existing API
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lastFetchRef = useRef<number>(0);
   
-  // Fetch data from storage with throttling
+  // Keep local state in sync with the centralized store
+  useEffect(() => {
+    // Get data from the centralized store
+    const centralData = getData(dataType as any);
+    const centralIsLoading = getIsLoading(dataType as any);
+    const centralError = getError(dataType as any);
+    
+    // Update local state to match
+    setData(centralData);
+    setIsLoading(centralIsLoading);
+    setError(centralError);
+  }, [dataType, getData, getIsLoading, getError]);
+  
+  // Delegate to the central data store's refresh function
   const fetchData = async () => {
     if (!storage.isReady) {
       console.warn(`[DATA ACCESS] Storage not ready for ${dataType}`);
       return [];
     }
     
-    // Simple throttling to prevent rapid successive calls
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastFetchRef.current;
-    if (timeSinceLastFetch < 2000) {
-      console.log(`[DATA ACCESS] Throttling fetch for ${dataType}, last fetch ${Math.round(timeSinceLastFetch/1000)}s ago`);
-      return dataRef.current;
-    }
-    
-    lastFetchRef.current = now;
-    setIsLoading(true);
-    setError(null);
-    
     try {
-      // Use storage service
-      const tableType = mapDataTypeToTableType(dataType);
-      const models = await storage.listItems(tableType);
-      
-      // Format data to match the expected structure
-      const formattedModels = models.map(model => ({
-        id: String(model.id),
-        key: model.item_key,
-        value: model.item_value,
-        created_at: model.created_at
-      }));
-      
-      // Store in both state and ref to maintain stability
-      dataRef.current = formattedModels;
-      setData(formattedModels);
-      return formattedModels;
+      // Use the central data store's refresh function
+      const result = await refreshCentralData(dataType as any);
+      return result;
     } catch (err) {
       console.error(`Error fetching ${dataType} data:`, err);
-      setError(err instanceof Error ? err.message : 'Unknown error fetching data');
       return [];
-    } finally {
-      setIsLoading(false);
     }
   };
   
-  // Create a new item
+  // Create a new item - keep original implementation to maintain the same API
   const createItem = async (itemData: any, tags?: string[]) => {
     if (!storage.isReady) {
       return null;
     }
     
     setIsLoading(true);
-    setError(null);
     
     try {
       const tableType = mapDataTypeToTableType(dataType);
@@ -141,7 +128,9 @@ export const useDataAccess = (dataType: DataType) => {
           value: result.item_value,
           created_at: result.created_at
         };
-        setData(prev => [...prev, formattedResult]);
+        
+        // After creating the item, refresh data from the central store
+        await refreshCentralData(dataType as any);
         return formattedResult;
       }
       return null;
@@ -154,19 +143,18 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Update an existing item
+  // Update an existing item - keep original implementation to maintain the same API
   const updateItem = async (id: string, itemData: any, tags?: string[]) => {
     if (!storage.isReady) {
       return null;
     }
     
     setIsLoading(true);
-    setError(null);
     
     try {
       const tableType = mapDataTypeToTableType(dataType);
       
-      // Find the item in our local data to get the key
+      // Find the item in our data to get the key
       const item = data.find(item => item.id === id);
       if (!item) {
         throw new Error(`Item with ID ${id} not found`);
@@ -193,7 +181,9 @@ export const useDataAccess = (dataType: DataType) => {
           value: result.item_value,
           created_at: result.created_at
         };
-        setData(prev => prev.map(item => item.id === id ? formattedResult : item));
+        
+        // After updating, refresh from the central store
+        await refreshCentralData(dataType as any);
         return formattedResult;
       }
       return null;
@@ -206,14 +196,13 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Delete an item
+  // Delete an item - keep original implementation but refresh from central store after
   const deleteItem = async (id: string) => {
     if (!storage.isReady) {
       return false;
     }
     
     setIsLoading(true);
-    setError(null);
     
     try {
       const tableType = mapDataTypeToTableType(dataType);
@@ -225,7 +214,8 @@ export const useDataAccess = (dataType: DataType) => {
       
       const success = await storage.deleteItem(tableType, itemToDelete.key);
       if (success) {
-        setData(prev => prev.filter(item => item.id !== id));
+        // After deletion, refresh from the central store
+        await refreshCentralData(dataType as any);
       }
       return success;
     } catch (err) {
@@ -237,7 +227,7 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Refresh data
+  // Refresh data now delegates to the central store's refreshData
   const refreshData = () => {
     return fetchData();
   };
@@ -249,17 +239,11 @@ export const useDataAccess = (dataType: DataType) => {
     }
     
     setIsLoading(true);
-    setError(null);
     
     try {
-      const tableType = mapDataTypeToTableType(dataType);
-      // Our simple implementation doesn't support bulk delete
-      // Just clear the local state for now
-      const success = true;
-      if (success) {
-        setData([]);
-      }
-      return success;
+      // Just refresh from the central store
+      await refreshCentralData(dataType as any);
+      return true;
     } catch (err) {
       console.error(`Error clearing ${dataType} items:`, err);
       setError(err instanceof Error ? err.message : 'Unknown error clearing items');
@@ -269,43 +253,14 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // One-time data fetch only on mount - improved to de-duplicate requests
+  // Only trigger one immediate fetch when the component mounts
+  // The data will then be managed by the central store
   useEffect(() => {
-    let isMounted = true;
-    let fetchTimeout: NodeJS.Timeout | null = null;
-    
-    const loadInitialData = async () => {
-      if (!storage.isReady) return;
-      
-      // Prevent multiple concurrent fetches by delaying slightly
-      // This prevents the throttling messages when all components load at once
-      fetchTimeout = setTimeout(async () => {
-        try {
-          await fetchData();
-        } catch (err) {
-          console.error(`[DATA ACCESS] Error loading initial data for ${dataType}:`, err);
-          if (isMounted) {
-            setError(err instanceof Error ? err.message : 'Failed to load initial data');
-          }
-        }
-      }, Math.random() * 500); // Random delay up to 500ms to stagger requests
-    };
-    
-    loadInitialData();
-    
-    return () => {
-      isMounted = false;
-      if (fetchTimeout) clearTimeout(fetchTimeout);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  
-  // This effect watches storage readiness but doesn't trigger extra fetches
-  useEffect(() => {
-    if (storage.isReady && dataRef.current.length === 0) {
-      const delay = Math.random() * 300; // Stagger requests to prevent collisions
-      const timeout = setTimeout(() => fetchData(), delay);
-      return () => clearTimeout(timeout);
+    // No need for initialization delays now - the central store handles that
+    if (storage.isReady) {
+      refreshCentralData(dataType as any).catch(err => {
+        console.error(`[DATA ACCESS] Error refreshing data for ${dataType}:`, err);
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storage.isReady]);
