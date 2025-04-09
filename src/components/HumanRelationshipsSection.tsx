@@ -61,27 +61,29 @@ export const HumanRelationshipsSection = () => {
   // Access the storage context
   const { isReady: storageReady } = useStorage();
   
-  // Initialize data access when connected with improved error handling - MEMOIZED to prevent infinite loops
+  // Initialize data access when connected - ONCE and properly
   const initializeData = useCallback(() => {
     if (!isConnected || !address || !storageReady) return;
     
     console.log('[HUMAN RELATIONSHIPS] Initializing data access');
     
-    // Don't show loading spinner initially - wait to see if operation actually takes time
-    let spinnerTimeoutId: NodeJS.Timeout = setTimeout(() => {
-      setLoading(true);
+    // Use refs to track timeout IDs to prevent closure issues
+    const spinnerTimeoutId = setTimeout(() => {
+      // Only set loading if the operation is taking time
+      if (!initialized) {
+        setLoading(true);
+      }
     }, 200);
     
     // Set up timeout to prevent getting stuck in loading state
-    let operationTimeoutId: NodeJS.Timeout;
-    const loadingTimeout = new Promise<void>((_, reject) => {
-      operationTimeoutId = setTimeout(() => {
-        reject(new Error('Initialization timed out'));
-      }, 5000);
-    });
+    const operationTimeoutId = setTimeout(() => {
+      console.error('[HUMAN RELATIONSHIPS] Initialization timed out');
+      setError('Connection timed out. Please refresh the page.');
+      setLoading(false);
+    }, 5000);
     
-    // Start initialization with timeout safety
-    Promise.race([initDataAccess(), loadingTimeout])
+    // Single initialization attempt
+    initDataAccess()
       .catch(err => {
         console.error('[HUMAN RELATIONSHIPS] Failed to initialize data access:', err);
         setError(err.message || 'Connection issue. Please try again.');
@@ -91,23 +93,25 @@ export const HumanRelationshipsSection = () => {
         clearTimeout(operationTimeoutId);
         setLoading(false);
       });
-      
+    
+    // Clean up function
     return () => {
       clearTimeout(spinnerTimeoutId);
       clearTimeout(operationTimeoutId);
     };
-  }, [isConnected, address, storageReady, initDataAccess]);
+  }, [isConnected, address, storageReady, initialized, initDataAccess]);
   
-  // Run initialization once when component mounts and dependencies are ready
-  // Only initialize once when all dependencies are ready
+  // Single initialization effect with proper cleanup
   useEffect(() => {
+    // Only run once when all dependencies are available
     if (!initialized && isConnected && address && storageReady) {
       setInitialized(true);
-      initializeData();
+      const cleanup = initializeData();
+      
+      // Return cleanup function if one was provided
+      return cleanup;
     }
-  // Don't include initializeData in dependencies to prevent initialization loops
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, isConnected, address, storageReady]);
+  }, [initialized, isConnected, address, storageReady, initializeData]);
   
 
 

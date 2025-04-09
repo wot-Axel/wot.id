@@ -253,14 +253,58 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Fetch data ONCE on mount - Gun.js will handle updates via reactivity
+  // Set up proper Gun.js subscription and cleanup
   useEffect(() => {
-    if (storage.isReady) {
-      fetchData();
-    }
-    // Only run this effect once on mount, Gun.js handles reactivity
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let isMounted = true;
+    let gunSubscription: any = null;
+    
+    const setupGunSubscription = async () => {
+      if (!storage.isReady) return;
+      
+      try {
+        // Initial data fetch
+        await fetchData();
+        
+        // Set up Gun.js subscription for this data type
+        // This ensures we get real-time updates without React re-renders
+        const tableType = mapDataTypeToTableType(dataType);
+        const gun = await storage.getGunInstance();
+        
+        if (gun) {
+          // Create a stable subscription that updates React state only when data changes
+          gunSubscription = gun.get(tableType).on((data: any) => {
+            if (!isMounted) return; // Prevent updates after unmount
+            
+            // Only trigger React state update if data actually changed
+            if (data && Object.keys(data).length > 0) {
+              // Use functional state update to avoid stale closures
+              fetchData();
+            }
+          });
+        }
+      } catch (err) {
+        console.error(`[DATA ACCESS] Error setting up Gun subscription for ${dataType}:`, err);
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to subscribe to data updates');
+        }
+      }
+    };
+    
+    setupGunSubscription();
+    
+    // Clean up subscription on unmount to prevent memory leaks
+    return () => {
+      isMounted = false;
+      if (gunSubscription) {
+        try {
+          // Properly unsubscribe from Gun.js to prevent memory leaks
+          gunSubscription.off();
+        } catch (err) {
+          console.error(`[DATA ACCESS] Error cleaning up Gun subscription for ${dataType}:`, err);
+        }
+      }
+    };
+  }, [dataType, storage]);
   
   return {
     data,

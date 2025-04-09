@@ -10,6 +10,7 @@ interface StorageContextType {
   getItem: (tableType: TableType, key: string) => Promise<TableData | null>;
   listItems: (tableType: TableType) => Promise<TableData[]>;
   deleteItem: (tableType: TableType, key: string) => Promise<boolean>;
+  getGunInstance: () => Promise<any>; // Expose the Gun instance for direct subscriptions
   isReady: boolean;
 }
 
@@ -18,6 +19,7 @@ const StorageContext = createContext<StorageContextType>({
   getItem: async () => null,
   listItems: async () => [],
   deleteItem: async () => false,
+  getGunInstance: async () => null,
   isReady: false 
 });
 
@@ -93,6 +95,14 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
     return await GunUtils.deleteGunItem(tableType, key);
   };
 
+  // Add method to get the Gun instance directly for subscriptions
+  const getGunInstance = async (): Promise<any> => {
+    if (!isReady) {
+      throw new Error('Storage not initialized');
+    }
+    return GunUtils.getGun();
+  };
+
   return (
     <StorageContext.Provider
       value={{
@@ -100,6 +110,7 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
         getItem,
         listItems,
         deleteItem,
+        getGunInstance,
         isReady
       }}
     >
