@@ -21,39 +21,31 @@ export const HumanRelationshipsSection = () => {
   const [error, setError] = useState<string>('');
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   
-  // Create a throttled version of fetchData to prevent rapid successive calls
-  const fetchData = useCallback(async () => {
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastFetchTime;
-    
-    // If last fetch was less than 10 seconds ago, don't fetch again
-    if (timeSinceLastFetch < 10000) {
-      console.log('[HUMAN RELATIONSHIPS] Skipping fetch, too recent:', Math.round(timeSinceLastFetch/1000) + 's ago');
-      return;
-    }
-    
+  // Use direct reference to the data access method
+  const fetchData = useCallback(() => {
     console.log('[HUMAN RELATIONSHIPS] Fetching data...');
-    setLastFetchTime(now);
     return rawFetchData();
-  }, [rawFetchData, lastFetchTime]);
+  }, [rawFetchData]);
   const [initialized, setInitialized] = useState<boolean>(false);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
-  // Initialize data access when needed
+  // Single point of initialization
   const initDataAccess = useCallback(async () => {
     try {
-      setLoading(true);
-      setError('');
+      // Don't set loading state immediately to prevent UI flashes
+      const timeoutId = setTimeout(() => setLoading(true), 500);
       
-      // Fetch data using the useDataAccess hook
+      // Just fetch data - keep it simple
       await fetchData();
+      
+      clearTimeout(timeoutId);
+      setLoading(false);
     } catch (err: any) {
       console.error('Error initializing data access:', err);
-      setError(err.message || 'Failed to initialize data access. Please try again.');
-    } finally {
+      setError(err.message || 'Failed to initialize data access');
       setLoading(false);
     }
   }, [fetchData]);
@@ -61,57 +53,24 @@ export const HumanRelationshipsSection = () => {
   // Access the storage context
   const { isReady: storageReady } = useStorage();
   
-  // Initialize data access when connected - ONCE and properly
+  // Simplified initialization - no complex timeout logic
   const initializeData = useCallback(() => {
     if (!isConnected || !address || !storageReady) return;
     
     console.log('[HUMAN RELATIONSHIPS] Initializing data access');
     
-    // Use refs to track timeout IDs to prevent closure issues
-    const spinnerTimeoutId = setTimeout(() => {
-      // Only set loading if the operation is taking time
-      if (!initialized) {
-        setLoading(true);
-      }
-    }, 200);
-    
-    // Set up timeout to prevent getting stuck in loading state
-    const operationTimeoutId = setTimeout(() => {
-      console.error('[HUMAN RELATIONSHIPS] Initialization timed out');
-      setError('Connection timed out. Please refresh the page.');
-      setLoading(false);
-    }, 5000);
-    
-    // Single initialization attempt
-    initDataAccess()
-      .catch(err => {
-        console.error('[HUMAN RELATIONSHIPS] Failed to initialize data access:', err);
-        setError(err.message || 'Connection issue. Please try again.');
-      })
-      .finally(() => {
-        clearTimeout(spinnerTimeoutId);
-        clearTimeout(operationTimeoutId);
-        setLoading(false);
-      });
-    
-    // Clean up function
-    return () => {
-      clearTimeout(spinnerTimeoutId);
-      clearTimeout(operationTimeoutId);
-    };
-  }, [isConnected, address, storageReady, initialized, initDataAccess]);
+    // Just call init and handle errors at the lower level
+    return initDataAccess();
+  }, [isConnected, address, storageReady, initDataAccess]);
   
-  // Single initialization effect with proper cleanup
+  // One-time initialization effect - absolutely minimal
   useEffect(() => {
-    // Only run once when all dependencies are available
-    if (!initialized && isConnected && address && storageReady) {
+    if (isConnected && address && storageReady && !initialized) {
       setInitialized(true);
-      const cleanup = initializeData();
-      
-      // Return cleanup function if one was provided
-      return cleanup;
+      initializeData();
     }
-  }, [initialized, isConnected, address, storageReady, initializeData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, address, storageReady]);
   
 
 

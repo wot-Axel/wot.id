@@ -1,6 +1,6 @@
  'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useStorage } from '@/context/StorageContext';
 import { TableType, TableData, PrivateData } from '@/utils/storageUtils';
 
@@ -51,16 +51,29 @@ const mapDataTypeToTableType = (dataType: DataType): TableType => {
 export const useDataAccess = (dataType: DataType) => {
   const storage = useStorage();
   
+  // Use refs for state that shouldn't trigger re-renders
+  const dataRef = useRef<any[]>([]);
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastFetchRef = useRef<number>(0);
   
-  // Fetch data from storage
+  // Fetch data from storage with throttling
   const fetchData = async () => {
     if (!storage.isReady) {
-      return;
+      console.warn(`[DATA ACCESS] Storage not ready for ${dataType}`);
+      return [];
     }
     
+    // Simple throttling to prevent rapid successive calls
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchRef.current;
+    if (timeSinceLastFetch < 2000) {
+      console.log(`[DATA ACCESS] Throttling fetch for ${dataType}, last fetch ${Math.round(timeSinceLastFetch/1000)}s ago`);
+      return dataRef.current;
+    }
+    
+    lastFetchRef.current = now;
     setIsLoading(true);
     setError(null);
     
@@ -77,6 +90,8 @@ export const useDataAccess = (dataType: DataType) => {
         created_at: model.created_at
       }));
       
+      // Store in both state and ref to maintain stability
+      dataRef.current = formattedModels;
       setData(formattedModels);
       return formattedModels;
     } catch (err) {
@@ -253,58 +268,38 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Set up proper Gun.js subscription and cleanup
+  // One-time data fetch only on mount
   useEffect(() => {
     let isMounted = true;
-    let gunSubscription: any = null;
     
-    const setupGunSubscription = async () => {
+    const loadInitialData = async () => {
       if (!storage.isReady) return;
       
       try {
-        // Initial data fetch
         await fetchData();
-        
-        // Set up Gun.js subscription for this data type
-        // This ensures we get real-time updates without React re-renders
-        const tableType = mapDataTypeToTableType(dataType);
-        const gun = await storage.getGunInstance();
-        
-        if (gun) {
-          // Create a stable subscription that updates React state only when data changes
-          gunSubscription = gun.get(tableType).on((data: any) => {
-            if (!isMounted) return; // Prevent updates after unmount
-            
-            // Only trigger React state update if data actually changed
-            if (data && Object.keys(data).length > 0) {
-              // Use functional state update to avoid stale closures
-              fetchData();
-            }
-          });
-        }
       } catch (err) {
-        console.error(`[DATA ACCESS] Error setting up Gun subscription for ${dataType}:`, err);
+        console.error(`[DATA ACCESS] Error loading initial data for ${dataType}:`, err);
         if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to subscribe to data updates');
+          setError(err instanceof Error ? err.message : 'Failed to load initial data');
         }
       }
     };
     
-    setupGunSubscription();
+    loadInitialData();
     
-    // Clean up subscription on unmount to prevent memory leaks
     return () => {
       isMounted = false;
-      if (gunSubscription) {
-        try {
-          // Properly unsubscribe from Gun.js to prevent memory leaks
-          gunSubscription.off();
-        } catch (err) {
-          console.error(`[DATA ACCESS] Error cleaning up Gun subscription for ${dataType}:`, err);
-        }
-      }
     };
-  }, [dataType, storage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  // This effect watches storage readiness but doesn't trigger extra fetches
+  useEffect(() => {
+    if (storage.isReady && dataRef.current.length === 0) {
+      fetchData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storage.isReady]);
   
   return {
     data,
