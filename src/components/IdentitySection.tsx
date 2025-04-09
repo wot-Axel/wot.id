@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import dynamic from 'next/dynamic';
 import { useDataAccess, DataType } from '@/hooks/useDataAccess';
 

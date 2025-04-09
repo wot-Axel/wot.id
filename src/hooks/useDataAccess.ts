@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useStorage } from '@/context/StorageContext';
 import { TableType, TableData } from '@/utils/storageUtils';
+import { clearDecryptionCache } from '@/utils/gunUtils';
 
 // Define PrivateData interface to maintain compatibility
 interface PrivateData {
@@ -79,12 +80,15 @@ export const useDataAccess = (dataType: DataType) => {
       const models = await storage.listItems(tableType);
       
       // Format data to match the expected structure
-      const formattedModels = models.map(model => ({
-        id: String(model.id),
-        key: model.item_key,
-        value: model.item_value,
-        created_at: model.created_at
-      }));
+      // Filter out any null or undefined items
+      const formattedModels = models
+        .filter(model => model && model.item_key && model.item_value) // Filter out invalid entries
+        .map(model => ({
+          id: String(model.id || ''),
+          key: model.item_key,
+          value: model.item_value,
+          created_at: model.created_at || new Date().toISOString()
+        }));
       
       setData(formattedModels);
       return formattedModels;
@@ -99,7 +103,7 @@ export const useDataAccess = (dataType: DataType) => {
   // Create a new item
   const createItem = async (itemData: any, tags?: string[]) => {
     if (!storage.isReady) {
-      return null;
+      throw new Error('Storage system not ready');
     }
     
     setIsLoading(true);
@@ -114,9 +118,10 @@ export const useDataAccess = (dataType: DataType) => {
       let value = '';
       
       if (typeof itemData === 'object') {
-        // Use the first property as the key, or generate a unique key
-        const firstKey = Object.keys(itemData)[0];
-        key = itemData.key || itemData.id || firstKey || `${dataType}_${Date.now()}`;
+        // Generate a more reliable unique key using timestamp and random suffix
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        key = itemData.key || itemData.id || `${dataType}_${timestamp}_${randomSuffix}`;
         
         // Add tags to the content for searchability
         const contentWithTags = { ...itemData, tags: tags || [] };
@@ -246,12 +251,26 @@ export const useDataAccess = (dataType: DataType) => {
     
     try {
       const tableType = mapDataTypeToTableType(dataType);
-      // Our simple implementation doesn't support bulk delete
-      // Just clear the local state for now
-      const success = true;
-      if (success) {
-        setData([]);
+      
+      // Get all current items
+      const currentItems = [...data];
+      let success = true;
+      
+      // Delete each item from Gun.js storage
+      for (const item of currentItems) {
+        const itemSuccess = await storage.deleteItem(tableType, item.key);
+        if (!itemSuccess) {
+          success = false;
+          console.warn(`Failed to delete item with key: ${item.key}`);
+        }
       }
+      
+      // Clear the decryption cache for this table type to prevent stale data
+      clearDecryptionCache(tableType);
+      
+      // Clear the local state regardless of individual deletion success
+      // This ensures UI is clean even if some deletions failed
+      setData([]);
       return success;
     } catch (err) {
       console.error(`Error clearing ${dataType} items:`, err);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { useDataAccess, DataType } from '@/hooks/useDataAccess';
 import { storeGunItem, getGunItem, listGunItems, deleteGunItem } from '@/utils/gunUtils';
 import { TableData } from '@/utils/storageUtils';

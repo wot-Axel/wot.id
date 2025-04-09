@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { useDataAccess, DataType } from '@/hooks/useDataAccess';
 
 export const HumanRelationshipsSection = () => {
@@ -39,10 +39,14 @@ export const HumanRelationshipsSection = () => {
     }
   }, [fetchData]);
   
-  // Initialize data access when connected
+  // Initialize data access when connected with improved error handling
   useEffect(() => {
     if (isConnected && address && !loading && !dataLoading) {
-      initDataAccess();
+      initDataAccess().catch(err => {
+        console.error('Failed to initialize data access:', err);
+        setError('Connection issue. Please try refreshing the page.');
+        setLoading(false);
+      });
     }
   }, [isConnected, address, loading, dataLoading, initDataAccess]);
   
@@ -107,6 +111,9 @@ export const HumanRelationshipsSection = () => {
       
       // Clear all items
       await clearItems();
+      
+      // Refresh the data to ensure UI is updated
+      await fetchData();
     } catch (err: any) {
       console.error('Error clearing contacts data:', err);
       setError(err.message || 'Failed to clear contacts data. Please try again.');
@@ -115,12 +122,15 @@ export const HumanRelationshipsSection = () => {
     }
   };
 
-  // Parse the JSON data from the value field
+  // Parse the JSON data from the value field with improved error handling
   const parseContactData = (item: any) => {
     try {
       // If the item has a value field, try to parse it
       if (item.value) {
-        return JSON.parse(item.value);
+        const parsed = JSON.parse(item.value);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
       }
       // If the item has content, use that directly
       if (item.content && typeof item.content === 'object') {
@@ -128,13 +138,20 @@ export const HumanRelationshipsSection = () => {
       }
       // Try to parse the item itself if it's a string
       if (typeof item === 'string') {
-        return JSON.parse(item);
+        const parsed = JSON.parse(item);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
       }
-      // If item is already an object, return it
+      // If item is already an object with expected properties, return it
       if (typeof item === 'object' && item !== null) {
-        return item;
+        // Check if it has the expected contact properties
+        if (item.name !== undefined) {
+          return item;
+        }
       }
     } catch (err) {
+      console.warn('Error parsing contact data:', err);
       // If parsing fails, return default object
     }
     return { name: '', email: '', phone: '', notes: '' };

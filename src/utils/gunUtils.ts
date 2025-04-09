@@ -17,6 +17,30 @@ const decryptionCache = new Map<string, {value: string, timestamp: number}>();
 const CACHE_TIMEOUT_MS = 30 * 60 * 1000;
 
 /**
+ * Clear the decryption cache for a specific table type or entire cache
+ * @param tableType Optional table type to clear cache for (if not provided, clears entire cache)
+ */
+export const clearDecryptionCache = (tableType?: TableType) => {
+  if (tableType) {
+    // Clear only cache entries for the specified table type
+    const keysToDelete: string[] = [];
+    decryptionCache.forEach((_, key) => {
+      if (key.startsWith(`${tableType}:`)) {
+        keysToDelete.push(key);
+      }
+    });
+    
+    keysToDelete.forEach(key => decryptionCache.delete(key));
+    console.log(`[STORAGE] Cleared decryption cache for ${tableType}, removed ${keysToDelete.length} entries`);
+  } else {
+    // Clear entire cache
+    const count = decryptionCache.size;
+    decryptionCache.clear();
+    console.log(`[STORAGE] Cleared entire decryption cache (${count} entries)`);
+  }
+};
+
+/**
  * Gun.js acknowledgment response type
  */
 type GunAck = {
@@ -534,6 +558,21 @@ export const deleteGunItem = async (
             'GUN_DELETE_ERROR'
           ));
         } else {
+          // Remove from decryption cache if it existed
+          // This ensures we don't return stale data if the item is recreated
+          const cacheKeyPrefix = `${tableType}:${key}:`;
+          const keysToDelete: string[] = [];
+          decryptionCache.forEach((_, cacheKey) => {
+            if (cacheKey.startsWith(cacheKeyPrefix)) {
+              keysToDelete.push(cacheKey);
+            }
+          });
+          
+          if (keysToDelete.length > 0) {
+            keysToDelete.forEach(cacheKey => decryptionCache.delete(cacheKey));
+            console.log(`[STORAGE] Cleared ${keysToDelete.length} cache entries for item ${key}`);
+          }
+          
           resolve(true);
         }
       });

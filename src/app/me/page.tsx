@@ -1,6 +1,7 @@
 'use client';
 
-import { useAppKitAccount, useDisconnect } from '@reown/appkit/react';
+import { useAppKitAccount } from '@reown/appkit-controllers/react';
+import { useDisconnect } from '@reown/appkit/react';
 // Footer is now included in the layout
 import { MedicalDataSection } from "@/components/MedicalDataSection";
 import { AccountsPasswordsSection } from "@/components/AccountsPasswordsSection";
