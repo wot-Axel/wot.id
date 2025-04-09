@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { useDataAccess, DataType } from '@/hooks/useDataAccess';
-import { TableData } from '@/utils/tablelandUtils';
+import { storeGunItem, getGunItem, listGunItems, deleteGunItem } from '@/utils/gunUtils';
+import { TableData } from '@/utils/storageUtils';
 
 // Define document fields
 interface DocumentField {

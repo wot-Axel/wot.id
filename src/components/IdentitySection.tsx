@@ -242,7 +242,7 @@ export const IdentitySection = () => {
         <div className="section-content">
           <div className="info-box" style={{ marginBottom: '1rem' }}>
             <p>
-              <strong>Tableland:</strong> Your identity data is securely stored on Tableland, 
+              <strong>Decentralized Storage:</strong> Your identity data is securely stored using Gun.js, 
               a decentralized SQL database for Web3. This provides better reliability, performance, 
               and compatibility with server-side rendering for your sensitive identity information.
             </p>

@@ -150,7 +150,7 @@ export const HumanRelationshipsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Tableland Integration:</strong> Your relationships data is securely stored on Tableland, 
+            <strong>Decentralized Storage:</strong> Your relationships data is securely stored using Gun.js, 
             a decentralized SQL database for Web3. This provides better reliability, performance, 
             and compatibility with server-side rendering compared to our previous implementation.
           </p>
@@ -160,7 +160,7 @@ export const HumanRelationshipsSection = () => {
             
             {contactsData.length === 0 ? (
               <div>
-                <p>You don't have any relationships saved yet. Add some to store your human relationships securely on Tableland.</p>
+                <p>You don't have any relationships saved yet. Add some to store your human relationships securely with Gun.js.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
@@ -171,7 +171,7 @@ export const HumanRelationshipsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your relationship information is stored securely on Tableland.</p>
+                <p>Your relationship information is stored securely with Gun.js decentralized storage.</p>
                 
                 <form onSubmit={handleAddContact} className="private-data-form">
                   <div className="form-group">

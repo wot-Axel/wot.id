@@ -48,83 +48,8 @@ const getXmtpClient = async () => {
   return XmtpClientModule;
 };
 
-// Create a global utility to add a mock Ethereum provider to the window object
-// This is needed because XMTP internally checks for window.ethereum even when using a custom signer
-const setupMockEthereumProvider = (walletClient: any, address: string | undefined) => {
-  // Only run in browser
-  if (typeof window === 'undefined') return;
-  
-  // Safety check - address should never be undefined when this function is called
-  if (!address) {
-    console.error('No address provided to setupMockEthereumProvider');
-    return;
-  }
-  
-  console.log('Setting up mock ethereum provider with address:', address);
-  
-  // Create a mock ethereum provider that mimics the minimum interface needed by XMTP
-  const mockProvider = {
-    isMetaMask: true,
-    request: async ({ method, params }: any) => {
-      console.log('Mock ethereum provider request:', method, params);
-      
-      // Implement the necessary JSON-RPC methods that XMTP might call
-      if (method === 'eth_requestAccounts' || method === 'eth_accounts') {
-        return [address];
-      }
-      
-      if (method === 'eth_chainId') {
-        // Return the current chain ID from walletClient
-        // This allows XMTP to work with any chain the user is connected to
-        const chainId = walletClient?.chain?.id;
-        return chainId ? `0x${chainId.toString(16)}` : '0x1';
-      }
-      
-      if (method === 'personal_sign' || method === 'eth_sign') {
-        try {
-          const message = params[0];
-          console.log('Signing message in mock provider:', method);
-          console.log('Message (first 50 chars):', typeof message === 'string' ? message.substring(0, 50) : '(binary data)');
-          
-          const signature = await walletClient.signMessage({ message });
-          console.log('Raw signature received from wallet:', signature.substring(0, 10) + '...');
-          
-          // XMTP expects a hex string with a specific format
-          // The signature from walletClient might already be properly formatted, but let's ensure it
-          // is a properly formatted hex string with the '0x' prefix
-          const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
-          console.log('Formatted signature:', formattedSignature.substring(0, 10) + '...');
-          
-          return formattedSignature;
-        } catch (error) {
-          console.error('Error in mock provider while signing:', error);
-          throw error;
-        }
-      }
-      
-      // Add other methods as needed
-      throw new Error(`Method ${method} not implemented in mock provider`);
-    },
-    on: (event: string, callback: any) => {
-      console.log('Mock ethereum provider registered event:', event);
-      // We could implement event handling here if needed
-      return mockProvider;
-    },
-    removeListener: (event: string, callback: any) => {
-      console.log('Mock ethereum provider removed listener for event:', event);
-      return mockProvider;
-    }
-  };
-  
-  // Assign the mock provider to window.ethereum if it doesn't exist
-  if (typeof window !== 'undefined' && !window.ethereum) {
-    console.log('Installing mock ethereum provider to window.ethereum');
-    // @ts-ignore - TypeScript doesn't know about window.ethereum
-    window.ethereum = mockProvider;
-  }
-  
-  return mockProvider;
-};
+// XMTP should use the real provider from the wallet
+// No mock providers as per user preference
 
 // We don't need to redeclare window.ethereum as it's already defined elsewhere
 // This was causing TypeScript errors
@@ -165,14 +90,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   // const [db, setDb] = useState<Database | null>(null);
   // const [tableName, setTableName] = useState<string>('');
 
-  // Phase 1: Setup mock ethereum provider without Tableland initialization
-  useEffect(() => {
-    // Setup mock ethereum provider when wallet is connected
-    if (isConnected && address && walletClient) {
-      // Initialize the mock ethereum provider
-      setupMockEthereumProvider(walletClient, address);
-    }
-  }, [isConnected, address, walletClient]);
+  // Use the real provider from AppKit instead of a mock provider
+  // This ensures proper wallet integration without any mock code
 
   // Phase 2: Tableland table setup (commented out until implementation)
   /*
@@ -341,8 +260,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             throw new Error('Wallet client or address is undefined');
           }
           
-          // Ensure we have a mock ethereum provider setup
-          setupMockEthereumProvider(walletClient, address);
+          // Using real provider directly - no mock providers
           
           // Debug walletClient capabilities
           console.log('WalletClient details:');
@@ -510,12 +428,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Ensure we have a mock ethereum provider setup
-      console.log('Ensuring mock ethereum provider is setup...');
-      if (walletClient) {
-        setupMockEthereumProvider(walletClient, address);
-      } else {
-        console.log('Skipping mock ethereum provider setup - walletClient is undefined');
-      }
+      console.log('Using the real wallet provider for XMTP interactions...');
       
       // Create our custom signer for all XMTP interactions
       console.log('Creating custom signer for XMTP...');
@@ -620,13 +533,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
           } catch (e: any) {
             console.log('Error checking if user can message:', e);
             if (e.message?.includes('ethereum provider')) {
-              console.error('Ethereum provider error, retrying with mock provider...');
-              // Try reinitializing the mock provider
-              if (walletClient) {
-                setupMockEthereumProvider(walletClient, address);
-              } else {
-                console.error('Cannot setup mock provider: walletClient is undefined');
-              }
+              console.error('Ethereum provider error - ensure your wallet is properly connected');
             } else {
               console.log('This is expected if user has no identity yet, proceeding to create client anyway');
             }
@@ -659,7 +566,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
           } else if (e.message?.includes('not a function')) {
             setError(new Error('Your wallet appears to be incompatible with this messaging system. Please try a different wallet.'));
           } else if (e.message?.includes('ethereum provider')) {
-            setError(new Error('XMTP requires an ethereum provider. We have created a mock provider, please try again.'));
+            setError(new Error('XMTP requires an ethereum provider. Please ensure your wallet is properly connected.'));
           } else {
             setError(new Error(`Failed to create message client: ${e.message || 'Unknown error'}`));
           }

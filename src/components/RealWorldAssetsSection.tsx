@@ -166,7 +166,7 @@ export const RealWorldAssetsSection = () => {
         <div className="section-content">
           <div className="info-box" style={{ marginBottom: '1rem' }}>
             <p>
-              <strong>Tableland Integration:</strong> Your real-world assets data is securely stored on Tableland, 
+              <strong>Decentralized Storage:</strong> Your real-world assets data is securely stored using Gun.js, 
               a decentralized SQL database for Web3. This provides better reliability, performance, 
               and compatibility with server-side rendering compared to our previous implementation.
             </p>

@@ -106,7 +106,7 @@ export const AccountsPasswordsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Tableland Integration:</strong> Your accounts and passwords data is securely stored on Tableland, 
+            <strong>Decentralized Storage:</strong> Your accounts and passwords data is securely stored using Gun.js, 
             a decentralized SQL database for Web3. This provides better reliability, performance, 
             and compatibility with server-side rendering compared to our previous implementation.
           </p>
@@ -127,7 +127,7 @@ export const AccountsPasswordsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your account information is stored securely on Tableland.</p>
+                <p>Your account information is stored securely using Gun.js decentralized storage.</p>
                 
                 <form onSubmit={handleAddData} className="private-data-form">
                   <div className="form-group">
