@@ -31,13 +31,33 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
         // Initialize Gun
         GunUtils.initGun();
         
-        // Set ready state
+        // Test Gun connection by writing and reading a small test value
+        // This ensures Gun is actually ready for operations
+        const testKey = `test_${Date.now()}`;
+        const testValue = 'connection_test';
+        
+        // Test write operation
+        await GunUtils.storeGunItem(TableType.SYSTEM, testKey, testValue);
+        
+        // Test read operation
+        const testResult = await GunUtils.getGunItem(TableType.SYSTEM, testKey);
+        
+        if (!testResult || testResult.item_value !== testValue) {
+          throw new Error('Gun test operation failed - storage not ready');
+        }
+        
+        // If we reach here, Gun is fully initialized and operational
         setIsReady(true);
         
-        console.log('[STORAGE] Gun storage system initialized');
+        console.log('[STORAGE] Gun storage system initialized and verified');
       } catch (error) {
         console.error('[STORAGE] Failed to initialize Gun storage:', error);
-        setIsReady(false);
+        // Still set ready to true after a small delay to prevent infinite loading
+        // This allows the UI to progress even if Gun has issues
+        setTimeout(() => {
+          console.log('[STORAGE] Setting storage ready despite initialization issues');
+          setIsReady(true);
+        }, 3000);
       }
     };
 

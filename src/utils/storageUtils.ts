@@ -8,7 +8,8 @@ export enum TableType {
   DIGITAL_ASSETS = 'digital_assets',
   MEDICAL = 'medical',
   AFFILIATIONS = 'affiliations',
-  CHAT = 'chat'
+  CHAT = 'chat',
+  SYSTEM = 'system' // Used for system operations and verification
 }
 
 export interface TableData {

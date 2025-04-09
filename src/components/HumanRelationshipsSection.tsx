@@ -39,29 +39,44 @@ export const HumanRelationshipsSection = () => {
     }
   }, [fetchData]);
   
-  // Initialize data access when connected with improved error handling and timeout safety
+  // Initialize data access when connected with improved error handling
   useEffect(() => {
-    if (isConnected && address && !loading && !dataLoading) {
+    if (isConnected && address) {
+      console.log('[HUMAN RELATIONSHIPS] Initializing data access');
+      
+      // Don't show loading spinner initially - wait to see if operation actually takes time
+      let spinnerTimeoutId: NodeJS.Timeout = setTimeout(() => {
+        if (!dataLoading) {
+          setLoading(true);
+        }
+      }, 200);
+      
       // Set up timeout to prevent getting stuck in loading state
-      let timeoutId: NodeJS.Timeout;
+      let operationTimeoutId: NodeJS.Timeout;
       const loadingTimeout = new Promise<void>((_, reject) => {
-        timeoutId = setTimeout(() => {
+        operationTimeoutId = setTimeout(() => {
           reject(new Error('Initialization timed out'));
-        }, 8000);
+        }, 5000);
       });
       
       // Start initialization with timeout safety
       Promise.race([initDataAccess(), loadingTimeout])
         .catch(err => {
-          console.error('Failed to initialize data access:', err);
-          setError('Connection issue. Please try refreshing the page.');
+          console.error('[HUMAN RELATIONSHIPS] Failed to initialize data access:', err);
+          setError(err.message || 'Connection issue. Please try again.');
         })
         .finally(() => {
-          clearTimeout(timeoutId);
+          clearTimeout(spinnerTimeoutId);
+          clearTimeout(operationTimeoutId);
           setLoading(false);
         });
+        
+      return () => {
+        clearTimeout(spinnerTimeoutId);
+        clearTimeout(operationTimeoutId);
+      };
     }
-  }, [isConnected, address, loading, dataLoading, initDataAccess]);
+  }, [isConnected, address, initDataAccess]);
   
 
 
@@ -70,11 +85,22 @@ export const HumanRelationshipsSection = () => {
       setLoading(true);
       setError('');
       
-      // Initialize data access
-      await initDataAccess();
+      console.log('[HUMAN RELATIONSHIPS] Creating first connection entry');
+      
+      // Create a sample contact to initialize the data
+      const sampleContact = {
+        name: 'Sample Contact',
+        email: '',
+        phone: '',
+        notes: 'This is a sample contact to initialize storage.'
+      };
+      await createItem(sampleContact);
+      
+      // Refresh the data after creating the sample contact
+      await fetchData();
     } catch (err: any) {
-      console.error('Error creating table:', err);
-      setError(err.message || 'Failed to create table. Please try again.');
+      console.error('[HUMAN RELATIONSHIPS] Error creating contact:', err);
+      setError(err.message || 'Failed to create contact. Please try again.');
     } finally {
       setLoading(false);
     }
