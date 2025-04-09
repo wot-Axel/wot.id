@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useStorage } from './StorageContext';
-import { DataType, StorageItem, mapDataTypeToTableType } from '@/types/storage';
+import { DataType, StorageItem } from '../types/storage';
+import { mapDataTypeToTableType } from '../types/storage';
 
 // Define the shape of our global data state
 type DataState = {
@@ -44,8 +45,24 @@ const DATA_TYPES: DataType[] = [
   'currencies',
 ];
 
-// Throttle duration in milliseconds
-const THROTTLE_DURATION = 2000;
+// Throttle duration in milliseconds - different for various data types
+const DEFAULT_THROTTLE_DURATION = 3000; // Default 3 seconds
+
+// Configure longer throttle times for less critical data types
+const THROTTLE_DURATIONS: Partial<Record<DataType, number>> = {
+  profile: 2000,           // More critical data - update more frequently
+  documents: 5000,
+  connections: 5000,
+  organizations: 5000,
+  digital_assets: 3000,
+  real_world_assets: 5000,
+  medical: 10000,
+  private: 5000,
+  contacts: 5000,
+  affiliations: 10000,
+  currencies: 3000,
+  messages: 3000,       // Added missing type
+};
 
 // Helper to format TableData into StorageItem[]
 const formatItems = (models: any[]): StorageItem[] => {
@@ -90,10 +107,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     console.log('[DATA CONTEXT] Storage ready, fetching initial data');
     
-    // Load data for all types with staggered delays to prevent flooding
-    DATA_TYPES.forEach((dataType, index) => {
-      // Stagger requests with 100ms between each to prevent overwhelming the system
-      const delay = index * 100;
+    // Group data types by priority for better loading experience
+    const priorityData: DataType[] = ['profile', 'connections', 'currencies']; // Load these first
+    const secondaryData: DataType[] = DATA_TYPES.filter(type => !priorityData.includes(type));
+    
+    // Load priority data first
+    priorityData.forEach((dataType, index) => {
+      const delay = index * 150; // Slightly longer delay between priority items
+      setTimeout(() => {
+        fetchDataForType(dataType).catch(err => {
+          console.error(`[DATA CONTEXT] Error loading initial data for ${dataType}:`, err);
+        });
+      }, delay);
+    });
+    
+    // Then load secondary data with larger staggering to reduce load spikes
+    secondaryData.forEach((dataType, index) => {
+      const delay = 800 + (index * 300); // Start after priority data with more spacing
       setTimeout(() => {
         fetchDataForType(dataType).catch(err => {
           console.error(`[DATA CONTEXT] Error loading initial data for ${dataType}:`, err);
@@ -111,11 +141,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return [];
     }
     
-    // Apply throttling
+    // Apply throttling with different durations for different data types
     const now = Date.now();
     const lastFetch = lastFetchTimeRef.current[dataType] || 0;
-    if (now - lastFetch < THROTTLE_DURATION) {
-      console.log(`[DATA CONTEXT] Throttling fetch for ${dataType}, last fetch ${Math.round((now - lastFetch)/1000)}s ago`);
+    const throttleDuration = THROTTLE_DURATIONS[dataType] || DEFAULT_THROTTLE_DURATION;
+    
+    if (now - lastFetch < throttleDuration) {
+      // Only log in development to reduce console spam
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(`[DATA CONTEXT] Throttling fetch for ${dataType}, last fetch ${Math.round((now - lastFetch)/1000)}s ago`);
+      }
       // Return current data
       return dataStateRef.current[dataType]?.data || [];
     }

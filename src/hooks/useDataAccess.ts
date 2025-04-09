@@ -253,15 +253,25 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Only trigger one immediate fetch when the component mounts
-  // The data will then be managed by the central store
+  // Only trigger a data fetch once when the component mounts
+  // No need to re-fetch on every render - the central store handles updates
+  const didInitRef = useRef(false);
+  
   useEffect(() => {
-    // No need for initialization delays now - the central store handles that
-    if (storage.isReady) {
+    // Skip if we've already initialized or storage isn't ready
+    if (didInitRef.current || !storage.isReady) return;
+    
+    // Mark as initialized to prevent refetching
+    didInitRef.current = true;
+    
+    // Only fetch if the central store doesn't already have data for this type
+    const existingData = getData(dataType as any);
+    if (existingData?.length === 0) {
       refreshCentralData(dataType as any).catch(err => {
         console.error(`[DATA ACCESS] Error refreshing data for ${dataType}:`, err);
       });
     }
+  // We deliberately avoid dependencies that could trigger refetches
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storage.isReady]);
   
