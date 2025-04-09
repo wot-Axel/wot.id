@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { useDataAccess, DataType } from '@/hooks/useDataAccess';
+import { useStorage } from '@/context/StorageContext';
 
 export const HumanRelationshipsSection = () => {
   const { address, isConnected } = useAppKitAccount();
@@ -18,6 +19,7 @@ export const HumanRelationshipsSection = () => {
   
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [initialized, setInitialized] = useState<boolean>(false);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
@@ -39,44 +41,53 @@ export const HumanRelationshipsSection = () => {
     }
   }, [fetchData]);
   
-  // Initialize data access when connected with improved error handling
-  useEffect(() => {
-    if (isConnected && address) {
-      console.log('[HUMAN RELATIONSHIPS] Initializing data access');
-      
-      // Don't show loading spinner initially - wait to see if operation actually takes time
-      let spinnerTimeoutId: NodeJS.Timeout = setTimeout(() => {
-        if (!dataLoading) {
-          setLoading(true);
-        }
-      }, 200);
-      
-      // Set up timeout to prevent getting stuck in loading state
-      let operationTimeoutId: NodeJS.Timeout;
-      const loadingTimeout = new Promise<void>((_, reject) => {
-        operationTimeoutId = setTimeout(() => {
-          reject(new Error('Initialization timed out'));
-        }, 5000);
-      });
-      
-      // Start initialization with timeout safety
-      Promise.race([initDataAccess(), loadingTimeout])
-        .catch(err => {
-          console.error('[HUMAN RELATIONSHIPS] Failed to initialize data access:', err);
-          setError(err.message || 'Connection issue. Please try again.');
-        })
-        .finally(() => {
-          clearTimeout(spinnerTimeoutId);
-          clearTimeout(operationTimeoutId);
-          setLoading(false);
-        });
-        
-      return () => {
+  // Access the storage context
+  const { isReady: storageReady } = useStorage();
+  
+  // Initialize data access when connected with improved error handling - MEMOIZED to prevent infinite loops
+  const initializeData = useCallback(() => {
+    if (!isConnected || !address || !storageReady) return;
+    
+    console.log('[HUMAN RELATIONSHIPS] Initializing data access');
+    
+    // Don't show loading spinner initially - wait to see if operation actually takes time
+    let spinnerTimeoutId: NodeJS.Timeout = setTimeout(() => {
+      setLoading(true);
+    }, 200);
+    
+    // Set up timeout to prevent getting stuck in loading state
+    let operationTimeoutId: NodeJS.Timeout;
+    const loadingTimeout = new Promise<void>((_, reject) => {
+      operationTimeoutId = setTimeout(() => {
+        reject(new Error('Initialization timed out'));
+      }, 5000);
+    });
+    
+    // Start initialization with timeout safety
+    Promise.race([initDataAccess(), loadingTimeout])
+      .catch(err => {
+        console.error('[HUMAN RELATIONSHIPS] Failed to initialize data access:', err);
+        setError(err.message || 'Connection issue. Please try again.');
+      })
+      .finally(() => {
         clearTimeout(spinnerTimeoutId);
         clearTimeout(operationTimeoutId);
-      };
+        setLoading(false);
+      });
+      
+    return () => {
+      clearTimeout(spinnerTimeoutId);
+      clearTimeout(operationTimeoutId);
+    };
+  }, [isConnected, address, storageReady, initDataAccess]);
+  
+  // Run initialization once when component mounts and dependencies are ready
+  useEffect(() => {
+    if (!initialized && isConnected && address && storageReady) {
+      setInitialized(true);
+      initializeData();
     }
-  }, [isConnected, address, initDataAccess]);
+  }, [initialized, isConnected, address, storageReady, initializeData]);
   
 
 

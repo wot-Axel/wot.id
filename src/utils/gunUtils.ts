@@ -363,16 +363,23 @@ export const getGunItem = async (
     }
     
     return new Promise<TableData | null>((resolve, reject) => {
+      // Track if we've already resolved to prevent multiple callbacks
+      let hasResolved = false;
+      
       const timeout = setTimeout(() => {
-        reject(new GunStorageError(
-          `Timeout getting data for ${tableType}/${key}`, 
-          'getItem', 
-          'OPERATION_TIMEOUT'
-        ));
-      }, 5000); // 5 second timeout for item retrieval
+        if (!hasResolved) {
+          console.warn(`[STORAGE] Timeout getting data for ${tableType}/${key}`);
+          hasResolved = true;
+          // Resolve with null instead of rejecting to prevent UI from getting stuck
+          resolve(null);
+        }
+      }, 3000); // Reduced timeout for better responsiveness
       
       db.get(tableType).get(key).once(async (data: any) => {
+        if (hasResolved) return; // Prevent multiple resolves
+        
         clearTimeout(timeout);
+        hasResolved = true;
         
         if (!data) {
           resolve(null);
@@ -489,13 +496,26 @@ export const listGunItems = async (tableType: TableType): Promise<TableData[]> =
       });
       
       // Gun doesn't have a built-in "I'm done loading" event
-      // So we use a timeout to give it time to fetch the data
+      // This is a key issue - we need to ensure data has time to load
+      // but not wait forever
+      
+      // First check - quick check for initial data
       setTimeout(() => {
-        if (!itemLoadComplete) {
+        if (!itemLoadComplete && items.length > 0) {
+          console.log(`[STORAGE] Early termination with ${items.length} items for ${tableType}`);
           itemLoadComplete = true;
           processAndResolve();
         }
-      }, 500); // Slightly longer delay to collect items (was 300ms)
+      }, 300);
+      
+      // Final check - if we're still not complete, finish anyway
+      setTimeout(() => {
+        if (!itemLoadComplete) {
+          console.log(`[STORAGE] Final resolver with ${items.length} items for ${tableType}`);
+          itemLoadComplete = true;
+          processAndResolve();
+        }
+      }, 1000);
       
       // Process and resolve the promise with decrypted items if needed
       async function processAndResolve() {

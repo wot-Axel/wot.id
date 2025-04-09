@@ -68,8 +68,9 @@ export const useDataAccess = (dataType: DataType) => {
   // Fetch data from storage with timeout safety
   const fetchData = async () => {
     if (!storage.isReady) {
+      console.warn(`[DATA ACCESS] Storage not ready for ${dataType}`);
       setError('Storage not ready');
-      return;
+      return [];
     }
     
     setIsLoading(true);
@@ -77,25 +78,50 @@ export const useDataAccess = (dataType: DataType) => {
     
     // Add timeout to prevent getting stuck
     const timeout = new Promise<null>((_, reject) => {
-      setTimeout(() => reject(new Error('Data fetch operation timed out')), 10000);
+      setTimeout(() => reject(new Error('Data fetch operation timed out')), 5000);
     });
     
     try {
       // Use storage service with timeout safety
       const tableType = mapDataTypeToTableType(dataType);
+      console.log(`[DATA ACCESS] Fetching data for ${dataType} (tableType: ${tableType})`);
+      
       const fetchPromise = storage.listItems(tableType);
       const models = await Promise.race([fetchPromise, timeout]);
       
-      if (!models || !Array.isArray(models)) {
-        console.warn(`Invalid data returned for ${dataType}:`, models);
+      if (!models) {
+        console.warn(`[DATA ACCESS] No data returned for ${dataType}`);
         setData([]);
         return [];
+      }
+      
+      // Handle non-array results (could happen with Gun.js)
+      if (!Array.isArray(models)) {
+        console.warn(`[DATA ACCESS] Non-array data returned for ${dataType}:`, models);
+        setData([]);
+        return [];
+      }
+      
+      console.log(`[DATA ACCESS] Retrieved ${models.length} items for ${dataType}`);
+      
+      // Debug the first item if available
+      if (models.length > 0) {
+        console.log(`[DATA ACCESS] Sample item for ${dataType}:`, { 
+          ...models[0],
+          item_value: models[0].item_value ? models[0].item_value.substring(0, 20) + '...' : null 
+        });
       }
       
       // Format data to match the expected structure
       // Filter out any null or undefined items
       const formattedModels = models
-        .filter(model => model && model.item_key && model.item_value) // Filter out invalid entries
+        .filter(model => {
+          const isValid = model && model.item_key && model.item_value;
+          if (!isValid) {
+            console.warn(`[DATA ACCESS] Filtering out invalid model:`, model);
+          }
+          return isValid;
+        })
         .map(model => ({
           id: String(model.id || ''),
           key: model.item_key,
@@ -103,6 +129,7 @@ export const useDataAccess = (dataType: DataType) => {
           created_at: model.created_at || new Date().toISOString()
         }));
       
+      console.log(`[DATA ACCESS] Formatted ${formattedModels.length} items for ${dataType}`);
       setData(formattedModels);
       return formattedModels;
     } catch (err) {
