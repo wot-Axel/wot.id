@@ -4,73 +4,32 @@ import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { 
   TableType,
-  TableData,
-  initTableland,
-  checkTableExists,
-  createTable,
-  getData,
-  insertData,
-  clearData
-} from '@/utils/tablelandUtils';
-import { useTableland } from '@/context/TablelandContext';
+  TableData
+} from '@/utils/storageUtils';
+import { useStorage } from '@/context/StorageContext';
 
 export const PrivateDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
-  const [isOptimismNetwork, setIsOptimismNetwork] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [tableName, setTableName] = useState<string>('');
   const [privateData, setPrivateData] = useState<TableData[]>([]);
   const [newKey, setNewKey] = useState<string>('');
   const [newValue, setNewValue] = useState<string>('');
 
-  // Use the Tableland context
-  const { client, isInitialized, isLoading: tablelandLoading, connect } = useTableland();
+  // Use the Storage context
+  const storage = useStorage();
   
-  // Check if we should use Tableland
-  const tablelandEnabled = true; // Always using Tableland now
-
-  // Initialize Tableland connection
-  useEffect(() => {
-    const init = async () => {
-      try {
-        if (isConnected && address && !isInitialized && !tablelandLoading && tablelandEnabled) {
-          setLoading(true);
-          setError('');
-          
-          // Connect to Tableland
-          await connect();
-          
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error initializing Tableland:', err);
-        setError(err.message || 'Failed to initialize Tableland. Please try again.');
-        setLoading(false);
-      }
-    };
-    
-    init();
-  }, [isConnected, address, isInitialized, tablelandLoading, connect, tablelandEnabled]);
-  
-  // Load private data when Tableland is initialized
+  // Load private data when connected
   useEffect(() => {
     const loadPrivateData = async () => {
       try {
-        if (isInitialized && client && address && tablelandEnabled) {
+        if (isConnected && address && storage.isReady) {
           setLoading(true);
+          setError('');
           
-          // Check if table exists
-          const { exists, tableName: existingTable } = await checkTableExists(client, TableType.PRIVATE, address);
-          
-          if (exists && existingTable) {
-            setTableName(existingTable);
-            
-            // Get existing data
-            const records = await getData(client, TableType.PRIVATE, existingTable);
-            
-            setPrivateData(records);
-          }
+          // Get existing data
+          const records = await storage.listItems(TableType.PRIVATE);
+          setPrivateData(records);
           
           setLoading(false);
         }
@@ -82,33 +41,11 @@ export const PrivateDataSection = () => {
     };
     
     loadPrivateData();
-  }, [isInitialized, client, address, tablelandEnabled]);
-
-  const handleCreateTable = async () => {
-    if (!client || !address) {
-      setError('Tableland not initialized or no address available.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Create a new table for private data
-      const newTableName = await createTable(client, TableType.PRIVATE, address);
-      setTableName(newTableName);
-      
-      setLoading(false);
-    } catch (err: any) {
-      console.error('Error creating table:', err);
-      setError(err.message || 'Failed to create table. Please try again.');
-      setLoading(false);
-    }
-  };
+  }, [isConnected, address, storage.isReady]);
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client || !tableName || !newKey || !newValue) {
+    if (!storage.isReady || !newKey || !newValue) {
       setError('Missing required information. Please check all fields.');
       return;
     }
@@ -117,12 +54,11 @@ export const PrivateDataSection = () => {
       setLoading(true);
       setError('');
       
-      // Insert data into the table
-      await insertData(client, TableType.PRIVATE, tableName, newKey, newValue);
+      // Store data using the storage system
+      await storage.storeItem(TableType.PRIVATE, newKey, newValue);
       
       // Refresh data
-      const records = await getData(client, TableType.PRIVATE, tableName);
-      
+      const records = await storage.listItems(TableType.PRIVATE);
       setPrivateData(records);
       
       // Clear form
@@ -137,8 +73,8 @@ export const PrivateDataSection = () => {
   };
 
   const handleClearPrivateData = async () => {
-    if (!client || !tableName) {
-      setError('Tableland not initialized or no table available.');
+    if (!storage.isReady) {
+      setError('Storage system not initialized.');
       return;
     }
     
@@ -146,11 +82,10 @@ export const PrivateDataSection = () => {
       setLoading(true);
       setError('');
       
-      // Clear the table
-      await clearData(client, TableType.PRIVATE, tableName);
-      
-      // Reset data
+      // Our simple implementation doesn't support bulk delete
+      // Just clear the local state for now
       setPrivateData([]);
+      localStorage.removeItem(`${TableType.PRIVATE}_items`);
       
       setLoading(false);
     } catch (err: any) {
@@ -166,32 +101,20 @@ export const PrivateDataSection = () => {
 
   return (
     <div className="legal-section">
-      <h2>Private Data (Tableland)</h2>
+      <h2>Private Data</h2>
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Tableland Integration:</strong> Your private data is securely stored on Tableland, 
-            a decentralized SQL database for Web3. This provides excellent reliability, performance, 
-            and compatibility with server-side rendering.
+            <strong>Secure Storage:</strong> Your private data is securely stored using encrypted local storage.
+            In a future update, this will be integrated with a more robust decentralized storage solution.
           </p>
         </div>
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {!tableName ? (
+            {storage.isReady ? (
               <div>
-                <p>You don't have a private data table yet. Create one to store your private data on Tableland.</p>
-                <button 
-                  className="button-primary" 
-                  onClick={handleCreateTable}
-                  disabled={loading}
-                >
-                  {loading ? 'Creating...' : 'Create Private Table'}
-                </button>
-              </div>
-            ) : (
-              <div>
-                <p>Your private data is securely stored on Tableland.</p>
+                <p>Your private data is securely stored.</p>
                 
                 <form onSubmit={handleAddData} className="private-data-form">
                   <div className="form-group">
@@ -255,9 +178,9 @@ export const PrivateDataSection = () => {
                       </thead>
                       <tbody>
                         {privateData.map((item) => (
-                          <tr key={item.id || item.key}>
-                            <td>{item.key}</td>
-                            <td>{item.value}</td>
+                          <tr key={item.id}>
+                            <td>{item.item_key}</td>
+                            <td>{item.item_value}</td>
                             <td>{item.created_at ? new Date(item.created_at).toLocaleString() : new Date().toLocaleString()}</td>
                           </tr>
                         ))}
@@ -265,6 +188,10 @@ export const PrivateDataSection = () => {
                     </table>
                   )}
                 </div>
+              </div>
+            ) : (
+              <div>
+                <p>Storage system is initializing. Please wait a moment...</p>
               </div>
             )}
           </>

@@ -62,9 +62,30 @@ export const deriveKey = async (password: string, salt?: Uint8Array): Promise<{ 
  * @param password The password to encrypt with
  * @returns The encrypted data as a base64 string
  */
+/**
+ * Check if data appears to be already encrypted
+ * @param data Data to check
+ * @returns Whether the data appears to be encrypted
+ */
+export const isEncryptedData = (data: any): boolean => {
+  if (!data || typeof data !== 'string') {
+    return false;
+  }
+  // Check for our encryption prefix
+  if (data.startsWith(ENCRYPTION_PREFIX)) {
+    return true;
+  }
+  return false;
+};
+
 export const encryptData = async (data: any, password: string): Promise<string> => {
   return monitorAsync('encryptData', 'encryptionUtils', async () => {
     try {
+      // Skip if already encrypted
+      if (isEncryptedData(data)) {
+        return data;
+      }
+      
       // Convert data to JSON string
       const dataString = typeof data === 'string' ? data : JSON.stringify(data);
       
@@ -93,8 +114,8 @@ export const encryptData = async (data: any, password: string): Promise<string> 
       result.set(iv, salt.length);
       result.set(new Uint8Array(encryptedBuffer), salt.length + iv.length);
       
-      // Convert to base64
-      return btoa(String.fromCharCode(...result));
+      // Convert to base64 and add prefix
+      return ENCRYPTION_PREFIX + btoa(String.fromCharCode(...result));
     } catch (error) {
       console.error('Error encrypting data:', error);
       throw new Error('Failed to encrypt data');
@@ -110,9 +131,24 @@ export const encryptData = async (data: any, password: string): Promise<string> 
  */
 export const decryptData = async (encryptedData: string, password: string): Promise<any> => {
   return monitorAsync('decryptData', 'encryptionUtils', async () => {
+    // Check if data is encrypted first
+    if (!encryptedData || typeof encryptedData !== 'string') {
+      return encryptedData; // Return as-is if not a string
+    }
+    
+    // Check for encryption prefix
+    if (!isEncryptedData(encryptedData)) {
+      throw new Error('Data is not encrypted');
+    }
+    
     try {
+      // Remove prefix if present
+      const actualData = encryptedData.startsWith(ENCRYPTION_PREFIX) 
+        ? encryptedData.substring(ENCRYPTION_PREFIX.length) 
+        : encryptedData;
+      
       // Convert base64 to Uint8Array
-      const encryptedBytes = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+      const encryptedBytes = Uint8Array.from(atob(actualData), c => c.charCodeAt(0));
       
       // Extract salt, iv, and encrypted data
       const salt = encryptedBytes.slice(0, SALT_LENGTH);
@@ -144,11 +180,18 @@ export const decryptData = async (encryptedData: string, password: string): Prom
         return decryptedString;
       }
     } catch (error) {
+      if (error instanceof Error && error.message === 'Data is not encrypted') {
+        // If we explicitly detected non-encrypted data, return as-is
+        return encryptedData;
+      }
       console.error('Error decrypting data:', error);
-      throw new Error('Failed to decrypt data: Invalid password or corrupted data');
+      throw error; // Preserve original error for better debugging
     }
   });
 };
+
+// Encryption marker prefix to reliably identify encrypted data
+const ENCRYPTION_PREFIX = 'WOT_ENC:';
 
 /**
  * Check if a string is encrypted
@@ -156,7 +199,17 @@ export const decryptData = async (encryptedData: string, password: string): Prom
  * @returns Whether the data is encrypted
  */
 export const isEncrypted = (data: string): boolean => {
+  if (!data || typeof data !== 'string') {
+    return false;
+  }
+  
+  // Check for our encryption marker prefix
+  if (data.startsWith(ENCRYPTION_PREFIX)) {
+    return true;
+  }
+  
   try {
+    // Fallback for data encrypted before we added the prefix
     // Try to decode as base64
     const decoded = atob(data);
     
@@ -165,9 +218,17 @@ export const isEncrypted = (data: string): boolean => {
       return false;
     }
     
-    // This is a heuristic and not foolproof
-    // For more accuracy, we could add a prefix to encrypted data
-    return true;
+    // Additional heuristic: check for binary data in the first bytes
+    // Most encrypted data will have non-printable characters
+    let binaryCharCount = 0;
+    for (let i = 0; i < Math.min(10, decoded.length); i++) {
+      const code = decoded.charCodeAt(i);
+      if (code < 32 || code > 126) {
+        binaryCharCount++;
+      }
+    }
+    
+    return binaryCharCount >= 2; // If at least 2 binary characters, likely encrypted
   } catch {
     // Not valid base64
     return false;

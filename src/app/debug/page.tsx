@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useTableland } from '@/context/TablelandContext';
-import { getTablelandDebugLogs, exportTablelandLogs } from '@/utils/tablelandUtils';
-import { TableType } from '@/utils/tablelandUtils';
+import { useStorage } from '@/context/StorageContext';
+import { getTablelandDebugLogs, exportTablelandLogs } from '@/utils/storageUtils';
+import { TableType } from '@/utils/storageUtils';
 
 // Interface for parsed server logs
 interface ServerLog {
@@ -30,27 +30,29 @@ const DebugPage = () => {
   const [filterPath, setFilterPath] = useState('');
   const [filterMethod, setFilterMethod] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const tableland = useTableland();
+  const storage = useStorage();
 
   useEffect(() => {
     // Get logs from localStorage
     const storedLogs = getTablelandDebugLogs();
     setLogs(storedLogs);
 
-    // Get connection status
-    if (typeof window !== 'undefined' && (window as any).checkTablelandState) {
-      setConnectionStatus((window as any).checkTablelandState());
-    }
-  }, []);
+    // Set simple connection status
+    setConnectionStatus({
+      connected: storage.isReady,
+      message: storage.isReady ? 'Storage is ready' : 'Storage not initialized'
+    });
+  }, [storage.isReady]);
 
   const refreshLogs = () => {
     const storedLogs = getTablelandDebugLogs();
     setLogs(storedLogs);
     
     // Update connection status
-    if (typeof window !== 'undefined' && (window as any).checkTablelandState) {
-      setConnectionStatus((window as any).checkTablelandState());
-    }
+    setConnectionStatus({
+      connected: storage.isReady,
+      message: storage.isReady ? 'Storage is ready' : 'Storage not initialized'
+    });
   };
 
   const exportLogs = () => {
@@ -75,10 +77,11 @@ const DebugPage = () => {
     
     for (const type of tableTypes) {
       try {
-        const name = await tableland.getTableName(type as TableType);
-        names[type] = name;
+        // In our localStorage implementation, we don't have actual table names
+        // Just use a placeholder value showing the storage type
+        names[type] = `local_storage_${type}`;
       } catch (error) {
-        console.error(`Error getting table name for ${type}:`, error);
+        console.error(`Error getting storage info for ${type}:`, error);
         names[type] = null;
       }
     }
@@ -86,13 +89,12 @@ const DebugPage = () => {
     setTableNames(names);
   };
 
-  const connectTableland = async () => {
-    try {
-      await tableland.connect();
-      refreshLogs();
-    } catch (error) {
-      console.error('Error connecting to Tableland:', error);
-    }
+  const checkStorageStatus = () => {
+    setConnectionStatus({
+      connected: storage.isReady,
+      message: storage.isReady ? 'Storage is ready' : 'Storage not initialized'
+    });
+    refreshLogs();
   };
 
   // Parse server logs from CSV format
@@ -169,7 +171,7 @@ const DebugPage = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Tableland Debug</h1>
+      <h1 className="text-2xl font-bold mb-4">Storage Debug</h1>
       
       <div className="mb-6 flex flex-wrap gap-4">
         <button 
@@ -191,10 +193,10 @@ const DebugPage = () => {
           Check Table Names
         </button>
         <button 
-          onClick={connectTableland}
+          onClick={checkStorageStatus}
           className="px-4 py-2 bg-orange-500 text-white rounded"
         >
-          Connect Tableland
+          Check Storage Status
         </button>
       </div>
 

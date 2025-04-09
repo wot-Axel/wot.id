@@ -1,9 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { useDataAccess, DataType } from '@/hooks/useDataAccess';
-import { PrivateData } from '@/utils/tablelandUtils';
+
+// Define the interface locally instead of importing from tablelandUtils
+interface PrivateData {
+  id?: number;
+  key: string;
+  value: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export const OrganizationalAffiliationsSection = () => {
   const { address, isConnected } = useAppKitAccount();
