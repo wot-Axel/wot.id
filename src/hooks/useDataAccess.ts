@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useStorage } from '@/context/StorageContext';
 import { TableType, TableData } from '@/utils/storageUtils';
 import { clearDecryptionCache } from '@/utils/gunUtils';
@@ -58,26 +58,34 @@ const mapDataTypeToTableType = (dataType: DataType): TableType => {
   }
 };
 
+// Global data cache to prevent multiple fetches for the same data type
+const globalDataCache: Record<string, {
+  data: any[];
+  lastFetched: number;
+  isFetching: boolean;
+  subscribers: Set<(data: any[]) => void>;
+}> = {};
+
 export const useDataAccess = (dataType: DataType) => {
   const storage = useStorage();
   
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Add a state to track if initial data has been fetched
-  const [dataInitialized, setDataInitialized] = useState(false);
+  // Use ref to track component mount state
+  const isMountedRef = useRef(true);
   
   // Fetch data from storage with timeout safety - memoized to prevent rerenders
   const fetchData = useCallback(async () => {
-    // Skip if already loading to prevent parallel fetches
-    if (isLoading) {
-      console.log(`[DATA ACCESS] Skipping fetch for ${dataType} - already in progress`);
-      return data;
-    }
     if (!storage.isReady) {
       console.warn(`[DATA ACCESS] Storage not ready for ${dataType}`);
       setError('Storage not ready');
       return [];
+    }
+    
+    // Set global fetching state
+    if (globalDataCache[dataType]) {
+      globalDataCache[dataType].isFetching = true;
     }
     
     setIsLoading(true);
@@ -137,7 +145,22 @@ export const useDataAccess = (dataType: DataType) => {
         }));
       
       console.log(`[DATA ACCESS] Formatted ${formattedModels.length} items for ${dataType}`);
-      setData(formattedModels);
+      
+      // Update cache
+      if (globalDataCache[dataType]) {
+        globalDataCache[dataType].data = formattedModels;
+        globalDataCache[dataType].lastFetched = Date.now();
+        globalDataCache[dataType].isFetching = false;
+        
+        // Notify all subscribers
+        globalDataCache[dataType].subscribers.forEach(callback => {
+          callback(formattedModels);
+        });
+      }
+      
+      if (isMountedRef.current) {
+        setData(formattedModels);
+      }
       return formattedModels;
     } catch (err) {
       console.error(`Error fetching ${dataType} data:`, err);
@@ -286,6 +309,11 @@ export const useDataAccess = (dataType: DataType) => {
   
   // Refresh data
   const refreshData = () => {
+    // Clear any existing cache for this data type
+    if (globalDataCache[dataType]) {
+      console.log(`[DATA ACCESS] Invalidating cache for ${dataType} before refresh`);
+      globalDataCache[dataType].lastFetched = 0; // Force refresh
+    }
     return fetchData();
   };
   
@@ -317,9 +345,22 @@ export const useDataAccess = (dataType: DataType) => {
       // Clear the decryption cache for this table type to prevent stale data
       clearDecryptionCache(tableType);
       
+      // Clear the global cache
+      if (globalDataCache[dataType]) {
+        globalDataCache[dataType].data = [];
+        globalDataCache[dataType].lastFetched = Date.now();
+        
+        // Notify all subscribers
+        globalDataCache[dataType].subscribers.forEach(callback => {
+          callback([]);
+        });
+      }
+      
       // Clear the local state regardless of individual deletion success
       // This ensures UI is clean even if some deletions failed
-      setData([]);
+      if (isMountedRef.current) {
+        setData([]);
+      }
       return success;
     } catch (err) {
       console.error(`Error clearing ${dataType} items:`, err);
@@ -330,18 +371,66 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Fetch data on mount and when dependencies change
+  // Set up unmount cleanup
   useEffect(() => {
-    // Only fetch data once when storage is ready and not already fetched
-    if (storage.isReady && !dataInitialized && !isLoading) {
-      console.log(`[DATA ACCESS] Initial data fetch for ${dataType}`);
-      fetchData().then(() => {
-        setDataInitialized(true);
-      });
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Initialize from cache or fetch fresh data
+  useEffect(() => {
+    if (!storage.isReady) return;
+    
+    // Create cache entry if it doesn't exist
+    if (!globalDataCache[dataType]) {
+      globalDataCache[dataType] = {
+        data: [],
+        lastFetched: 0,
+        isFetching: false,
+        subscribers: new Set()
+      };
     }
-  // Importantly, DO NOT include dataType in the dependency array 
-  // This prevents refetching when multiple components use the same data type
-  }, [storage.isReady, dataInitialized, isLoading]);
+    
+    // Add this component as a subscriber
+    const updateData = (newData: any[]) => {
+      if (isMountedRef.current) {
+        setData(newData);
+        setIsLoading(false);
+      }
+    };
+    
+    globalDataCache[dataType].subscribers.add(updateData);
+    
+    // Use cached data if available and recent (less than 30 seconds old)
+    const cache = globalDataCache[dataType];
+    const now = Date.now();
+    const isDataFresh = cache.data.length > 0 && (now - cache.lastFetched < 30000);
+    
+    if (isDataFresh) {
+      // Use cached data
+      console.log(`[DATA ACCESS] Using cached data for ${dataType} (${cache.data.length} items)`);
+      setData(cache.data);
+      setIsLoading(false);
+    } else if (!cache.isFetching) {
+      // Fetch fresh data if not already fetching
+      console.log(`[DATA ACCESS] Fetching fresh data for ${dataType}`);
+      setIsLoading(true);
+      fetchData();
+    } else {
+      // Someone else is already fetching this data type
+      console.log(`[DATA ACCESS] Waiting for existing fetch for ${dataType}`);
+      setIsLoading(true);
+    }
+    
+    // Cleanup subscriber on unmount
+    return () => {
+      if (globalDataCache[dataType]) {
+        globalDataCache[dataType].subscribers.delete(updateData);
+      }
+    };
+  }, [dataType, storage.isReady, fetchData]);
+  
   
   return {
     data,
