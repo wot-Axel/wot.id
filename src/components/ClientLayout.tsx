@@ -8,7 +8,7 @@ import { StorageProvider } from '@/context/StorageContext';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Footer } from '@/components/Footer';
 import { LogCaptureInitializer } from '@/components/LogCaptureInitializer';
-import { StorageMigration } from '@/components/StorageMigration';
+// Storage migration no longer needed with Gun.js implementation
 
 export function ClientLayout({ 
   children,
@@ -24,8 +24,7 @@ export function ClientLayout({
           <StorageProvider>
             {/* Initialize log capture system */}
             <LogCaptureInitializer />
-            {/* Handle data migration from localStorage to Gun.js */}
-            <StorageMigration />
+            {/* Gun.js storage implementation now fully integrated */}
             <TopNavigation />
             <main className="main-content">
               {children}
