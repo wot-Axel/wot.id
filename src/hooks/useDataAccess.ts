@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStorage } from '@/context/StorageContext';
 import { TableType, TableData } from '@/utils/storageUtils';
 import { clearDecryptionCache } from '@/utils/gunUtils';
@@ -64,9 +64,16 @@ export const useDataAccess = (dataType: DataType) => {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Add a state to track if initial data has been fetched
+  const [dataInitialized, setDataInitialized] = useState(false);
   
-  // Fetch data from storage with timeout safety
-  const fetchData = async () => {
+  // Fetch data from storage with timeout safety - memoized to prevent rerenders
+  const fetchData = useCallback(async () => {
+    // Skip if already loading to prevent parallel fetches
+    if (isLoading) {
+      console.log(`[DATA ACCESS] Skipping fetch for ${dataType} - already in progress`);
+      return data;
+    }
     if (!storage.isReady) {
       console.warn(`[DATA ACCESS] Storage not ready for ${dataType}`);
       setError('Storage not ready');
@@ -140,7 +147,7 @@ export const useDataAccess = (dataType: DataType) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [storage, dataType]);
   
   // Create a new item
   const createItem = async (itemData: any, tags?: string[]) => {
@@ -325,10 +332,16 @@ export const useDataAccess = (dataType: DataType) => {
   
   // Fetch data on mount and when dependencies change
   useEffect(() => {
-    if (storage.isReady) {
-      fetchData();
+    // Only fetch data once when storage is ready and not already fetched
+    if (storage.isReady && !dataInitialized && !isLoading) {
+      console.log(`[DATA ACCESS] Initial data fetch for ${dataType}`);
+      fetchData().then(() => {
+        setDataInitialized(true);
+      });
     }
-  }, [dataType, storage.isReady]);
+  // Importantly, DO NOT include dataType in the dependency array 
+  // This prevents refetching when multiple components use the same data type
+  }, [storage.isReady, dataInitialized, isLoading]);
   
   return {
     data,
