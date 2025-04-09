@@ -1,18 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useStorage } from '@/context/StorageContext';
-import { TableType, TableData } from '@/utils/storageUtils';
-import { clearDecryptionCache } from '@/utils/gunUtils';
-
-// Define PrivateData interface to maintain compatibility
-interface PrivateData {
-  id?: string;
-  key: string;
-  value: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import { TableType, TableData, PrivateData } from '@/utils/storageUtils';
 
 /**
  * Hook for accessing data from storage
@@ -58,124 +48,49 @@ const mapDataTypeToTableType = (dataType: DataType): TableType => {
   }
 };
 
-// Global data cache to prevent multiple fetches for the same data type
-const globalDataCache: Record<string, {
-  data: any[];
-  lastFetched: number;
-  isFetching: boolean;
-  subscribers: Set<(data: any[]) => void>;
-}> = {};
-
 export const useDataAccess = (dataType: DataType) => {
   const storage = useStorage();
   
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Use ref to track component mount state
-  const isMountedRef = useRef(true);
   
-  // Fetch data from storage with timeout safety - memoized to prevent rerenders
-  const fetchData = useCallback(async () => {
+  // Fetch data from storage
+  const fetchData = async () => {
     if (!storage.isReady) {
-      console.warn(`[DATA ACCESS] Storage not ready for ${dataType}`);
-      setError('Storage not ready');
-      return [];
-    }
-    
-    // Set global fetching state
-    if (globalDataCache[dataType]) {
-      globalDataCache[dataType].isFetching = true;
+      return;
     }
     
     setIsLoading(true);
     setError(null);
     
-    // Add timeout to prevent getting stuck
-    const timeout = new Promise<null>((_, reject) => {
-      setTimeout(() => reject(new Error('Data fetch operation timed out')), 5000);
-    });
-    
     try {
-      // Use storage service with timeout safety
+      // Use storage service
       const tableType = mapDataTypeToTableType(dataType);
-      console.log(`[DATA ACCESS] Fetching data for ${dataType} (tableType: ${tableType})`);
-      
-      const fetchPromise = storage.listItems(tableType);
-      const models = await Promise.race([fetchPromise, timeout]);
-      
-      if (!models) {
-        console.warn(`[DATA ACCESS] No data returned for ${dataType}`);
-        setData([]);
-        return [];
-      }
-      
-      // Handle non-array results (could happen with Gun.js)
-      if (!Array.isArray(models)) {
-        console.warn(`[DATA ACCESS] Non-array data returned for ${dataType}:`, models);
-        setData([]);
-        return [];
-      }
-      
-      console.log(`[DATA ACCESS] Retrieved ${models.length} items for ${dataType}`);
-      
-      // Debug the first item if available
-      if (models.length > 0) {
-        console.log(`[DATA ACCESS] Sample item for ${dataType}:`, { 
-          ...models[0],
-          item_value: models[0].item_value ? models[0].item_value.substring(0, 20) + '...' : null 
-        });
-      }
+      const models = await storage.listItems(tableType);
       
       // Format data to match the expected structure
-      // Filter out any null or undefined items
-      const formattedModels = models
-        .filter(model => {
-          const isValid = model && model.item_key && model.item_value;
-          if (!isValid) {
-            console.warn(`[DATA ACCESS] Filtering out invalid model:`, model);
-          }
-          return isValid;
-        })
-        .map(model => ({
-          id: String(model.id || ''),
-          key: model.item_key,
-          value: model.item_value,
-          created_at: model.created_at || new Date().toISOString()
-        }));
+      const formattedModels = models.map(model => ({
+        id: String(model.id),
+        key: model.item_key,
+        value: model.item_value,
+        created_at: model.created_at
+      }));
       
-      console.log(`[DATA ACCESS] Formatted ${formattedModels.length} items for ${dataType}`);
-      
-      // Update cache
-      if (globalDataCache[dataType]) {
-        globalDataCache[dataType].data = formattedModels;
-        globalDataCache[dataType].lastFetched = Date.now();
-        globalDataCache[dataType].isFetching = false;
-        
-        // Notify all subscribers
-        globalDataCache[dataType].subscribers.forEach(callback => {
-          callback(formattedModels);
-        });
-      }
-      
-      if (isMountedRef.current) {
-        setData(formattedModels);
-      }
+      setData(formattedModels);
       return formattedModels;
     } catch (err) {
       console.error(`Error fetching ${dataType} data:`, err);
       setError(err instanceof Error ? err.message : 'Unknown error fetching data');
-      setData([]); // Set empty data on error to ensure UI can progress
-      return [];
     } finally {
       setIsLoading(false);
     }
-  }, [storage, dataType]);
+  };
   
   // Create a new item
   const createItem = async (itemData: any, tags?: string[]) => {
     if (!storage.isReady) {
-      throw new Error('Storage system not ready');
+      return null;
     }
     
     setIsLoading(true);
@@ -190,10 +105,9 @@ export const useDataAccess = (dataType: DataType) => {
       let value = '';
       
       if (typeof itemData === 'object') {
-        // Generate a more reliable unique key using timestamp and random suffix
-        const timestamp = Date.now();
-        const randomSuffix = Math.random().toString(36).substring(2, 8);
-        key = itemData.key || itemData.id || `${dataType}_${timestamp}_${randomSuffix}`;
+        // Use the first property as the key, or generate a unique key
+        const firstKey = Object.keys(itemData)[0];
+        key = itemData.key || itemData.id || firstKey || `${dataType}_${Date.now()}`;
         
         // Add tags to the content for searchability
         const contentWithTags = { ...itemData, tags: tags || [] };
@@ -242,7 +156,7 @@ export const useDataAccess = (dataType: DataType) => {
         throw new Error(`Item with ID ${id} not found`);
       }
       
-      // Convert the content to key-value format for Gun.js storage
+      // For Tableland, we need to convert the content to key-value format
       let key = item.key;
       let value = '';
       
@@ -309,11 +223,6 @@ export const useDataAccess = (dataType: DataType) => {
   
   // Refresh data
   const refreshData = () => {
-    // Clear any existing cache for this data type
-    if (globalDataCache[dataType]) {
-      console.log(`[DATA ACCESS] Invalidating cache for ${dataType} before refresh`);
-      globalDataCache[dataType].lastFetched = 0; // Force refresh
-    }
     return fetchData();
   };
   
@@ -328,37 +237,10 @@ export const useDataAccess = (dataType: DataType) => {
     
     try {
       const tableType = mapDataTypeToTableType(dataType);
-      
-      // Get all current items
-      const currentItems = [...data];
-      let success = true;
-      
-      // Delete each item from Gun.js storage
-      for (const item of currentItems) {
-        const itemSuccess = await storage.deleteItem(tableType, item.key);
-        if (!itemSuccess) {
-          success = false;
-          console.warn(`Failed to delete item with key: ${item.key}`);
-        }
-      }
-      
-      // Clear the decryption cache for this table type to prevent stale data
-      clearDecryptionCache(tableType);
-      
-      // Clear the global cache
-      if (globalDataCache[dataType]) {
-        globalDataCache[dataType].data = [];
-        globalDataCache[dataType].lastFetched = Date.now();
-        
-        // Notify all subscribers
-        globalDataCache[dataType].subscribers.forEach(callback => {
-          callback([]);
-        });
-      }
-      
-      // Clear the local state regardless of individual deletion success
-      // This ensures UI is clean even if some deletions failed
-      if (isMountedRef.current) {
+      // Our simple implementation doesn't support bulk delete
+      // Just clear the local state for now
+      const success = true;
+      if (success) {
         setData([]);
       }
       return success;
@@ -371,66 +253,12 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Set up unmount cleanup
+  // Fetch data on mount and when dependencies change
   useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // Initialize from cache or fetch fresh data
-  useEffect(() => {
-    if (!storage.isReady) return;
-    
-    // Create cache entry if it doesn't exist
-    if (!globalDataCache[dataType]) {
-      globalDataCache[dataType] = {
-        data: [],
-        lastFetched: 0,
-        isFetching: false,
-        subscribers: new Set()
-      };
-    }
-    
-    // Add this component as a subscriber
-    const updateData = (newData: any[]) => {
-      if (isMountedRef.current) {
-        setData(newData);
-        setIsLoading(false);
-      }
-    };
-    
-    globalDataCache[dataType].subscribers.add(updateData);
-    
-    // Use cached data if available and recent (less than 30 seconds old)
-    const cache = globalDataCache[dataType];
-    const now = Date.now();
-    const isDataFresh = cache.data.length > 0 && (now - cache.lastFetched < 30000);
-    
-    if (isDataFresh) {
-      // Use cached data
-      console.log(`[DATA ACCESS] Using cached data for ${dataType} (${cache.data.length} items)`);
-      setData(cache.data);
-      setIsLoading(false);
-    } else if (!cache.isFetching) {
-      // Fetch fresh data if not already fetching
-      console.log(`[DATA ACCESS] Fetching fresh data for ${dataType}`);
-      setIsLoading(true);
+    if (storage.isReady) {
       fetchData();
-    } else {
-      // Someone else is already fetching this data type
-      console.log(`[DATA ACCESS] Waiting for existing fetch for ${dataType}`);
-      setIsLoading(true);
     }
-    
-    // Cleanup subscriber on unmount
-    return () => {
-      if (globalDataCache[dataType]) {
-        globalDataCache[dataType].subscribers.delete(updateData);
-      }
-    };
-  }, [dataType, storage.isReady, fetchData]);
-  
+  }, [dataType, storage.isReady]);
   
   return {
     data,
@@ -444,3 +272,5 @@ export const useDataAccess = (dataType: DataType) => {
     storage
   };
 };
+
+

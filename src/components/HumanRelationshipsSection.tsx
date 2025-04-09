@@ -13,12 +13,29 @@ export const HumanRelationshipsSection = () => {
     error: dataError, 
     createItem, 
     updateItem, 
-    refreshData: fetchData,
+    refreshData: rawFetchData,
     clearItems
   } = useDataAccess(DataType.CONNECTIONS);
   
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  
+  // Create a throttled version of fetchData to prevent rapid successive calls
+  const fetchData = useCallback(async () => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime;
+    
+    // If last fetch was less than 10 seconds ago, don't fetch again
+    if (timeSinceLastFetch < 10000) {
+      console.log('[HUMAN RELATIONSHIPS] Skipping fetch, too recent:', Math.round(timeSinceLastFetch/1000) + 's ago');
+      return;
+    }
+    
+    console.log('[HUMAN RELATIONSHIPS] Fetching data...');
+    setLastFetchTime(now);
+    return rawFetchData();
+  }, [rawFetchData, lastFetchTime]);
   const [initialized, setInitialized] = useState<boolean>(false);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
