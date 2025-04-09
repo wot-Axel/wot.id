@@ -10,6 +10,12 @@ import { TableType, TableData } from './storageUtils';
 import { encryptData, decryptData } from './encryptionUtils';
 import { registerPendingChange } from './syncUtils';
 
+// Add decryption cache to avoid redundant decryption operations
+const decryptionCache = new Map<string, {value: string, timestamp: number}>();
+
+// Cache timeout (30 minutes)
+const CACHE_TIMEOUT_MS = 30 * 60 * 1000;
+
 /**
  * Gun.js acknowledgment response type
  */
@@ -352,11 +358,36 @@ export const getGunItem = async (
         // Decrypt if needed
         if (shouldEncryptData(tableType) && data.item_value) {
           try {
-            const decryptedValue = await decryptData(data.item_value, getEncryptionPassword());
-            resolve({
-              ...data,
-              item_value: decryptedValue
-            });
+            // Generate cache key based on table type and encrypted value
+            const cacheKey = `${tableType}:${key}:${data.item_value.slice(0, 20)}`;
+            
+            // Check if we have a valid cached value
+            const cachedItem = decryptionCache.get(cacheKey);
+            const now = Date.now();
+            
+            if (cachedItem && (now - cachedItem.timestamp) < CACHE_TIMEOUT_MS) {
+              // Use cached value
+              resolve({
+                ...data,
+                item_value: cachedItem.value
+              });
+            } else {
+              // Decrypt and cache the value
+              console.time(`[Performance] encryptionUtils.decryptData`);
+              const decryptedValue = await decryptData(data.item_value, getEncryptionPassword());
+              console.timeEnd(`[Performance] encryptionUtils.decryptData`);
+              
+              // Update cache
+              decryptionCache.set(cacheKey, {
+                value: decryptedValue,
+                timestamp: now
+              });
+              
+              resolve({
+                ...data,
+                item_value: decryptedValue
+              });
+            }
           } catch (error) {
             console.error(`[STORAGE] Failed to decrypt data for ${tableType}:`, error);
             // Return with encrypted value as fallback for resilience
@@ -403,8 +434,8 @@ export const listGunItems = async (tableType: TableType): Promise<TableData[]> =
       }, 10000); // 10 second timeout for listing
       
       db.get(tableType).map().once((data: any, key: string) => {
-        if (data && !itemLoadComplete) {
-          // Store the raw items for processing
+        if (data && !itemLoadComplete && data.item_value !== null) {
+          // Store the raw items for processing - filter out null values
           items.push(data as TableData);
         }
       });
@@ -428,11 +459,34 @@ export const listGunItems = async (tableType: TableType): Promise<TableData[]> =
             const decryptedItems = await Promise.all(
               items.map(async (item) => {
                 try {
-                  const decryptedValue = await decryptData(item.item_value, getEncryptionPassword());
-                  return {
-                    ...item,
-                    item_value: decryptedValue
-                  };
+                  // Generate cache key based on table type and encrypted value
+                  const cacheKey = `${tableType}:${item.item_key}:${item.item_value.slice(0, 20)}`;
+                  
+                  // Check if we have a valid cached value
+                  const cachedItem = decryptionCache.get(cacheKey);
+                  const now = Date.now();
+                  
+                  if (cachedItem && (now - cachedItem.timestamp) < CACHE_TIMEOUT_MS) {
+                    // Use cached value
+                    return {
+                      ...item,
+                      item_value: cachedItem.value
+                    };
+                  } else {
+                    // Decrypt and cache the value
+                    const decryptedValue = await decryptData(item.item_value, getEncryptionPassword());
+                    
+                    // Update cache
+                    decryptionCache.set(cacheKey, {
+                      value: decryptedValue,
+                      timestamp: now
+                    });
+                    
+                    return {
+                      ...item,
+                      item_value: decryptedValue
+                    };
+                  }
                 } catch (error) {
                   console.error(`[STORAGE] Failed to decrypt item ${item.item_key}:`, error);
                   return item; // Return the original item on error for resilience
