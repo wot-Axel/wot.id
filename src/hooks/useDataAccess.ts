@@ -65,19 +65,32 @@ export const useDataAccess = (dataType: DataType) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Fetch data from storage
+  // Fetch data from storage with timeout safety
   const fetchData = async () => {
     if (!storage.isReady) {
+      setError('Storage not ready');
       return;
     }
     
     setIsLoading(true);
     setError(null);
     
+    // Add timeout to prevent getting stuck
+    const timeout = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('Data fetch operation timed out')), 10000);
+    });
+    
     try {
-      // Use storage service
+      // Use storage service with timeout safety
       const tableType = mapDataTypeToTableType(dataType);
-      const models = await storage.listItems(tableType);
+      const fetchPromise = storage.listItems(tableType);
+      const models = await Promise.race([fetchPromise, timeout]);
+      
+      if (!models || !Array.isArray(models)) {
+        console.warn(`Invalid data returned for ${dataType}:`, models);
+        setData([]);
+        return [];
+      }
       
       // Format data to match the expected structure
       // Filter out any null or undefined items
@@ -95,6 +108,8 @@ export const useDataAccess = (dataType: DataType) => {
     } catch (err) {
       console.error(`Error fetching ${dataType} data:`, err);
       setError(err instanceof Error ? err.message : 'Unknown error fetching data');
+      setData([]); // Set empty data on error to ensure UI can progress
+      return [];
     } finally {
       setIsLoading(false);
     }
@@ -170,7 +185,7 @@ export const useDataAccess = (dataType: DataType) => {
         throw new Error(`Item with ID ${id} not found`);
       }
       
-      // For Tableland, we need to convert the content to key-value format
+      // Convert the content to key-value format for Gun.js storage
       let key = item.key;
       let value = '';
       

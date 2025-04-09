@@ -1,4 +1,4 @@
-// Define compatible types locally rather than importing from tablelandUtils
+// Define types for local storage compatibility with Gun.js data
 import { TableType } from './storageUtils';
 
 interface TableData {

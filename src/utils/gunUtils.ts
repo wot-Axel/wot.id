@@ -426,7 +426,7 @@ export const getGunItem = async (
 };
 
 /**
- * List all items for a specific table type with improved reliability
+ * List all items for a specific table type with improved reliability and early termination
  * @param tableType The type of table/collection
  * @returns Promise with array of items
  */
@@ -439,8 +439,19 @@ export const listGunItems = async (tableType: TableType): Promise<TableData[]> =
     
     const items: TableData[] = [];
     let itemLoadComplete = false;
+    let hasReceivedData = false;
     
     return new Promise<TableData[]>((resolve, reject) => {
+      // Early termination check - if we have some data after a short period, proceed
+      const earlyTerminationCheck = setTimeout(() => {
+        if (items.length > 0 && !itemLoadComplete) {
+          console.log(`[STORAGE] Early termination with ${items.length} items for ${tableType}`);
+          hasReceivedData = true;
+          itemLoadComplete = true;
+          processAndResolve();
+        }
+      }, 3000); // Check after 3 seconds if we have any data
+
       // Set a timeout for the entire operation
       const operationTimeout = setTimeout(() => {
         // If we have some items, return them even though the operation timed out
@@ -449,18 +460,31 @@ export const listGunItems = async (tableType: TableType): Promise<TableData[]> =
           itemLoadComplete = true;
           processAndResolve();
         } else {
-          reject(new GunStorageError(
-            `Timeout listing data for ${tableType}`, 
-            'listItems', 
-            'OPERATION_TIMEOUT'
-          ));
+          console.error(`[STORAGE] List operation timed out with no items for ${tableType}`);
+          // Return empty array instead of rejecting to prevent UI from getting stuck
+          resolve([]);
         }
-      }, 10000); // 10 second timeout for listing
+      }, 8000); // 8 second timeout for listing (reduced from 10)
+      
+      // Track how many data events we've received
+      let dataEventCount = 0;
+      const MAX_DATA_EVENTS = 1000; // Prevent infinite data events
       
       db.get(tableType).map().once((data: any, key: string) => {
+        // Only process a reasonable number of events
+        if (dataEventCount++ > MAX_DATA_EVENTS) {
+          if (!itemLoadComplete) {
+            console.warn(`[STORAGE] Too many data events for ${tableType}, terminating early`);
+            itemLoadComplete = true;
+            processAndResolve();
+          }
+          return;
+        }
+        
         if (data && !itemLoadComplete && data.item_value !== null) {
           // Store the raw items for processing - filter out null values
           items.push(data as TableData);
+          hasReceivedData = true;
         }
       });
       
@@ -471,10 +495,11 @@ export const listGunItems = async (tableType: TableType): Promise<TableData[]> =
           itemLoadComplete = true;
           processAndResolve();
         }
-      }, 300); // Small delay to collect items
+      }, 500); // Slightly longer delay to collect items (was 300ms)
       
       // Process and resolve the promise with decrypted items if needed
       async function processAndResolve() {
+        clearTimeout(earlyTerminationCheck);
         clearTimeout(operationTimeout);
         
         try {

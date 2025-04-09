@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStorage } from '@/context/StorageContext';
-import { getTablelandDebugLogs, exportTablelandLogs } from '@/utils/storageUtils';
+import { getGunDebugLogs, exportGunLogs } from '@/utils/storageUtils';
 import { TableType } from '@/utils/storageUtils';
 
 // Interface for parsed server logs
@@ -34,7 +34,7 @@ const DebugPage = () => {
 
   useEffect(() => {
     // Get logs from localStorage
-    const storedLogs = getTablelandDebugLogs();
+    const storedLogs = getGunDebugLogs();
     setLogs(storedLogs);
 
     // Set simple connection status
@@ -45,7 +45,7 @@ const DebugPage = () => {
   }, [storage.isReady]);
 
   const refreshLogs = () => {
-    const storedLogs = getTablelandDebugLogs();
+    const storedLogs = getGunDebugLogs();
     setLogs(storedLogs);
     
     // Update connection status
@@ -63,7 +63,7 @@ const DebugPage = () => {
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'tableland-debug-logs.json';
+      a.download = 'gun-debug-logs.json';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -71,7 +71,7 @@ const DebugPage = () => {
     }
   };
 
-  const checkTableNames = async () => {
+  const checkGunStorageKeys = async () => {
     const tableTypes = Object.values(TableType);
     const names: Record<string, string | null> = {};
     
@@ -187,10 +187,10 @@ const DebugPage = () => {
           Export Logs
         </button>
         <button 
-          onClick={checkTableNames}
+          onClick={checkGunStorageKeys}
           className="px-4 py-2 bg-purple-500 text-white rounded"
         >
-          Check Table Names
+          Check Storage Keys
         </button>
         <button 
           onClick={checkStorageStatus}

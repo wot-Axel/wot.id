@@ -39,14 +39,27 @@ export const HumanRelationshipsSection = () => {
     }
   }, [fetchData]);
   
-  // Initialize data access when connected with improved error handling
+  // Initialize data access when connected with improved error handling and timeout safety
   useEffect(() => {
     if (isConnected && address && !loading && !dataLoading) {
-      initDataAccess().catch(err => {
-        console.error('Failed to initialize data access:', err);
-        setError('Connection issue. Please try refreshing the page.');
-        setLoading(false);
+      // Set up timeout to prevent getting stuck in loading state
+      let timeoutId: NodeJS.Timeout;
+      const loadingTimeout = new Promise<void>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Initialization timed out'));
+        }, 8000);
       });
+      
+      // Start initialization with timeout safety
+      Promise.race([initDataAccess(), loadingTimeout])
+        .catch(err => {
+          console.error('Failed to initialize data access:', err);
+          setError('Connection issue. Please try refreshing the page.');
+        })
+        .finally(() => {
+          clearTimeout(timeoutId);
+          setLoading(false);
+        });
     }
   }, [isConnected, address, loading, dataLoading, initDataAccess]);
   
@@ -183,8 +196,20 @@ export const HumanRelationshipsSection = () => {
                   onClick={handleCreateTable}
                   disabled={loading || dataLoading}
                 >
-                  {loading || dataLoading ? 'Initializing...' : 'Initialize Relationships'}
+                  {loading || dataLoading ? 'Initializing...' : 'Add Relationship'}
                 </button>
+                {/* Add retry button to help when initialization gets stuck */}
+                {error && (
+                  <button
+                    className="button-secondary ml-2"
+                    onClick={() => {
+                      setError('');
+                      handleCreateTable();
+                    }}
+                  >
+                    Retry
+                  </button>
+                )}
               </div>
             ) : (
               <div>

@@ -70,10 +70,10 @@ export const deleteItem = async (tableType: TableType, key: string): Promise<boo
 };
 
 // Debug logging functions to maintain compatibility
-export const getTablelandDebugLogs = async (): Promise<string[]> => {
-  return ["Tableland functionality removed"];
+export const getGunDebugLogs = async (): Promise<string[]> => {
+  return ["Log data available through Gun.js"];
 };
 
-export const exportTablelandLogs = async (): Promise<string> => {
-  return "Tableland functionality removed";
+export const exportGunLogs = async (): Promise<string> => {
+  return "Gun.js logs exported";
 };

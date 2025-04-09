@@ -28,15 +28,15 @@ export const isOptimismChain = (chainId?: number): boolean => {
 };
 
 /**
- * Get the network requirements for Tableland
- * @returns Requirements information for Tableland operations
+ * Get the network requirements for Gun.js operations
+ * @returns Requirements information for network operations
  */
-export const getTablelandNetworkRequirements = () => {
+export const getNetworkRequirements = () => {
   return {
     chainName: optimism.name,
     chainId: optimism.id,
     // Helpful message for users
-    helpMessage: `Tableland operations require connecting to the ${optimism.name} network (Chain ID: ${optimism.id}).
+    helpMessage: `Network operations require connecting to the ${optimism.name} network (Chain ID: ${optimism.id}).
     Your identity will still use your Ethereum mainnet address.`
   };
 };
