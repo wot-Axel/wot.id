@@ -99,12 +99,15 @@ export const HumanRelationshipsSection = () => {
   }, [isConnected, address, storageReady, initDataAccess]);
   
   // Run initialization once when component mounts and dependencies are ready
+  // Only initialize once when all dependencies are ready
   useEffect(() => {
     if (!initialized && isConnected && address && storageReady) {
       setInitialized(true);
       initializeData();
     }
-  }, [initialized, isConnected, address, storageReady, initializeData]);
+  // Don't include initializeData in dependencies to prevent initialization loops
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized, isConnected, address, storageReady]);
   
 
 

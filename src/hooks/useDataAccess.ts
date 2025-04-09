@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import { useState, useEffect } from 'react';
 import { useStorage } from '@/context/StorageContext';
@@ -253,12 +253,14 @@ export const useDataAccess = (dataType: DataType) => {
     }
   };
   
-  // Fetch data on mount and when dependencies change
+  // Fetch data ONCE on mount - Gun.js will handle updates via reactivity
   useEffect(() => {
     if (storage.isReady) {
       fetchData();
     }
-  }, [dataType, storage.isReady]);
+    // Only run this effect once on mount, Gun.js handles reactivity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   return {
     data,
