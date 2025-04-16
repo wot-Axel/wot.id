@@ -222,28 +222,39 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             // Check which method is available in the XMTP library
             console.log('Available methods on Client:', Object.keys(xmtpModule.Client));
             
-            // XMTP V3 requires a specific approach for development keys
-            // We'll use the simplest documented approach for wallet-based authentication
+            console.log('Using production approach for development mode - bypassing dev specific options');
             try {
               // Import the full ethers library for proper Wallet integration
-              console.log('Creating wallet from private key');
+              console.log('Creating wallet from development private key');
               const wallet = new Wallet(DEV_PRIVATE_KEY);
               
-              console.log('Creating wallet-based identity');
-              // These specific options are required for v3 compatibility
-              xmtp = await xmtpModule.Client.create(wallet, { 
-                env: 'dev',
-                options: {
-                  skipContactPublishing: true,
-                  // Use version 2023-09-01 for backward compatibility
-                  apiUrl: 'https://xmtp-legacy.dev.waku.contact/api/xmtp/v1/2023-09-01'
+              // Create a more standardized signer that matches the production approach
+              const standardSigner = {
+                getAddress: async () => {
+                  return await wallet.getAddress();
+                },
+                signMessage: async (message: string | Uint8Array) => {
+                  const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
+                  return await wallet.signMessage(messageString);
                 }
-              });
+              };
               
-              console.log('Client created successfully');
-            } catch (error) {
-              console.error('Failed to create client:', error);
-              throw new Error(`XMTP client creation failed: ${error instanceof Error ? error.message : String(error)}`);
+              console.log('Creating identity with simplified options');
+              // Use the absolute minimum required options for stability
+              xmtp = await xmtpModule.Client.create(standardSigner, { env: 'dev' });
+              console.log('Client created successfully with standard signer');
+            } catch (firstError) {
+              console.error('Failed with standard signer, trying direct wallet:', firstError);
+              
+              try {
+                // Last resort - try with minimal options, no object wrapping
+                const wallet = new Wallet(DEV_PRIVATE_KEY);
+                xmtp = await xmtpModule.Client.create(wallet, { env: 'production' });
+                console.log('Success with last resort approach');
+              } catch (lastError) {
+                console.error('All client creation approaches failed:', lastError);
+                throw new Error('Unable to create XMTP client with any method');
+              }
             }
             console.log('Successfully created XMTP client with development key');
             
