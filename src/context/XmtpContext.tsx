@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react';
-// Import Client type only for type checking, not the actual implementation
-import type { Client } from '@xmtp/xmtp-js';
+// Import Client type from browser-sdk for type checking
+import type { Client } from '@xmtp/browser-sdk';
 import { useAccount, useWalletClient } from 'wagmi';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { Wallet } from 'ethers';
@@ -38,7 +38,7 @@ const getXmtpClient = async () => {
   
   if (!XmtpClientModule) {
     try {
-      XmtpClientModule = await import('@xmtp/xmtp-js');
+      XmtpClientModule = await import('@xmtp/browser-sdk');
     } catch (error) {
       console.error('Error importing XMTP client:', error);
       // Return a mock module if import fails
@@ -594,8 +594,11 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         // Get the most recent message for each conversation to use as preview
         let lastMessagePreview = 'No messages yet';
         try {
-          const messages = await convo.messages({ limit: 1 });
-          if (messages.length > 0) {
+          // Use a more compatible approach without BigInt literals
+          const messages = await (convo.messages as any)({ limit: 1 });
+          // Safely handle array length regardless of whether it's number or bigint
+          const messagesLength = messages && messages.length ? (typeof messages.length === 'bigint' ? Number(messages.length) : messages.length) : 0;
+          if (messagesLength > 0) {
             lastMessagePreview = typeof messages[0].content === 'string' 
               ? messages[0].content 
               : 'Message content not available';
@@ -612,7 +615,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         return {
           ...convo,
           metadata: {
-            peerAddress: convo.peerAddress,
+            peerAddress: 'peerAddress' in convo ? convo.peerAddress : '',
             lastMessage: lastMessagePreview,
             createdAt: new Date().toISOString(),
             unreadCount: 0
@@ -641,7 +644,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const conversation = await client.conversations.newConversation(peerAddress);
+      // Using type assertion to handle the API differences
+      const conversation = await (client.conversations as any).newConversation(peerAddress);
       await conversation.send(content);
       
       // Refresh conversations after sending
@@ -659,8 +663,8 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // Create conversation in XMTP
-      const conversation = await client.conversations.newConversation(peerAddress);
+      // Using type assertion to handle the API differences
+      const conversation = await (client.conversations as any).newConversation(peerAddress);
       
       // In Phase 2, we'll add metadata storage for improved persistence
       

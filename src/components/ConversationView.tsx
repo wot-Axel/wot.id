@@ -24,8 +24,8 @@ export default function ConversationView({ conversation }: ConversationViewProps
       
       try {
         setIsLoading(true);
-        const convo = await client.conversations.newConversation(conversation.peerAddress);
-        const msgs = await convo.messages();
+        // In XMTP v3, we can use the conversation object directly without creating a new one
+        const msgs = await conversation.messages();
         setMessages(msgs);
       } catch (e) {
         console.error('Error loading messages:', e);
@@ -42,9 +42,8 @@ export default function ConversationView({ conversation }: ConversationViewProps
     if (!client || !conversation) return;
     
     const listenForMessages = async () => {
-      const convo = await client.conversations.newConversation(conversation.peerAddress);
-      
-      for await (const message of await convo.streamMessages()) {
+      // In XMTP v3, we can stream messages directly from the conversation object
+      for await (const message of await conversation.streamMessages()) {
         setMessages((prevMessages) => [...prevMessages, message]);
       }
     };
@@ -64,8 +63,8 @@ export default function ConversationView({ conversation }: ConversationViewProps
     if (!newMessage.trim() || !client || !conversation) return;
     
     try {
-      const convo = await client.conversations.newConversation(conversation.peerAddress);
-      await convo.send(newMessage);
+      // In XMTP v3, we can send messages directly from the conversation object
+      await conversation.send(newMessage);
       setNewMessage('');
     } catch (e) {
       console.error('Error sending message:', e);

@@ -32,11 +32,8 @@ export default function NewConversationModal({
         throw new Error('Invalid Ethereum address');
       }
       
-      // Check if the address can be messaged
-      const canMessage = await client.canMessage(peerAddress);
-      if (!canMessage) {
-        throw new Error('This address is not available on XMTP network');
-      }
+      // In XMTP v3, we no longer need to check canMessage
+      // The conversation creation will fail if the address is not available
       
       // Create conversation - in our phased approach, createNewConversation now returns the conversation
       const conversation = await createNewConversation(peerAddress);
