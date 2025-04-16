@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { useDataAccess, DataType } from '@/hooks/useDataAccess';
-import { storeGunItem, getGunItem, listGunItems, deleteGunItem } from '@/utils/gunUtils';
+import { storeItem, getItem, listItems, deleteItem } from '@/utils/storageUtils';
 import { TableData } from '@/utils/storageUtils';
 
 // Define document fields
