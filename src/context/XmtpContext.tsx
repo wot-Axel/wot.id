@@ -242,9 +242,14 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
                 }
               };
               
-              console.log('Attempting client creation with proper Signer interface');
+              console.log('Creating 32-byte database encryption key');
+              // Generate a random 32-byte encryption key for the database
+              const dbEncryptionKey = window.crypto.getRandomValues(new Uint8Array(32));
+              
+              console.log('Attempting client creation with proper Signer interface and dbEncryptionKey');
               xmtp = await xmtpModule.Client.create(xmtpSigner, { 
-                env: 'dev'
+                env: 'dev',
+                dbEncryptionKey
               });
               
               console.log('Client created successfully with proper Signer implementation');
