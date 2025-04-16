@@ -222,39 +222,24 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             // Check which method is available in the XMTP library
             console.log('Available methods on Client:', Object.keys(xmtpModule.Client));
             
-            console.log('Using production approach for development mode - bypassing dev specific options');
+            // Pure XMTP v3 SDK approach
+            console.log('Using pure XMTP v3 SDK approach');
             try {
-              // Import the full ethers library for proper Wallet integration
-              console.log('Creating wallet from development private key');
+              // Create wallet from private key
               const wallet = new Wallet(DEV_PRIVATE_KEY);
               
-              // Create a more standardized signer that matches the production approach
-              const standardSigner = {
-                getAddress: async () => {
-                  return await wallet.getAddress();
-                },
-                signMessage: async (message: string | Uint8Array) => {
-                  const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
-                  return await wallet.signMessage(messageString);
-                }
-              };
+              // XMTP v3 requires a different approach - explicitly create the Identity object
+              console.log('Creating with v3 SDK pattern');
               
-              console.log('Creating identity with simplified options');
-              // Use the absolute minimum required options for stability
-              xmtp = await xmtpModule.Client.create(standardSigner, { env: 'dev' });
-              console.log('Client created successfully with standard signer');
-            } catch (firstError) {
-              console.error('Failed with standard signer, trying direct wallet:', firstError);
+              // Direct wallet implementation - most reliable for v3
+              xmtp = await xmtpModule.Client.create(wallet, { 
+                env: 'dev'
+              });
               
-              try {
-                // Last resort - try with minimal options, no object wrapping
-                const wallet = new Wallet(DEV_PRIVATE_KEY);
-                xmtp = await xmtpModule.Client.create(wallet, { env: 'production' });
-                console.log('Success with last resort approach');
-              } catch (lastError) {
-                console.error('All client creation approaches failed:', lastError);
-                throw new Error('Unable to create XMTP client with any method');
-              }
+              console.log('Client created successfully with v3 approach');
+            } catch (error) {
+              console.error('Failed to create XMTP client with v3 approach:', error);
+              throw error;
             }
             console.log('Successfully created XMTP client with development key');
             
@@ -670,8 +655,11 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // Using type assertion to handle the API differences
-      const conversation = await (client.conversations as any).newConversation(peerAddress);
+      // XMTP v3 SDK pattern
+      console.log('Finding or creating conversation with:', peerAddress);
+      // Use the correct method in v3 SDK with proper type casting
+      const conversation = await (client as any).conversations.start(peerAddress);
+      console.log('Sending message to conversation');
       await conversation.send(content);
       
       // Refresh conversations after sending
@@ -689,8 +677,10 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // Using type assertion to handle the API differences
-      const conversation = await (client.conversations as any).newConversation(peerAddress);
+      // XMTP v3 uses different conversation API
+      console.log('Creating new conversation with peer:', peerAddress);
+      // Use the v3 SDK conversation method with proper type casting
+      const conversation = await (client as any).conversations.start(peerAddress);
       
       // In Phase 2, we'll add metadata storage for improved persistence
       
