@@ -222,23 +222,26 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             // Check which method is available in the XMTP library
             console.log('Available methods on Client:', Object.keys(xmtpModule.Client));
             
-            // Pure XMTP v3 SDK approach
-            console.log('Using pure XMTP v3 SDK approach');
+            // Pure XMTP v3 SDK approach based on their documentation
+            console.log('Using official XMTP v3 SDK approach');
             try {
               // Create wallet from private key
               const wallet = new Wallet(DEV_PRIVATE_KEY);
+              const address = await wallet.getAddress();
               
-              // XMTP v3 requires a different approach - explicitly create the Identity object
-              console.log('Creating with v3 SDK pattern');
+              // Create the client with the proper v3 pattern
+              console.log('Using documented v3 pattern with wallet');
               
-              // Direct wallet implementation - most reliable for v3
+              // Per XMTP docs: The key is to use the ethers Wallet directly
+              // No custom wrapper needed - let their SDK handle the details
               xmtp = await xmtpModule.Client.create(wallet, { 
-                env: 'dev'
+                env: 'production', // Try production environment instead of dev
+                codecs: [xmtpModule.ContentTypeText] // Explicitly set codecs
               });
               
-              console.log('Client created successfully with v3 approach');
+              console.log('Client created successfully with official v3 approach');
             } catch (error) {
-              console.error('Failed to create XMTP client with v3 approach:', error);
+              console.error('Failed to create XMTP client with official v3 approach:', error);
               throw error;
             }
             console.log('Successfully created XMTP client with development key');
@@ -656,11 +659,15 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       // XMTP v3 SDK pattern
-      console.log('Finding or creating conversation with:', peerAddress);
-      // Use the correct method in v3 SDK with proper type casting
-      const conversation = await (client as any).conversations.start(peerAddress);
+      console.log('Starting conversation with:', peerAddress);
+      // Use type assertion with any to bypass TypeScript errors
+      const conversation = await (client.conversations as any).newConversation(
+        peerAddress
+      );
       console.log('Sending message to conversation');
-      await conversation.send(content);
+      // Send text content 
+      const message = await conversation.send(content);
+      console.log('Message sent successfully:', message.id);
       
       // Refresh conversations after sending
       await loadConversations(client);
@@ -677,10 +684,13 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // XMTP v3 uses different conversation API
+      // XMTP v3 standard conversation creation pattern
       console.log('Creating new conversation with peer:', peerAddress);
-      // Use the v3 SDK conversation method with proper type casting
-      const conversation = await (client as any).conversations.start(peerAddress);
+      // Use type assertion with any to bypass TypeScript errors
+      const conversation = await (client.conversations as any).newConversation(
+        peerAddress
+      );
+      console.log('Conversation created with:', peerAddress);
       
       // In Phase 2, we'll add metadata storage for improved persistence
       
