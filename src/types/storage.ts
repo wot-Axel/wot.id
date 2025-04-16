@@ -43,7 +43,7 @@ export const mapDataTypeToTableType = (dataType: DataType): TableType => {
     case 'organizations':
       return TableType.AFFILIATIONS;
     case 'messages':
-      return TableType.CHAT;
+      return TableType.MESSAGE;
     case 'private':
       return TableType.PRIVATE;
     case 'contacts':
