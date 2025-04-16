@@ -3,22 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { useStorage } from '@/context/StorageContext';
 import { TableType } from '@/utils/storageUtils';
-import * as GunUtils from '@/utils/gunUtils';
-import * as SyncUtils from '@/utils/syncUtils';
 
 export default function StorageDebugPage() {
   const storage = useStorage();
-  const [isGunReady, setIsGunReady] = useState(false);
+  const [isStorageReady, setIsStorageReady] = useState(false);
   const [networkStatus, setNetworkStatus] = useState(navigator.onLine);
   const [tableData, setTableData] = useState<Record<string, any>>({});
   const [selectedTable, setSelectedTable] = useState<TableType>(TableType.PRIVATE);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [syncStatus, setSyncStatus] = useState<{
-    syncInProgress: boolean;
-    lastSyncTime: number | null;
-    pendingChangesCount: number;
-    isOnline: boolean;
-  }>({ syncInProgress: false, lastSyncTime: null, pendingChangesCount: 0, isOnline: true });
+  const [storageStats, setStorageStats] = useState<string[]>([]);
   const [testKey, setTestKey] = useState('');
   const [testValue, setTestValue] = useState('');
 
@@ -30,21 +23,17 @@ export default function StorageDebugPage() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initialize Gun explicitly
-    GunUtils.initGun();
-    setIsGunReady(true);
+    // Initialize storage
+    setIsStorageReady(storage.isReady);
     
-    // Set up sync status monitoring
-    const syncStatusInterval = setInterval(() => {
-      setSyncStatus(SyncUtils.getSyncStatus());
-    }, 1000);
+    // Simple system logs for debugging
+    setStorageStats(['Local storage initialized', 'Using browser localStorage provider']);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(syncStatusInterval);
     };
-  }, []);
+  }, [storage.isReady]);
 
   // Load data when table changes or refresh is triggered
   useEffect(() => {
@@ -102,57 +91,34 @@ export default function StorageDebugPage() {
     }
   };
   
-  // Trigger manual sync
-  const handleTriggerSync = async () => {
-    try {
-      const result = await SyncUtils.synchronizePendingChanges();
-      alert(`Sync complete. Success: ${result.success}, Failed: ${result.failed}`);
-      handleRefresh();
-    } catch (error) {
-      console.error('Sync error:', error);
-      alert(`Sync error: ${error instanceof Error ? error.message : String(error)}`);
-    }
+  // Handle refresh of data
+  const handleManualRefresh = () => {
+    handleRefresh();
+    alert('Storage data refreshed');
   };
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Storage Debug Tools</h1>
-      
-      <div className="mb-6 bg-gray-100 p-4 rounded">
+           <div className="mb-6 bg-gray-100 p-4 rounded">
         <h2 className="text-lg font-bold mb-2">Storage Status</h2>
         <div className="grid grid-cols-2 gap-2">
           <div className="font-semibold">Storage Provider:</div>
           <div>{storage.isReady ? 'Ready' : 'Initializing...'}</div>
           
-          <div className="font-semibold">Gun.js Status:</div>
-          <div>{isGunReady ? 'Initialized' : 'Not Initialized'}</div>
+          <div className="font-semibold">localStorage Status:</div>
+          <div>{isStorageReady ? 'Initialized' : 'Not Initialized'}</div>
           
           <div className="font-semibold">Network Status:</div>
           <div className={networkStatus ? 'text-green-600' : 'text-red-600'}>
             {networkStatus ? 'Online' : 'Offline'}
           </div>
           
-          <div className="font-semibold">Sync Status:</div>
-          <div className={syncStatus.syncInProgress ? 'text-blue-600' : ''}>
-            {syncStatus.syncInProgress ? 'Synchronizing...' : 'Idle'}
-          </div>
-          
-          <div className="font-semibold">Last Sync:</div>
-          <div>
-            {syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleString() : 'Never'}
-          </div>
-          
-          <div className="font-semibold">Pending Changes:</div>
-          <div className={syncStatus.pendingChangesCount > 0 ? 'text-orange-600' : 'text-green-600'}>
-            {syncStatus.pendingChangesCount} items
-            {syncStatus.pendingChangesCount > 0 && (
-              <button 
-                onClick={handleTriggerSync} 
-                className="ml-2 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-              >
-                Sync Now
-              </button>
-            )}
+          <div className="font-semibold">Storage Stats:</div>
+          <div className="col-span-2 mt-2 text-sm bg-gray-50 p-2 rounded border border-gray-200 max-h-28 overflow-y-auto">
+            {storageStats.map((stat, index) => (
+              <div key={index} className="mb-1">{stat}</div>
+            ))}
           </div>
         </div>
       </div>
