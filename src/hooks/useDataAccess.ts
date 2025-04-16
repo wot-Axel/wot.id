@@ -40,7 +40,7 @@ const mapDataTypeToTableType = (dataType: DataType): TableType => {
     case DataType.ORGANIZATIONS:
       return TableType.AFFILIATIONS;
     case DataType.MESSAGES:
-      return TableType.CHAT;
+      return TableType.MESSAGE;
     case DataType.PRIVATE:
       return TableType.PRIVATE;
     default:
@@ -160,7 +160,7 @@ export const useDataAccess = (dataType: DataType) => {
         throw new Error(`Item with ID ${id} not found`);
       }
       
-      // For Tableland, we need to convert the content to key-value format
+      // Convert the content to key-value format for storage
       let key = item.key;
       let value = '';
       
