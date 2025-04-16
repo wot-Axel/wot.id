@@ -41,24 +41,24 @@ export const TopNavigation = () => {
           <nav className="nav-links">
             {/* Always show links, but handle click differently when not logged in */}
             <Link 
-              href={isConnected ? "/chat" : "/#"} 
-              className={`nav-link ${isActive('/chat') ? 'active' : ''}`}
+              href={isConnected ? "/message" : "/#"} 
+              className={`nav-link ${isActive('/message') ? 'active' : ''}`}
               onClick={!isConnected ? (e) => {
                 e.preventDefault();
                 openModal();
               } : undefined}
             >
-              Chat
+              Message
             </Link>
             <Link 
-              href={isConnected ? "/transact" : "/#"} 
-              className={`nav-link ${isActive('/transact') ? 'active' : ''}`}
+              href={isConnected ? "/transfer" : "/#"} 
+              className={`nav-link ${isActive('/transfer') ? 'active' : ''}`}
               onClick={!isConnected ? (e) => {
                 e.preventDefault();
                 openModal();
               } : undefined}
             >
-              Transact
+              Transfer
             </Link>
             <Link 
               href={isConnected ? "/trust" : "/#"} 

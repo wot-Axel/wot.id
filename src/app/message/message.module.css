@@ -1,4 +1,4 @@
-.chatContainer {
+.messageContainer {
   display: flex;
   height: calc(80vh - 100px);
   border: 1px solid #eaeaea;
@@ -68,7 +68,7 @@
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .chatContainer {
+  .messageContainer {
     flex-direction: column;
     height: calc(90vh - 100px);
   }

@@ -5,9 +5,9 @@ import { useAppKitAccount } from '@reown/appkit/react';
 import { ConnectButton } from '@/components/ConnectButton';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import ScannerModal from '@/components/ScannerModal';
-import styles from './transact.module.css';
+import styles from './transfer.module.css';
 
-export default function TransactPage() {
+export default function TransferPage() {
   const { isConnected, address } = useAppKitAccount();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -15,7 +15,7 @@ export default function TransactPage() {
   if (!isConnected) {
     return (
       <div className="page-content">
-        <h1>Transact</h1>
+        <h1>Transfer</h1>
         <p>Connect your wallet to send and receive assets</p>
         <ConnectButton />
       </div>
@@ -53,7 +53,7 @@ export default function TransactPage() {
             <span role="img" aria-label="scan">📷</span> Scan QR Code
           </button>
           
-          <div className={styles.transactionForm}>
+          <div className={styles.transferForm}>
             <div className={styles.formGroup}>
               <label htmlFor="recipient">Or enter Recipient Address</label>
               <div className={styles.addressInputContainer}>
@@ -98,9 +98,9 @@ export default function TransactPage() {
       <div className="legal-section">
         <h2>Transaction History</h2>
         <div className="section-content">
-          <p>View your recent transactions</p>
-          <div className={styles.transactionHistory}>
-            <p className={styles.emptyState}>No transactions yet</p>
+          <p>View your recent transfers</p>
+          <div className={styles.transferHistory}>
+            <p className={styles.emptyState}>No transfers yet</p>
           </div>
         </div>
       </div>

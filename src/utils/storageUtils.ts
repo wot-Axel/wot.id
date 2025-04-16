@@ -8,7 +8,7 @@ export enum TableType {
   DIGITAL_ASSETS = 'digital_assets',
   MEDICAL = 'medical',
   AFFILIATIONS = 'affiliations',
-  CHAT = 'chat',
+  MESSAGE = 'message',
   SYSTEM = 'system' // Used for system operations and verification
 }
 

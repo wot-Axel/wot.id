@@ -100,22 +100,22 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       if (!db || !address) return;
       
       try {
-        // Check if chat table exists using our generic function
-        const tableExists = await checkTableExists(db, TableType.CHAT, address);
+        // Check if message table exists using our generic function
+        const tableExists = await checkTableExists(db, TableType.MESSAGE, address);
         
         if (!tableExists) {
-          // Create chat table using our generic function
-          const newTableName = await createTable(db, TableType.CHAT, address);
+          // Create message table using our generic function
+          const newTableName = await createTable(db, TableType.MESSAGE, address);
           setTableName(newTableName);
-          console.log('Created new chat table:', newTableName);
+          console.log('Created new message table:', newTableName);
         } else {
           // Get existing table name (in a real implementation, we would query for this)
-          const existingTableName = `${TableType.CHAT}_${address.slice(0, 8)}_31337_1`;
+          const existingTableName = `${TableType.MESSAGE}_${address.slice(0, 8)}_31337_1`;
           setTableName(existingTableName);
-          console.log('Using existing chat table:', existingTableName);
+          console.log('Using existing message table:', existingTableName);
         }
       } catch (error) {
-        console.error('Error setting up chat table:', error);
+        console.error('Error setting up message table:', error);
       }
     };
 
@@ -380,9 +380,9 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
       const hasDevClient = localStorage.getItem('xmtp_dev_client_created') === 'true';
       console.log('Development client detected in localStorage:', hasDevClient);
       
-      // If we're on the chat page and there's no development client, show the message to create one
-      if (!hasDevClient && window.location.pathname.includes('/chat')) {
-        console.log('On chat page without development client, showing create identity message');
+      // If we're on the message page and there's no development client, show the message to create one
+      if (!hasDevClient && window.location.pathname.includes('/message')) {
+        console.log('On message page without development client, showing create identity message');
         setError(new Error('Message identity creation required. Please click the button below to create your message identity.'));
         return;
       }
@@ -679,7 +679,7 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // We're not auto-initializing the client to prevent conflicts with wallet connection
-  // Users will need to explicitly initialize the client when they navigate to the chat page
+  // Users will need to explicitly initialize the client when they navigate to the message page
   // This prevents interference with the Reown modal's connection flow
 
   // Check for development client in localStorage when component mounts

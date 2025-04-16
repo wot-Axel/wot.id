@@ -7,7 +7,7 @@ import type { Conversation } from '@xmtp/browser-sdk';
 import ConversationList from '@/components/ConversationList';
 import ConversationView from '@/components/ConversationView';
 import NewConversationModal from '@/components/NewConversationModal';
-import styles from './chat.module.css';
+import styles from './message.module.css';
 
 export default function ChatPage() {
   const { isConnected } = useAppKitAccount();
@@ -33,13 +33,13 @@ export default function ChatPage() {
     
     // Set a flag to indicate we're on the chat page
     if (typeof window !== 'undefined') {
-      localStorage.setItem('on_chat_page', 'true');
+      localStorage.setItem('on_message_page', 'true');
     }
     
     // Cleanup when component unmounts
     return () => {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('on_chat_page');
+        localStorage.removeItem('on_message_page');
       }
     };
   }, []);
@@ -114,9 +114,9 @@ export default function ChatPage() {
   if (!isConnected) {
     return (
       <div className="legal-page">
-        <h1>Chat</h1>
+        <h1>Message</h1>
         <div className={styles.connectPrompt}>
-          <p>Please connect your wallet to access the chat functionality.</p>
+          <p>Please connect your wallet to access the messaging functionality.</p>
         </div>
       </div>
     );
@@ -126,10 +126,10 @@ export default function ChatPage() {
   if (!client && !isLoading && !initializingClient) {
     return (
       <div className="legal-page">
-        <h1>Chat</h1>
+        <h1>Message</h1>
         <div className={styles.identityPrompt}>
           <h2>Create a Messaging Identity</h2>
-          <p>To use the chat functionality, you need to create a messaging identity.</p>
+          <p>To use the messaging functionality, you need to create a messaging identity.</p>
           <p>For this demo, we'll use a development identity that doesn't require a wallet signature.</p>
           
           {error && (
@@ -163,9 +163,9 @@ export default function ChatPage() {
   if (isLoading || initializingClient) {
     return (
       <div className="legal-page">
-        <h1>Chat</h1>
+        <h1>Message</h1>
         <div className={styles.loadingContainer}>
-          <p>Loading chat functionality...</p>
+          <p>Loading messaging functionality...</p>
         </div>
       </div>
     );
@@ -175,7 +175,7 @@ export default function ChatPage() {
   if (error) {
     return (
       <div className="legal-page">
-        <h1>Chat</h1>
+        <h1>Message</h1>
         <div className={styles.errorContainer}>
           <p>Error: {error.message}</p>
           <button 
@@ -189,12 +189,12 @@ export default function ChatPage() {
     );
   }
   
-  // Main chat interface
+  // Main message interface
   return (
     <div className="legal-page">
       <h1>Chat</h1>
       
-      <div className={styles.chatContainer}>
+      <div className={styles.messageContainer}>
         <div className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
             <h2>Conversations</h2>
@@ -218,7 +218,7 @@ export default function ChatPage() {
             <ConversationView conversation={selectedConversation} />
           ) : (
             <div className={styles.noConversationSelected}>
-              <p>Select a conversation or start a new chat</p>
+              <p>Select a conversation or start a new message</p>
             </div>
           )}
         </div>
