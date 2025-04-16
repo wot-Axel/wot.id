@@ -222,13 +222,23 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             // Check which method is available in the XMTP library
             console.log('Available methods on Client:', Object.keys(xmtpModule.Client));
             
-            // Create a wallet from the private key
+            // Create a proper signer for XMTP v3 SDK with the dev key
             const wallet = new Wallet(DEV_PRIVATE_KEY);
+            const signer = {
+              getIdentity: async () => ({
+                kind: "ETHEREUM",
+                identifier: address as string
+              }),
+              signMessage: async (message: string | Uint8Array) => {
+                const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
+                return await wallet.signMessage(messageString);
+              }
+            };
             
-            // Use the create method with the wallet
-            xmtp = await xmtpModule.Client.create(wallet, {
+            // Use the create method with the custom signer
+            xmtp = await xmtpModule.Client.create(signer, {
               env: 'dev',
-              skipContactPublishing: true,
+              codecs: [xmtpModule.ContentTypeText]
             });
             console.log('Successfully created XMTP client with development key');
             
