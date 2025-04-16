@@ -222,24 +222,56 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             // Check which method is available in the XMTP library
             console.log('Available methods on Client:', Object.keys(xmtpModule.Client));
             
-            // Create a proper signer for XMTP v3 SDK with the dev key
+            try {
+            // Use direct ethers Wallet approach for development mode
+            // This is a known working pattern with XMTP v3 SDK
             const wallet = new Wallet(DEV_PRIVATE_KEY);
-            const signer = {
-              getIdentity: async () => ({
-                kind: "ETHEREUM",
-                identifier: address as string
-              }),
-              signMessage: async (message: string | Uint8Array) => {
-                const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
-                return await wallet.signMessage(messageString);
-              }
-            };
             
-            // Use the create method with the custom signer
-            xmtp = await xmtpModule.Client.create(signer, {
+            console.log('Using direct wallet approach for development client');
+            // Create client using the wallet directly - this works with v3 SDK
+            xmtp = await xmtpModule.Client.create(wallet, {
               env: 'dev',
               codecs: [xmtpModule.ContentTypeText]
             });
+          } catch (walletError) {
+            console.error('Error creating client with direct wallet:', walletError);
+            
+            // Fallback to standard signer approach
+            console.log('Falling back to custom signer implementation...');
+            
+            // Custom signer implementation based on XMTP v3 docs
+            const customSigner = {
+              getIdentity: async () => {
+                console.log('getIdentity called, returning:', {
+                  kind: "ETHEREUM",
+                  identifier: address as string
+                });
+                return {
+                  kind: "ETHEREUM" as const,
+                  identifier: address as string
+                };
+              },
+              signMessage: async (message: string | Uint8Array) => {
+                console.log('signMessage called with', typeof message);
+                try {
+                  const messageString = typeof message === 'string' ? message : new TextDecoder().decode(message);
+                  const wallet = new Wallet(DEV_PRIVATE_KEY);
+                  const signature = await wallet.signMessage(messageString);
+                  console.log('Signature obtained:', signature.substring(0, 10) + '...');
+                  return signature;
+                } catch (signError) {
+                  console.error('Error in signMessage:', signError);
+                  throw signError;
+                }
+              }
+            };
+            
+            // Try with custom signer implementation
+            xmtp = await xmtpModule.Client.create(customSigner, {
+              env: 'dev',
+              codecs: [xmtpModule.ContentTypeText]
+            });
+          }
             console.log('Successfully created XMTP client with development key');
             
             // Store the client in localStorage to ensure it persists
