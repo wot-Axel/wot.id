@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
 import { useXmtp } from '@/context/XmtpContext';
+import type { Conversation } from '@xmtp/browser-sdk';
 import ConversationList from '@/components/ConversationList';
 import ConversationView from '@/components/ConversationView';
 import NewConversationModal from '@/components/NewConversationModal';
@@ -11,7 +12,7 @@ import styles from './chat.module.css';
 export default function ChatPage() {
   const { isConnected } = useAppKitAccount();
   const { client, isLoading, error, conversations, initClient, createIdentity } = useXmtp();
-  const [selectedConversation, setSelectedConversation] = useState<{ peerAddress: string } | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [initializingClient, setInitializingClient] = useState(false);
   
@@ -44,7 +45,7 @@ export default function ChatPage() {
   }, []);
   
   // Handle conversation selection
-  const handleSelectConversation = (conversation: { peerAddress: string }) => {
+  const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
   };
   
@@ -226,7 +227,7 @@ export default function ChatPage() {
       {showNewConversationModal && (
         <NewConversationModal 
           onClose={handleCloseModal}
-          onConversationCreated={(conversation) => {
+          onConversationCreated={(conversation: Conversation) => {
             setSelectedConversation(conversation);
             setShowNewConversationModal(false);
           }}
