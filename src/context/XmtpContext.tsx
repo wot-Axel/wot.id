@@ -222,26 +222,34 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
             // Check which method is available in the XMTP library
             console.log('Available methods on Client:', Object.keys(xmtpModule.Client));
             
-            // Pure XMTP v3 SDK approach based on their documentation
-            console.log('Using official XMTP v3 SDK approach');
+            // Implementing the correct Signer interface according to XMTP v3 documentation
+            console.log('Creating proper XMTP v3 Signer interface');
             try {
-              // Create wallet from private key
+              // Create wallet from development private key
               const wallet = new Wallet(DEV_PRIVATE_KEY);
-              const address = await wallet.getAddress();
+              const walletAddress = await wallet.getAddress();
               
-              // Create the client with the proper v3 pattern
-              console.log('Using documented v3 pattern with wallet');
+              // Create the proper Signer as documented in XMTP v3 docs
+              const xmtpSigner = {
+                type: "EOA",
+                getIdentifier: () => ({
+                  identifier: walletAddress,
+                  identifierKind: "Ethereum"
+                }),
+                signMessage: async (message: string) => {
+                  const signature = await wallet.signMessage(message);
+                  return signature;
+                }
+              };
               
-              // Per XMTP docs: The key is to use the ethers Wallet directly
-              // No custom wrapper needed - let their SDK handle the details
-              xmtp = await xmtpModule.Client.create(wallet, { 
-                env: 'production', // Try production environment instead of dev
-                codecs: [xmtpModule.ContentTypeText] // Explicitly set codecs
+              console.log('Attempting client creation with proper Signer interface');
+              xmtp = await xmtpModule.Client.create(xmtpSigner, { 
+                env: 'dev'
               });
               
-              console.log('Client created successfully with official v3 approach');
+              console.log('Client created successfully with proper Signer implementation');
             } catch (error) {
-              console.error('Failed to create XMTP client with official v3 approach:', error);
+              console.error('Error creating XMTP client:', error);
               throw error;
             }
             console.log('Successfully created XMTP client with development key');
