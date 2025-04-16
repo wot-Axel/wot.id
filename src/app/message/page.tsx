@@ -16,8 +16,8 @@ export default function ChatPage() {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [initializingClient, setInitializingClient] = useState(false);
   
-  // Disable automatic client initialization on page load to prevent the continuous loop
-  // Instead, we'll only initialize the client when the user explicitly clicks the button
+  // Initialize the client automatically when the page loads
+  // This creates a better user experience without requiring manual steps
   useEffect(() => {
     // Clear any existing XMTP state from localStorage on page load
     if (typeof window !== 'undefined') {
@@ -31,9 +31,14 @@ export default function ChatPage() {
       }
     }
     
-    // Set a flag to indicate we're on the chat page
+    // Set a flag to indicate we're on the message page
     if (typeof window !== 'undefined') {
       localStorage.setItem('on_message_page', 'true');
+      
+      // Automatically create identity if user is connected and no client exists
+      if (isConnected && !client && !isLoading && !initializingClient) {
+        handleCreateIdentity();
+      }
     }
     
     // Cleanup when component unmounts
@@ -122,38 +127,26 @@ export default function ChatPage() {
     );
   }
   
-  // If no client and not loading, show identity creation prompt
+  // If no client and not loading, show automatic initialization in progress
   if (!client && !isLoading && !initializingClient) {
     return (
       <div className="legal-page">
         <h1>Message</h1>
-        <div className={styles.identityPrompt}>
-          <h2>Create a Messaging Identity</h2>
-          <p>To use the messaging functionality, you need to create a messaging identity.</p>
-          <p>For this demo, we'll use a development identity that doesn't require a wallet signature.</p>
-          
+        <div className={styles.loadingContainer}>
+          <p>Initializing messaging service...</p>
           {error && (
             <div className={styles.error}>
               <h3>Error Creating Identity</h3>
               <p>{error.message}</p>
-              <p>Please try again or refresh the page.</p>
+              <button 
+                className="button-primary" 
+                onClick={handleCreateIdentity}
+                style={{ padding: '8px 16px', fontSize: '14px', margin: '10px 0' }}
+              >
+                Retry
+              </button>
             </div>
           )}
-          
-          <button 
-            className="button-primary" 
-            onClick={handleCreateIdentity}
-            disabled={initializingClient}
-            style={{ padding: '12px 24px', fontSize: '16px', margin: '20px 0' }}
-          >
-            {initializingClient ? 'Creating Identity...' : 'Create Development Identity'}
-          </button>
-          
-          <div className={styles.identityNote} style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '5px' }}>
-            <p><strong>Note:</strong> This is using XMTP's development network for demonstration purposes. 
-            In a production environment, this would use your actual wallet signature.</p>
-            <p><strong>Troubleshooting:</strong> If you encounter issues, try clearing your browser cache and refreshing the page.</p>
-          </div>
         </div>
       </div>
     );
