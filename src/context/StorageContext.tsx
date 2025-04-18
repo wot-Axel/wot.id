@@ -77,6 +77,34 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
 
     initialize();
   }, []);
+  
+  // Listen for changes to userAddress in localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'userAddress' && event.newValue !== null) {
+        setAddress(event.newValue);
+        console.log('[STORAGE] Updated wallet address from localStorage');
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check periodically for address changes
+    const intervalId = setInterval(() => {
+      const currentStoredAddress = localStorage.getItem('userAddress') || '';
+      if (currentStoredAddress && currentStoredAddress !== address) {
+        setAddress(currentStoredAddress);
+        console.log('[STORAGE] Updated wallet address from polling');
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(intervalId);
+    };
+  }, [address]);
 
   // Update address when it changes in localStorage
   useEffect(() => {
@@ -113,13 +141,11 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
       throw new Error('Storage not initialized');
     }
 
-    // Make sure we have a valid address
+    // Check for wallet address
     const currentAddress = address || localStorage.getItem('userAddress') || '';
-    if (!currentAddress) {
-      throw new Error('No wallet address available');
-    }
     
-    // If Ceramic is ready, use it
+    // If Ceramic is ready and authenticated, use it regardless of address state
+    // as the DID authentication is sufficient
     if (ceramicService && isAuthenticated) {
       try {
         // Map TableType to DataType
@@ -140,17 +166,21 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
       }
     }
     
-    // Fall back to localStorage
-    // Store in localStorage for now as a fallback
-    const item = {
-      id: Date.now().toString(),
+    // Fall back to localStorage if we have a wallet address
+    if (!currentAddress) {
+      throw new Error('No wallet address available for storage');
+    }
+    
+    // Create a unique item for localStorage with address-specific key
+    const item: TableData = {
+      id: `${tableType}_${currentAddress}_${key}_${Date.now()}`,
       item_key: key,
       item_value: value,
       created_at: new Date().toISOString()
     };
     
-    // Save to localStorage
-    const localStorageKey = `wot_id_fallback_${tableType}_${key}`;
+    // Save to localStorage with address-scoped key
+    const localStorageKey = `wot_id_fallback_${currentAddress}_${tableType}_${key}`;
     localStorage.setItem(localStorageKey, JSON.stringify(item));
     
     return item;
@@ -160,14 +190,11 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
     if (!isReady) {
       throw new Error('Storage not initialized');
     }
-
-    // Make sure we have a valid address
-    const currentAddress = address || localStorage.getItem('userAddress') || '';
-    if (!currentAddress) {
-      return null;
-    }
     
-    // If Ceramic is ready, use it
+    // Check for wallet address
+    const currentAddress = address || localStorage.getItem('userAddress') || '';
+    
+    // If Ceramic is ready and authenticated, use it regardless of address state
     if (ceramicService && isAuthenticated) {
       try {
         // Map TableType to DataType
@@ -191,8 +218,13 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
       }
     }
     
-    // Fall back to localStorage
-    const localStorageKey = `wot_id_fallback_${tableType}_${key}`;
+    // Fall back to localStorage if we have an address
+    if (!currentAddress) {
+      return null; // No address means no data for this user
+    }
+    
+    // Use address-scoped key for localStorage fallback
+    const localStorageKey = `wot_id_fallback_${currentAddress}_${tableType}_${key}`;
     const storedItem = localStorage.getItem(localStorageKey);
     
     if (storedItem) {
@@ -211,13 +243,10 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
       throw new Error('Storage not initialized');
     }
 
-    // Make sure we have a valid address
+    // Check for wallet address
     const currentAddress = address || localStorage.getItem('userAddress') || '';
-    if (!currentAddress) {
-      return [];
-    }
     
-    // If Ceramic is ready, use it
+    // If Ceramic is ready and authenticated, use it regardless of address state
     if (ceramicService && isAuthenticated) {
       try {
         // Map TableType to DataType
@@ -238,11 +267,18 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
       }
     }
     
-    // Get all items from localStorage that match the pattern
+    // Get all items from localStorage that match the address-scoped pattern
+    // Return empty array if no address available
+    if (!currentAddress) {
+      return [];
+    }
+    
     const fallbackItems: TableData[] = [];
+    const prefix = `wot_id_fallback_${currentAddress}_${tableType}_`;
+    
     for (let i = 0; i < localStorage.length; i++) {
       const storageKey = localStorage.key(i);
-      if (storageKey && storageKey.startsWith(`wot_id_fallback_${tableType}_`)) {
+      if (storageKey && storageKey.startsWith(prefix)) {
         try {
           const storedItem = localStorage.getItem(storageKey);
           if (storedItem) {
@@ -261,14 +297,11 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
     if (!isReady) {
       throw new Error('Storage not initialized');
     }
-
-    // Make sure we have a valid address
-    const currentAddress = address || localStorage.getItem('userAddress') || '';
-    if (!currentAddress) {
-      return false;
-    }
     
-    // If Ceramic is ready, use it
+    // Check for wallet address
+    const currentAddress = address || localStorage.getItem('userAddress') || '';
+    
+    // If Ceramic is ready and authenticated, use it regardless of address state
     if (ceramicService && isAuthenticated) {
       try {
         // Map TableType to DataType
@@ -278,8 +311,10 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
         const success = await ceramicService.deleteItem(dataType, key);
         if (success) {
           // Also remove from localStorage fallback if it exists
-          const localStorageKey = `wot_id_fallback_${tableType}_${key}`;
-          localStorage.removeItem(localStorageKey);
+          if (currentAddress) {
+            const localStorageKey = `wot_id_fallback_${currentAddress}_${tableType}_${key}`;
+            localStorage.removeItem(localStorageKey);
+          }
           return true;
         }
       } catch (error) {
@@ -289,7 +324,12 @@ export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Elem
       }
     }
     
-    const localStorageKey = `wot_id_fallback_${tableType}_${key}`;
+    // Handle localStorage deletion only if we have an address
+    if (!currentAddress) {
+      return false; // Can't delete without an address
+    }
+    
+    const localStorageKey = `wot_id_fallback_${currentAddress}_${tableType}_${key}`;
     localStorage.removeItem(localStorageKey);
     return true;
   };

@@ -120,6 +120,12 @@ export const CeramicProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     if (isReady && address && !isAuthenticated) {
       console.log('[CERAMIC] Auto-authenticating with address:', address);
+      
+      // Store the authenticated address in localStorage for use by StorageContext
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('userAddress', address);
+      }
+      
       authenticateWithDID(address).catch(err => {
         console.error('[CERAMIC] Auto-authentication failed:', err);
       });
