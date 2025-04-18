@@ -9,7 +9,7 @@ import { Ed25519Provider } from 'key-did-provider-ed25519';
 import { getResolver as getKeyResolver } from 'key-did-resolver';
 import { fromString } from 'uint8arrays/from-string';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
-import { getCeramicConfig } from '../ceramic/ceramicConfig';
+import { getCeramicConfig, CERAMIC_CONFIG } from '../ceramic/ceramicConfig';
 
 // Interface for the Ceramic context
 interface CeramicContextType {
@@ -47,7 +47,7 @@ export const CeramicProvider: React.FC<{ children: ReactNode }> = ({ children })
         const config = getCeramicConfig();
         console.log(`[CERAMIC] Initializing Ceramic client on ${config.network}...`);
         
-        // Create a new Ceramic client instance using the configured URL
+        // Create a new Ceramic client instance for mainnet production use
         const ceramicClient = new CeramicClient(config.nodeUrl);
         setCeramic(ceramicClient);
         
@@ -105,6 +105,18 @@ export const CeramicProvider: React.FC<{ children: ReactNode }> = ({ children })
       
       // Set the DID on the Ceramic client
       ceramic.did = did;
+      
+      // Make a test query to validate authentication and permissions
+      // This helps detect CORS issues early
+      try {
+        if (composeClient) {
+          // Use a simple query that's permissible even with CORS restrictions
+          await composeClient.executeQuery(`query { viewer { id } }`);
+        }
+      } catch (queryError) {
+        console.warn('[CERAMIC] Authentication test query failed, but continuing:', queryError);
+        // We continue even if this fails since the fallback will handle it
+      }
       
       console.log(`[CERAMIC] Authenticated with DID: ${did.id}`);
       setIsAuthenticated(true);

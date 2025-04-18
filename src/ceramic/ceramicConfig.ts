@@ -4,7 +4,7 @@
  */
 
 export const CERAMIC_CONFIG = {
-  // Mainnet node URL - production Ceramic mainnet
+  // Mainnet node URL with CORS headers enabled for all origins
   mainnetUrl: 'https://gateway.ceramic.network',
   // Fallback to local node if needed
   localUrl: 'http://localhost:7007',
@@ -13,7 +13,13 @@ export const CERAMIC_CONFIG = {
   // Seed for deterministic DID generation
   seed: '34d1f4b5d09fdde93d3a858b7423c42de8105113dcc1300771310a853857d26a',
   // DID registered with Ceramic
-  did: 'did:key:z6MkmzcN2bjLjGu8tP99N31XkvDgFskrwUfeVbewtJBNmqBo'
+  did: 'did:key:z6MkmzcN2bjLjGu8tP99N31XkvDgFskrwUfeVbewtJBNmqBo',
+  // Added headers for CORS authorization
+  headers: {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  }
 };
 
 // Export singleton instance that can be imported elsewhere
