@@ -32,17 +32,17 @@ const DataContext = createContext<DataContextType>({
 
 // List of all data types we want to preload
 const DATA_TYPES: DataType[] = [
-  'profile',
-  'documents',
-  'connections',
-  'organizations',
-  'digital_assets',
-  'real_world_assets',
-  'medical',
-  'private',
-  'contacts',
-  'affiliations',
-  'currencies',
+  DataType.PROFILE,
+  DataType.DOCUMENTS,
+  DataType.CONNECTIONS,
+  DataType.ORGANIZATIONS,
+  DataType.DIGITAL_ASSETS,
+  DataType.REAL_WORLD_ASSETS,
+  DataType.MEDICAL,
+  DataType.PRIVATE,
+  DataType.CONTACTS,
+  DataType.AFFILIATIONS,
+  DataType.CURRENCIES,
 ];
 
 // Throttle duration in milliseconds - different for various data types
