@@ -23,6 +23,7 @@ const DATA_TYPE_TO_MODEL_MAP: Record<DataType, string> = {
   [DataType.CONTACTS]: 'EncryptedConnection',
   [DataType.AFFILIATIONS]: 'EncryptedOrganization',
   [DataType.CURRENCIES]: 'EncryptedAsset',
+  [DataType.DEFAULT]: 'EncryptedDocument', // Default case added to fix build error
 };
 
 export interface StorageItem {
