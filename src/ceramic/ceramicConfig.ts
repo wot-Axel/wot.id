@@ -4,8 +4,8 @@
  */
 
 export const CERAMIC_CONFIG = {
-  // Mainnet node URL
-  mainnetUrl: 'https://ceramic-clay.3boxlabs.com',
+  // Mainnet node URL - production Ceramic mainnet
+  mainnetUrl: 'https://gateway.ceramic.network',
   // Fallback to local node if needed
   localUrl: 'http://localhost:7007',
   // Default network to use
