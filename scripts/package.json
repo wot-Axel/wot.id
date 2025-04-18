@@ -1,0 +1,13 @@
+{
+  "name": "ceramic-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for Ceramic mainnet integration",
+  "type": "module",
+  "dependencies": {
+    "@ceramicnetwork/http-client": "^2.0.0",
+    "dids": "^3.0.0",
+    "key-did-provider-ed25519": "^2.0.0",
+    "key-did-resolver": "^2.0.0",
+    "uint8arrays": "^3.0.0"
+  }
+}
