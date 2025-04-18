@@ -3,19 +3,21 @@
 import { TableType, TableData } from '@/utils/storageUtils';
 
 // Data types supported by the application
-export type DataType = 
-  | 'profile'
-  | 'documents'
-  | 'digital_assets'
-  | 'real_world_assets'
-  | 'medical'
-  | 'connections'
-  | 'organizations'
-  | 'messages'
-  | 'private'
-  | 'contacts'
-  | 'affiliations'
-  | 'currencies';
+export enum DataType {
+  PROFILE = 'profile',
+  DOCUMENTS = 'documents',
+  DIGITAL_ASSETS = 'digital_assets',
+  REAL_WORLD_ASSETS = 'real_world_assets',
+  MEDICAL = 'medical',
+  CONNECTIONS = 'connections',
+  ORGANIZATIONS = 'organizations',
+  MESSAGES = 'messages',
+  PRIVATE = 'private',
+  CONTACTS = 'contacts',
+  AFFILIATIONS = 'affiliations',
+  CURRENCIES = 'currencies',
+  DEFAULT = 'default'
+}
 
 // Common storage item interface
 export interface StorageItem {
@@ -25,32 +27,50 @@ export interface StorageItem {
   created_at?: string;
 }
 
+// Map TableType to DataType - used for compatibility with storage systems
+export function mapTableTypeToDataType(tableType: string): DataType {
+  switch(tableType) {
+    case 'profile':
+      return DataType.PROFILE;
+    case 'documents':
+      return DataType.DOCUMENTS;
+    case 'digital_assets':
+      return DataType.DIGITAL_ASSETS;
+    case 'connections':
+      return DataType.CONNECTIONS;
+    case 'organizations':
+      return DataType.ORGANIZATIONS;
+    default:
+      return DataType.DEFAULT;
+  }
+}
+
 // Map DataType to TableType
 export const mapDataTypeToTableType = (dataType: DataType): TableType => {
   switch (dataType) {
-    case 'profile':
+    case DataType.PROFILE:
       return TableType.PRIVATE;
-    case 'documents':
+    case DataType.DOCUMENTS:
       return TableType.PRIVATE;
-    case 'digital_assets':
+    case DataType.DIGITAL_ASSETS:
       return TableType.DIGITAL_ASSETS;
-    case 'real_world_assets':
+    case DataType.REAL_WORLD_ASSETS:
       return TableType.PRIVATE;
-    case 'medical':
+    case DataType.MEDICAL:
       return TableType.MEDICAL;
-    case 'connections':
+    case DataType.CONNECTIONS:
       return TableType.CONTACTS;
-    case 'organizations':
+    case DataType.ORGANIZATIONS:
       return TableType.AFFILIATIONS;
-    case 'messages':
+    case DataType.MESSAGES:
       return TableType.MESSAGE;
-    case 'private':
+    case DataType.PRIVATE:
       return TableType.PRIVATE;
-    case 'contacts':
+    case DataType.CONTACTS:
       return TableType.CONTACTS;
-    case 'affiliations':
+    case DataType.AFFILIATIONS:
       return TableType.AFFILIATIONS;
-    case 'currencies':
+    case DataType.CURRENCIES:
       return TableType.PRIVATE;
     default:
       return TableType.PRIVATE;

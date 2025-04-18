@@ -1,0 +1,13 @@
+type EncryptedOrganization @createModel(accountRelation: LIST, description: "Encrypted organization affiliations") {
+  # Organization information (encrypted)
+  encryptedData: String! @string(maxLength: 100000)
+  encryptedKey: String! @string(maxLength: 10000)
+  
+  # Reference fields
+  orgType: String! @string(maxLength: 50) # "employer", "association", etc.
+  
+  # Metadata
+  startDate: DateTime
+  endDate: DateTime
+  status: String @string(maxLength: 20) # "active", "former", etc.
+}

@@ -1,0 +1,12 @@
+type EncryptedConnection @createModel(accountRelation: LIST, description: "Encrypted connections between people") {
+  # Connection information (encrypted)
+  encryptedData: String! @string(maxLength: 100000)
+  encryptedKey: String! @string(maxLength: 10000)
+  
+  # Reference fields for search/display
+  connectionType: String! @string(maxLength: 50) # "personal", "professional", etc.
+  
+  # Metadata
+  createdAt: DateTime!
+  lastInteraction: DateTime
+}

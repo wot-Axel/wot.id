@@ -2,14 +2,27 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { TableType, TableData } from '@/utils/storageUtils';
-import { 
-  generateLocalTableName, 
-  checkLocalTableExists, 
-  createLocalTable, 
-  insertLocalData, 
-  getLocalData, 
-  clearLocalData 
-} from '@/utils/localStorageUtils';
+import { DataType } from '@/types/storage';
+import { CeramicDataService } from '@/ceramic/ceramicDataService';
+import { useCeramic } from './CeramicContext';
+
+// Internal utility to map TableType to DataType
+function mapTableTypeToDataType(tableType: string): DataType {
+  switch(tableType) {
+    case 'profile':
+      return DataType.PROFILE;
+    case 'documents':
+      return DataType.DOCUMENTS;
+    case 'digital_assets':
+      return DataType.DIGITAL_ASSETS;
+    case 'connections':
+      return DataType.CONNECTIONS;
+    case 'organizations':
+      return DataType.ORGANIZATIONS;
+    default:
+      return DataType.DEFAULT;
+  }
+}
 
 // Define the storage context interface
 interface StorageContextType {
@@ -28,11 +41,15 @@ const StorageContext = createContext<StorageContextType>({
   isReady: false 
 });
 
-export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const StorageProvider = ({ children }: { children: ReactNode }): JSX.Element => {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [address, setAddress] = useState<string>('');
+  const [ceramicService, setCeramicService] = useState<CeramicDataService | null>(null);
+  
+  // Get Ceramic context
+  const { ceramic, composeClient, isAuthenticated, isReady: ceramicReady } = useCeramic();
 
-  // Initialize localStorage when the provider mounts
+  // Initialize storage when the provider mounts
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -42,9 +59,10 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
           const storedAddress = localStorage.getItem('userAddress') || '';
           setAddress(storedAddress);
           
-          // Mark storage as ready
+          // Mark storage as ready even if Ceramic isn't ready yet
+          // This allows the app to function while Ceramic initializes
           setIsReady(true);
-          console.log('[STORAGE] Local storage system initialized and verified');
+          console.log('[STORAGE] Storage system initialized');
         } else {
           console.log('[STORAGE] Not in browser environment, storage unavailable');
           // Still set ready to allow SSR rendering
@@ -71,8 +89,25 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+  
+  // Initialize CeramicDataService when Ceramic and ComposeDB are ready
+  useEffect(() => {
+    if (ceramicReady && composeClient && ceramic) {
+      const service = new CeramicDataService(composeClient, ceramic.did);
+      setCeramicService(service);
+      console.log('[STORAGE] Ceramic storage service initialized');
+    }
+  }, [ceramicReady, composeClient, ceramic, isAuthenticated]);
+  
+  // Update DID in service when authentication changes
+  useEffect(() => {
+    if (ceramicService && ceramic && ceramic.did && isAuthenticated) {
+      ceramicService.setDID(ceramic.did);
+      console.log('[STORAGE] Updated DID in Ceramic service');
+    }
+  }, [ceramicService, ceramic, isAuthenticated]);
 
-  // Implement storage functions with localStorage
+  // Storage implementation with Ceramic
   const storeItem = async (tableType: TableType, key: string, value: string): Promise<TableData> => {
     if (!isReady) {
       throw new Error('Storage not initialized');
@@ -83,20 +118,42 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (!currentAddress) {
       throw new Error('No wallet address available');
     }
-
-    // Check if table exists, create if not
-    const { exists, tableName } = checkLocalTableExists(tableType, currentAddress);
-    const finalTableName = exists ? tableName : createLocalTable(tableType, currentAddress);
-
-    // Insert data
-    insertLocalData(finalTableName, key, value);
-
-    return { 
-      id: Date.now().toString(), 
-      item_key: key, 
-      item_value: value, 
-      created_at: new Date().toISOString() 
+    
+    // If Ceramic is ready, use it
+    if (ceramicService && isAuthenticated) {
+      try {
+        // Map TableType to DataType
+        const dataType = mapTableTypeToDataType(tableType);
+        
+        // Store in Ceramic
+        const result = await ceramicService.storeItem(dataType, key, value);
+        return {
+          id: result.id,
+          item_key: result.key,
+          item_value: result.value,
+          created_at: result.created_at || new Date().toISOString()
+        };
+      } catch (error) {
+        console.error('[STORAGE] Ceramic storage error:', error);
+        // Fall back to localStorage for resilience
+        console.log('[STORAGE] Falling back to localStorage');
+      }
+    }
+    
+    // Fall back to localStorage
+    // Store in localStorage for now as a fallback
+    const item = {
+      id: Date.now().toString(),
+      item_key: key,
+      item_value: value,
+      created_at: new Date().toISOString()
     };
+    
+    // Save to localStorage
+    const localStorageKey = `wot_id_fallback_${tableType}_${key}`;
+    localStorage.setItem(localStorageKey, JSON.stringify(item));
+    
+    return item;
   };
 
   const getItem = async (tableType: TableType, key: string): Promise<TableData | null> => {
@@ -109,27 +166,44 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (!currentAddress) {
       return null;
     }
-
-    // Check if table exists
-    const { exists, tableName } = checkLocalTableExists(tableType, currentAddress);
-    if (!exists) {
-      return null;
-    }
-
-    // Get all data and find matching item
-    const items = getLocalData(tableName);
-    const item = items.find(item => item.key === key);
     
-    if (!item) {
-      return null;
+    // If Ceramic is ready, use it
+    if (ceramicService && isAuthenticated) {
+      try {
+        // Map TableType to DataType
+        const dataType = mapTableTypeToDataType(tableType);
+        
+        // Get from Ceramic
+        let result = await ceramicService.getItem(dataType, key);
+        if (result) {
+          return {
+            id: result.id,
+            item_key: result.key,
+            item_value: result.value,
+            created_at: result.created_at || new Date().toISOString()
+          };
+        }
+        // If not found in Ceramic, continue to localStorage fallback
+      } catch (error) {
+        console.error('[STORAGE] Ceramic retrieval error:', error);
+        // Fall back to localStorage for resilience
+        console.log('[STORAGE] Falling back to localStorage');
+      }
     }
-
-    return {
-      id: item.id?.toString() || '',
-      item_key: item.key,
-      item_value: item.value,
-      created_at: item.created_at || new Date().toISOString()
-    };
+    
+    // Fall back to localStorage
+    const localStorageKey = `wot_id_fallback_${tableType}_${key}`;
+    const storedItem = localStorage.getItem(localStorageKey);
+    
+    if (storedItem) {
+      try {
+        return JSON.parse(storedItem) as TableData;
+      } catch (e) {
+        console.error('[STORAGE] Error parsing localStorage item:', e);
+      }
+    }
+    
+    return null;
   };
 
   const listItems = async (tableType: TableType): Promise<TableData[]> => {
@@ -142,24 +216,45 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (!currentAddress) {
       return [];
     }
-
-    // Check if table exists
-    const { exists, tableName } = checkLocalTableExists(tableType, currentAddress);
-    if (!exists) {
-      console.log(`[STORAGE] Final resolver with 0 items for ${tableType}`);
-      return [];
-    }
-
-    // Get all data and format for consistency
-    const items = getLocalData(tableName);
-    console.log(`[STORAGE] Final resolver with ${items.length} items for ${tableType}`);
     
-    return items.map(item => ({
-      id: item.id?.toString() || '',
-      item_key: item.key,
-      item_value: item.value,
-      created_at: item.created_at || new Date().toISOString()
-    }));
+    // If Ceramic is ready, use it
+    if (ceramicService && isAuthenticated) {
+      try {
+        // Map TableType to DataType
+        const dataType = mapTableTypeToDataType(tableType);
+        
+        // List from Ceramic
+        const results = await ceramicService.listItems(dataType);
+        return results.map(result => ({
+          id: result.id,
+          item_key: result.key,
+          item_value: result.value,
+          created_at: result.created_at || new Date().toISOString()
+        }));
+      } catch (error) {
+        console.error('[STORAGE] Ceramic list error:', error);
+        // Fall back to localStorage for resilience
+        console.log('[STORAGE] Falling back to localStorage');
+      }
+    }
+    
+    // Get all items from localStorage that match the pattern
+    const fallbackItems: TableData[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i);
+      if (storageKey && storageKey.startsWith(`wot_id_fallback_${tableType}_`)) {
+        try {
+          const storedItem = localStorage.getItem(storageKey);
+          if (storedItem) {
+            fallbackItems.push(JSON.parse(storedItem) as TableData);
+          }
+        } catch (e) {
+          console.error('[STORAGE] Error parsing localStorage item:', e);
+        }
+      }
+    }
+    
+    return fallbackItems;
   };
 
   const deleteItem = async (tableType: TableType, key: string): Promise<boolean> => {
@@ -172,37 +267,67 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (!currentAddress) {
       return false;
     }
-
-    // Check if table exists
-    const { exists, tableName } = checkLocalTableExists(tableType, currentAddress);
-    if (!exists) {
-      return false;
-    }
-
-    // Get current data
-    const items = getLocalData(tableName);
-    const filteredItems = items.filter(item => item.key !== key);
     
-    // Only update if we found and removed the item
-    if (filteredItems.length < items.length) {
-      // Save filtered data back
-      localStorage.setItem(tableName, JSON.stringify(filteredItems));
-      return true;
+    // If Ceramic is ready, use it
+    if (ceramicService && isAuthenticated) {
+      try {
+        // Map TableType to DataType
+        const dataType = mapTableTypeToDataType(tableType);
+        
+        // Delete from Ceramic
+        const success = await ceramicService.deleteItem(dataType, key);
+        if (success) {
+          // Also remove from localStorage fallback if it exists
+          const localStorageKey = `wot_id_fallback_${tableType}_${key}`;
+          localStorage.removeItem(localStorageKey);
+          return true;
+        }
+      } catch (error) {
+        console.error('[STORAGE] Ceramic deletion error:', error);
+        // Fall back to localStorage for resilience
+        console.log('[STORAGE] Falling back to localStorage');
+      }
     }
     
-    return false;
+    const localStorageKey = `wot_id_fallback_${tableType}_${key}`;
+    localStorage.removeItem(localStorageKey);
+    return true;
+  };
+
+  const mapTableTypeToDataType = (tableType: TableType) => {
+    const { DataType } = require('@/types/storage');
+
+    switch (tableType) {
+      case TableType.PRIVATE:
+        return DataType.PRIVATE;
+      case TableType.CONTACTS:
+        return DataType.CONTACTS;
+      case TableType.DIGITAL_ASSETS:
+        return DataType.DIGITAL_ASSETS; 
+      case TableType.MEDICAL:
+        return DataType.MEDICAL;
+      case TableType.AFFILIATIONS:
+        return DataType.AFFILIATIONS;
+      case TableType.MESSAGE:
+        return DataType.MESSAGES;
+      case TableType.SYSTEM:
+        return DataType.PRIVATE; // System data goes to private storage
+      default:
+        return DataType.PRIVATE;
+    }
+  };
+
+  // Context provider value
+  const contextValue: StorageContextType = {
+    storeItem,
+    getItem,
+    listItems,
+    deleteItem,
+    isReady
   };
 
   return (
-    <StorageContext.Provider
-      value={{
-        storeItem,
-        getItem,
-        listItems,
-        deleteItem,
-        isReady
-      }}
-    >
+    <StorageContext.Provider value={contextValue}>
       {children}
     </StorageContext.Provider>
   );
