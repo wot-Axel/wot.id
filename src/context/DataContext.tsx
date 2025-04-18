@@ -108,7 +108,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('[DATA CONTEXT] Storage ready, fetching initial data');
     
     // Group data types by priority for better loading experience
-    const priorityData: DataType[] = ['profile', 'connections', 'currencies']; // Load these first
+    const priorityData: DataType[] = [DataType.PROFILE, DataType.CONNECTIONS, DataType.CURRENCIES]; // Load these first
     const secondaryData: DataType[] = DATA_TYPES.filter(type => !priorityData.includes(type));
     
     // Load priority data first
