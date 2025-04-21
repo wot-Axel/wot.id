@@ -13,11 +13,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const ceramicUrl = `https://gateway.ceramic.network/api/v0/${Array.isArray(path) ? path.join('/') : path}`;
 
   // Prepare fetch options, copying method, headers, and body
+  // Copy headers, but remove 'host'
+  const { host, ...headers } = req.headers;
+
   const fetchOptions: RequestInit = {
     method: req.method,
-    headers: { ...req.headers, host: undefined }, // Remove host header for cross-origin
+    headers: headers as HeadersInit,
     body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
   };
+
 
   // Forward the request to the Ceramic gateway
   try {
