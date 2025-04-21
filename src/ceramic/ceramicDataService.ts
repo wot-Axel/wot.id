@@ -47,6 +47,21 @@ export class CeramicDataService {
   }
 
   /**
+   * Execute a Ceramic GraphQL query
+   * 
+   * @param query - The GraphQL query to execute
+   * @param variables - Optional variables for the query
+   * @returns Query result
+   */
+  private async executeCeramicQuery(query: string, variables?: Record<string, any>) {
+    if (!this.composeClient) {
+      throw new Error('ComposeClient not initialized');
+    }
+    
+    return await this.composeClient.executeQuery(query, variables);
+  }
+
+  /**
    * Store an item in Ceramic
    * 
    * @param dataType - The type of data being stored
