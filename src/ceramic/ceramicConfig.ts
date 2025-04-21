@@ -8,8 +8,8 @@ export const CERAMIC_CONFIG = {
   proxyUrl: '/api/ceramic',
   // Mainnet gateway URL (used for direct connections when possible)
   mainnetUrl: 'https://gateway.ceramic.network',
-  // Fallback to local node if needed
-  localUrl: 'http://localhost:7007',
+  // Local rust-ceramic node API (for local development)
+  localUrl: 'http://127.0.0.1:5101',
   // Default network to use
   network: 'mainnet',
   // Seed for deterministic DID generation
@@ -19,7 +19,8 @@ export const CERAMIC_CONFIG = {
   // API path that Ceramic adds to URLs (important for path normalization)
   apiPath: '/api/v0',
   // Flag to control whether we're using a direct ceramic connection or proxy
-  useProxy: true
+  // In production, set to true to avoid CORS issues (proxy required)
+  useProxy: process.env.NODE_ENV === 'production' ? true : false
 };
 
 /**
