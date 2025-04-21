@@ -4,7 +4,9 @@
  */
 
 export const CERAMIC_CONFIG = {
-  // Mainnet gateway URL
+  // Local API proxy URL that avoids CORS issues
+  proxyUrl: '/api/ceramic',
+  // Mainnet gateway URL (used only for reference)
   mainnetUrl: 'https://gateway.ceramic.network',
   // Fallback to local node if needed
   localUrl: 'http://localhost:7007',
@@ -21,10 +23,11 @@ export const getCeramicConfig = () => {
   // Use env var if available, otherwise use mainnet
   const environment = process.env.NEXT_PUBLIC_CERAMIC_ENV || 'mainnet';
   
-  // Select appropriate URL based on environment
-  const nodeUrl = environment === 'local' 
-    ? CERAMIC_CONFIG.localUrl 
-    : CERAMIC_CONFIG.mainnetUrl;
+  // In production, always use our API proxy to avoid CORS issues
+  // In development, we can use local node if specified
+  const nodeUrl = process.env.NODE_ENV === 'development' && environment === 'local'
+    ? CERAMIC_CONFIG.localUrl
+    : CERAMIC_CONFIG.proxyUrl;
   
   return {
     nodeUrl,
