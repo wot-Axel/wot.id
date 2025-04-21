@@ -49,13 +49,30 @@ export const CeramicProvider: React.FC<{ children: ReactNode }> = ({ children })
         
         // Create a new Ceramic client instance for mainnet production use
         const ceramicClient = new CeramicClient(config.nodeUrl);
+        // Apply custom HTTP API endpoint to prevent duplicate /api/ segments
+        (ceramicClient as any).context._apiEndpoint = config.nodeUrl;
         setCeramic(ceramicClient);
         
-        // Create ComposeDB client with runtime definition
+        // Create ComposeDB client with runtime definition and ensure proper URL handling
         const compose = new ComposeClient({
           ceramic: ceramicClient as any, // Type cast to avoid version compatibility issues
           definition
         });
+        
+        // Force ComposeDB to use exact URL we specified, without appending additional /api/v0 segments
+        if (typeof window !== 'undefined') {
+          try {
+            // Access private property to override URL generation behavior
+            const client = (compose as any).__composeClient;
+            if (client && client.ceramic && client.ceramic.context) {
+              // Use the same API endpoint as the Ceramic client
+              client.ceramic.context._apiEndpoint = config.nodeUrl;
+            }
+          } catch (e) {
+            console.warn('[CERAMIC] Unable to configure ComposeDB URL generation, using defaults:', e);
+          }
+        }
+        
         setComposeClient(compose);
         
         console.log('[CERAMIC] Ceramic client initialized successfully');
