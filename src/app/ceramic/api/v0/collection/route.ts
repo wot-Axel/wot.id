@@ -127,21 +127,21 @@ async function handleCollectionQuery(req: NextRequest) {
     
     return ceramicResponse;
   } catch (error) {
-    console.error('[CERAMIC COLLECTION] Error:', error);
+    console.error('[CERAMIC COLLECTION ERROR]', error, error instanceof Error ? error.stack : '');
     
-    // Safely extract error message
     let message = 'Unknown error';
+    let stack: string | undefined = undefined;
     if (error instanceof Error) {
       message = error.message;
-    } else if (typeof error === 'string') {
-      message = error;
+      stack = error.stack;
     }
-
+    
     // Create error response
-    const errorResponse = NextResponse.json(
-      { error: 'Error forwarding request to Ceramic network', details: message },
-      { status: 500 }
-    );
+    const errorResponse = NextResponse.json({
+      error: 'Error forwarding request to Ceramic network',
+      details: message,
+      stack,
+    }, { status: 500 });
     
     // Add CORS headers even for error responses
     errorResponse.headers.set('Access-Control-Allow-Origin', '*');
