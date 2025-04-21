@@ -38,6 +38,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const data = await ceramicRes.arrayBuffer();
     res.send(Buffer.from(data));
   } catch (error: any) {
-    res.status(502).json({ error: 'Failed to proxy request to Ceramic gateway', detail: error.message });
+    console.error('[CERAMIC PROXY ERROR]', {
+      url: ceramicUrl,
+      method: req.method,
+      headers: req.headers,
+      error,
+    });
+    res.status(502).json({
+      error: 'Failed to proxy request to Ceramic gateway',
+      detail: error.message,
+      stack: error.stack,
+      name: error.name,
+      toString: error.toString(),
+      url: ceramicUrl,
+      method: req.method,
+      headers: req.headers,
+    });
   }
 }
+
