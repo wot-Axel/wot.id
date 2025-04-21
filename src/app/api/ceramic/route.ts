@@ -13,6 +13,13 @@ async function forwardToCeramic(req: NextRequest, path: string) {
   // Construct target URL in a robust way that handles various input formats
   let targetUrl;
   try {
+    // First, check for and fix the most common problematic pattern - duplicate API segments
+    // This is a global fix that will catch all instances of /api/api/ pattern
+    if (path.includes('/api/api/')) {
+      console.log('[CERAMIC PROXY] Detected and fixing duplicate API segments in:', path);
+      path = path.replace('/api/api/', '/api/');
+    }
+    
     // Special case handling for collection endpoints which are frequently problematic
     if (path.includes('/collection') || path.includes('/streams')) {
       // These endpoints need special handling

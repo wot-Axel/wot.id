@@ -86,13 +86,33 @@ export const getCeramicConfig = () => {
   
   // Special handling for proxy URLs to prevent duplicate /api/ segments
   if (useProxy && baseUrl.includes('/api/')) {
-    // We need a clean URL without /api/v0 or we'll get duplicate /api/api/v0/
-    // The proxy will handle adding the proper segments
-    if (nodeUrl.endsWith('/api/v0')) {
-      nodeUrl = nodeUrl.substring(0, nodeUrl.length - 7); // Remove '/api/v0'
+    // For ComposeDB client, we need to completely remove the /api/ segment
+    // as it will automatically append /api/v0 to any URL
+    
+    // First, extract the origin part of the URL
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(baseUrl);
+    } catch (e) {
+      // For relative URLs, use the current window location
+      if (typeof window !== 'undefined' && window.location) {
+        parsedUrl = new URL(baseUrl, window.location.origin);
+      } else {
+        // Fallback for server-side
+        throw new Error('Cannot parse relative URL in server context');
+      }
     }
     
-    // If URL ends with /api/ceramic, make sure it doesn't have trailing slash
+    // Strip any /api/ or /api/v0 segments completely
+    const pathSegments = parsedUrl.pathname.split('/');
+    const cleanedSegments = pathSegments.filter(segment => 
+      segment !== 'api' && segment !== 'v0'
+    );
+    
+    // Reconstruct the URL without any /api/ segments
+    nodeUrl = `${parsedUrl.protocol}//${parsedUrl.host}${cleanedSegments.join('/')}`;
+    
+    // Ensure no trailing slash
     if (nodeUrl.endsWith('/')) {
       nodeUrl = nodeUrl.substring(0, nodeUrl.length - 1);
     }
