@@ -129,9 +129,17 @@ async function handleCollectionQuery(req: NextRequest) {
   } catch (error) {
     console.error('[CERAMIC COLLECTION] Error:', error);
     
+    // Safely extract error message
+    let message = 'Unknown error';
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (typeof error === 'string') {
+      message = error;
+    }
+
     // Create error response
     const errorResponse = NextResponse.json(
-      { error: 'Error forwarding request to Ceramic network', details: error.message },
+      { error: 'Error forwarding request to Ceramic network', details: message },
       { status: 500 }
     );
     
