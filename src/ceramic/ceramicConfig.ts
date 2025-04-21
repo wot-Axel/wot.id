@@ -72,54 +72,35 @@ export const getCeramicConfig = () => {
     baseUrl = CERAMIC_CONFIG.mainnetUrl;
   }
   
-  // For proxy mode with browser, ensure absolute URL
-  if (useProxy && typeof window !== 'undefined' && window.location) {
-    // URL is relative, make it absolute
-    if (baseUrl.startsWith('/')) {
-      baseUrl = `${window.location.origin}${baseUrl}`;
-    }
-  }
-  
-  // When using the proxy, we need to ensure the node URL doesn't have /api/v0
-  // Because the ComposeDB client will append this, causing duplicated segments
+  // When using the proxy, ComposeDB client needs special handling
+  // to avoid URL construction issues and prevent incorrect domain usage
   let nodeUrl = baseUrl;
   
-  // Special handling for proxy URLs to prevent duplicate /api/ segments
-  if (useProxy && baseUrl.includes('/api/')) {
-    // For ComposeDB client, we need to completely remove the /api/ segment
-    // as it will automatically append /api/v0 to any URL
-    
-    // First, extract the origin part of the URL
-    let parsedUrl;
-    try {
-      parsedUrl = new URL(baseUrl);
-    } catch (e) {
-      // For relative URLs, use the current window location
-      if (typeof window !== 'undefined' && window.location) {
-        parsedUrl = new URL(baseUrl, window.location.origin);
-      } else {
-        // Fallback for server-side
-        throw new Error('Cannot parse relative URL in server context');
-      }
-    }
-    
-    // Strip any /api/ or /api/v0 segments completely
-    const pathSegments = parsedUrl.pathname.split('/');
-    const cleanedSegments = pathSegments.filter(segment => 
-      segment !== 'api' && segment !== 'v0'
-    );
-    
-    // Reconstruct the URL without any /api/ segments
-    nodeUrl = `${parsedUrl.protocol}//${parsedUrl.host}${cleanedSegments.join('/')}`;
-    
-    // Ensure no trailing slash
-    if (nodeUrl.endsWith('/')) {
-      nodeUrl = nodeUrl.substring(0, nodeUrl.length - 1);
+  if (useProxy) {
+    // For in-browser requests, we need to ensure the proxy URL is correctly constructed
+    if (typeof window !== 'undefined') {
+      // Always use a relative path for the proxy when in the browser
+      // This ensures that the ComposeDB client will use the current origin correctly
+      nodeUrl = '/api/ceramic';
+      
+      // IMPORTANT: Do NOT construct an absolute URL with window.location.origin here
+      // The ComposeDB client will handle this correctly with relative URLs
+    } else {
+      // In server-side context, we need the complete URL to the mainnet
+      // Because we're not dealing with browser CORS in this case
+      nodeUrl = CERAMIC_CONFIG.mainnetUrl;
     }
   }
   
   // Clean the URL one last time to avoid any issues
   const finalUrl = normalizeCeramicUrl(nodeUrl);
+  
+  // Log the configuration for debugging
+  console.log('[CERAMIC CONFIG] Using URL:', {
+    nodeUrl: finalUrl,
+    network: environment === 'local' ? 'local' : 'mainnet',
+    useProxy
+  });
   
   return {
     // Return cleaned URL

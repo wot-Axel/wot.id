@@ -13,53 +13,56 @@ async function forwardToCeramic(req: NextRequest, path: string) {
   // Construct target URL in a robust way that handles various input formats
   let targetUrl;
   try {
-    // First, check for and fix the most common problematic pattern - duplicate API segments
-    // This is a global fix that will catch all instances of /api/api/ pattern
-    if (path.includes('/api/api/')) {
-      console.log('[CERAMIC PROXY] Detected and fixing duplicate API segments in:', path);
-      path = path.replace('/api/api/', '/api/');
+    // First normalize the path by removing any duplicate /api segments
+    // This is a common issue with various clients
+    let normalizedPath = path;
+    
+    // Fix duplicate /api/api/ pattern
+    if (normalizedPath.includes('/api/api/')) {
+      console.log('[CERAMIC PROXY] Detected and fixing duplicate API segments in:', normalizedPath);
+      normalizedPath = normalizedPath.replace('/api/api/', '/api/');
     }
     
-    // Special case handling for collection endpoints which are frequently problematic
-    if (path.includes('/collection') || path.includes('/streams')) {
-      // These endpoints need special handling
-      // Extract the part after any API segments, preserving only the endpoint path
-      let endpointPath = path;
-      
-      // Strip any /api/v0 prefix if present
-      if (path.includes('/api/v0/')) {
-        endpointPath = path.split('/api/v0/').pop() || '';
-      } else if (path.startsWith('/api/v0')) {
-        endpointPath = path.substring('/api/v0'.length);
-      } else if (path.includes('/api/')) {
-        // Handle case where there's just /api/ without v0
-        endpointPath = path.split('/api/').pop() || '';
-      }
-      
-      // Ensure we start with a clean slate and consistent format
-      if (endpointPath.startsWith('/')) {
-        endpointPath = endpointPath.substring(1);
-      }
-      
-      // Construct a clean target URL
-      targetUrl = new URL(`/api/v0/${endpointPath}`, mainnetUrl).toString();
+    // Catch any unexpected URL patterns and log them
+    if (normalizedPath.includes('www.wot.id')) {
+      console.error('[CERAMIC PROXY] ERROR: Detected website domain in Ceramic path:', normalizedPath);
+      // Strip the domain and everything before it
+      normalizedPath = '/' + normalizedPath.split('www.wot.id/')[1] || '';
+      console.log('[CERAMIC PROXY] Corrected path:', normalizedPath);
+    }
+    
+    // Extract the endpoint path after stripping any API prefixes
+    let endpointPath = '';
+    
+    // Handle various path patterns to extract the actual endpoint
+    if (normalizedPath.includes('/api/v0/')) {
+      // Case: .../api/v0/something
+      endpointPath = normalizedPath.split('/api/v0/').pop() || '';
+    } else if (normalizedPath.startsWith('/api/v0')) {
+      // Case: /api/v0/something
+      endpointPath = normalizedPath.substring('/api/v0'.length);
+    } else if (normalizedPath.includes('/api/')) {
+      // Case: .../api/something (without v0)
+      endpointPath = normalizedPath.split('/api/').pop() || '';
     } else {
-      // For all other paths, use more general handling
-      if (path.startsWith('/api/')) {
-        // Path already includes /api/, don't duplicate it
-        targetUrl = new URL(path, mainnetUrl).toString();
-      } else {
-        // Add /api/v0 if needed
-        const apiPath = path.startsWith('/') ? path : `/${path}`;
-        targetUrl = new URL(`/api/v0${apiPath}`, mainnetUrl).toString();
-      }
+      // Case: direct endpoint without /api prefix
+      endpointPath = normalizedPath.startsWith('/') ? 
+        normalizedPath.substring(1) : normalizedPath;
     }
     
-    // Final normalization to catch any remaining issues
-    targetUrl = normalizeCeramicUrl(targetUrl);
+    // Ensure we have a clean path with no leading slash
+    if (endpointPath.startsWith('/')) {
+      endpointPath = endpointPath.substring(1);
+    }
+    
+    // Construct the final URL with the Ceramic mainnet and standard API path
+    targetUrl = new URL(`/api/v0/${endpointPath}`, mainnetUrl).toString();
     
     // Ensure no duplicate slashes in the final URL (except after protocol)
-    targetUrl = targetUrl.replace(/([^:])\/{2,}/g, '$1/');
+    targetUrl = targetUrl.replace(/([^:])\/+/g, '$1/');
+    
+    // Final normalization
+    targetUrl = normalizeCeramicUrl(targetUrl);
   } catch (e) {
     console.error('[CERAMIC PROXY] Error constructing URL:', e);
     // Simple and reliable fallback for error cases
@@ -67,6 +70,7 @@ async function forwardToCeramic(req: NextRequest, path: string) {
   }
   
   // Log the request for monitoring and debugging
+  // Enhanced logging for all requests
   console.log(`[CERAMIC PROXY] ${req.method} ${path} → ${targetUrl}`);
   
   // For collection-related requests, add additional debugging
@@ -74,6 +78,7 @@ async function forwardToCeramic(req: NextRequest, path: string) {
     console.log('[CERAMIC PROXY] Collection request details:', {
       originalPath: path,
       targetUrl,
+      headers: Object.fromEntries(req.headers.entries()),
       timestamp: new Date().toISOString()
     });
   }
@@ -102,7 +107,7 @@ async function forwardToCeramic(req: NextRequest, path: string) {
   }
   
   try {
-    console.log(`Proxying ${req.method} request to: ${url}`);
+    console.log(`[CERAMIC PROXY] Sending ${req.method} request to: ${url}`);
     
     const response = await fetch(url, {
       method: req.method,
@@ -110,16 +115,46 @@ async function forwardToCeramic(req: NextRequest, path: string) {
       body: body ? JSON.stringify(body) : undefined,
     });
     
-    const responseData = await response.json().catch(() => ({}));
+    // Log response information
+    console.log(`[CERAMIC PROXY] Response status: ${response.status} for ${url}`);
     
-    return NextResponse.json(
+    // Handle different response types
+    const contentType = response.headers.get('content-type') || '';
+    let responseData;
+    
+    if (contentType.includes('application/json')) {
+      // For JSON responses
+      responseData = await response.json().catch((e) => {
+        console.error('[CERAMIC PROXY] Error parsing JSON response:', e);
+        return { error: 'Invalid JSON response from Ceramic network' };
+      });
+    } else {
+      // For non-JSON responses (unlikely but possible)
+      const text = await response.text();
+      responseData = { data: text };
+    }
+    
+    // Create response with appropriate headers
+    const ceramicResponse = NextResponse.json(
       responseData,
       { status: response.status }
     );
+    
+    // Copy important headers from the Ceramic response
+    response.headers.forEach((value, key) => {
+      if (['content-type', 'cache-control', 'etag'].includes(key.toLowerCase())) {
+        ceramicResponse.headers.set(key, value);
+      }
+    });
+    
+    return ceramicResponse;
   } catch (error) {
-    console.error('Ceramic proxy error:', error);
+    console.error('[CERAMIC PROXY] Network or server error:', error);
     return NextResponse.json(
-      { error: 'Failed to proxy request to Ceramic network' },
+      { 
+        error: 'Failed to proxy request to Ceramic network', 
+        details: error instanceof Error ? error.message : String(error) 
+      },
       { status: 502 }
     );
   }
