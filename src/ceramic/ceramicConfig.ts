@@ -25,9 +25,14 @@ export const getCeramicConfig = () => {
   
   // In production, always use our API proxy to avoid CORS issues
   // In development, we can use local node if specified
-  const nodeUrl = process.env.NODE_ENV === 'development' && environment === 'local'
+  let nodeUrl = process.env.NODE_ENV === 'development' && environment === 'local'
     ? CERAMIC_CONFIG.localUrl
     : CERAMIC_CONFIG.proxyUrl;
+    
+  // If we're in a browser environment, ensure we use an absolute URL
+  if (typeof window !== 'undefined' && window.location && nodeUrl === CERAMIC_CONFIG.proxyUrl) {
+    nodeUrl = `${window.location.origin}${nodeUrl}`;
+  }
   
   return {
     nodeUrl,
