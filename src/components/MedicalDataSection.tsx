@@ -68,7 +68,7 @@ export const MedicalDataSection = () => {
   const [medicalData, setMedicalData] = useState<MedicalData[]>([]);
   const [medicalDataSections, setMedicalDataSections] = useState<Record<string, MedicalData[]>>({});
 
-  // Load medical data from Gun.js storage
+  // Load medical data from storage
   useEffect(() => {
     if (address && isConnected && !loading) {
       loadMedicalData();
@@ -80,7 +80,7 @@ export const MedicalDataSection = () => {
       setLoading(true);
       setError('');
 
-      // Get existing data from Gun.js storage
+      // Get existing data from storage
       const medicalItems = await listItems(TableType.MEDICAL);
       setMedicalData(medicalItems);
       
@@ -131,7 +131,7 @@ export const MedicalDataSection = () => {
       const timestamp = Date.now();
       const key = `${dataType}_${timestamp}`;
       
-      // Add data to Gun.js storage
+      // Add data to storage
       await storeItem(TableType.MEDICAL, key, dataValue);
       
       // Refresh medical data

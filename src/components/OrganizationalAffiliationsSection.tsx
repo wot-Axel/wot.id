@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
-import { useDataAccess, DataType } from '@/hooks/useDataAccess';
+import { useDataAccess } from '@/hooks/useDataAccess';
+import { DataType } from '@/types/storage';
 
 // Use local interfaces for data structure
 interface PrivateData {
@@ -116,7 +117,7 @@ export const OrganizationalAffiliationsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Decentralized Storage:</strong> Your organizational affiliations data is securely stored using Gun.js, 
+            <strong>Decentralized Storage:</strong> Your organizational affiliations data is securely stored locally, 
             a decentralized SQL database for Web3. This provides better reliability, performance, 
             and compatibility with server-side rendering compared to our previous implementation.
           </p>
@@ -137,7 +138,7 @@ export const OrganizationalAffiliationsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your organizational affiliations are stored securely with Gun.js decentralized storage.</p>
+                <p>Your organizational affiliations are stored securely with encrypted local storage.</p>
                 
                 <form onSubmit={handleAddAffiliation} className="private-data-form">
                   <div className="form-group">

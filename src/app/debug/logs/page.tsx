@@ -25,9 +25,7 @@ export default function LogsDebugPage() {
     try {
       let url = `/api/logs?apiKey=${encodeURIComponent(apiKey)}`;
       
-      if (filterType === 'tableland') {
-        url += '&action=tableland';
-      } else if (filterType === 'error') {
+      if (filterType === 'error') {
         url += '&action=byType&type=error';
       } else if (filterType === 'search' && searchText) {
         url += `&action=search&search=${encodeURIComponent(searchText)}`;
@@ -88,10 +86,6 @@ export default function LogsDebugPage() {
       className += ' log-error';
     } else if (log.type === 'warn') {
       className += ' log-warning';
-    }
-    
-    if (log.message.includes('[TABLELAND')) {
-      className += ' log-tableland';
     }
     
     return (
@@ -216,10 +210,6 @@ export default function LogsDebugPage() {
           color: white;
         }
         
-        .log-tableland {
-          background: #eef6ff;
-        }
-        
         .log-data {
           margin-top: 8px;
           padding: 8px;
@@ -270,7 +260,6 @@ export default function LogsDebugPage() {
             onChange={(e) => setFilterType(e.target.value)}
           >
             <option value="all">All Logs</option>
-            <option value="tableland">Tableland Logs</option>
             <option value="error">Error Logs</option>
             <option value="search">Search</option>
           </select>
@@ -306,15 +295,15 @@ export default function LogsDebugPage() {
       
       {error && <div className="error-message">{error}</div>}
       
-      <div className="logs-list">
-        {isLoading ? (
-          <div className="loading">Loading logs...</div>
-        ) : logs.length > 0 ? (
-          logs.map(formatLog)
-        ) : (
-          <div className="no-logs">No logs found</div>
-        )}
-      </div>
+      {isLoading ? (
+        <div className="loading">Loading logs...</div>
+      ) : logs.length > 0 ? (
+        <div className="logs-list">
+          {logs.map(formatLog)}
+        </div>
+      ) : (
+        <div className="no-logs">No logs found.</div>
+      )}
     </div>
   );
 }

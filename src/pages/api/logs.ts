@@ -1,6 +1,6 @@
 // API endpoint for retrieving logs
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getLogs, getLogsByType, getLogsByContent, getTablelandLogs, clearLogs } from '../../utils/logCapture';
+import { getLogs, getLogsByType, getLogsByContent, clearLogs } from '../../utils/logCapture';
 
 // Simple API key for basic protection
 // In production, you should use a more secure authentication method
@@ -36,8 +36,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         }
         return res.status(200).json(getLogsByContent(search));
       
-      case 'tableland':
-        return res.status(200).json(getTablelandLogs());
+
       
       default:
         // Default action is to get all logs

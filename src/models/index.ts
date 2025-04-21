@@ -1,5 +1,5 @@
 // Schema definitions for our data models
-// These are used for validation before storing data in Gun.js
+// These are used for validation before storing data in local storage
 
 // Map data types to model names for easier reference
 export const DataTypeToModelMap = {
@@ -65,7 +65,7 @@ export const MedicalDataSchema = {
 };
 
 // For the MVP, we'll use a simplified definition
-// This is used for schema validation with Gun.js
+// This is used for schema validation with local storage
 export const CombinedModel = {
   schemas: {
     DigitalAsset: DigitalAssetSchema,

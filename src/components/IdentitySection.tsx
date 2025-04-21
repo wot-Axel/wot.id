@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import dynamic from 'next/dynamic';
-import { useDataAccess, DataType } from '@/hooks/useDataAccess';
+import { useDataAccess } from '@/hooks/useDataAccess';
+import { DataType } from '@/types/storage';
 
 // Define a common interface for data records
 interface DataRecord {
@@ -242,7 +243,7 @@ export const IdentitySection = () => {
         <div className="section-content">
           <div className="info-box" style={{ marginBottom: '1rem' }}>
             <p>
-              <strong>Decentralized Storage:</strong> Your identity data is securely stored using Gun.js, 
+              <strong>Decentralized Storage:</strong> Your identity data is securely stored locally, 
               a decentralized SQL database for Web3. This provides better reliability, performance, 
               and compatibility with server-side rendering for your sensitive identity information.
             </p>

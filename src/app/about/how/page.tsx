@@ -23,7 +23,7 @@ const AboutHow = () => {
             <li><strong>Multi-Chain Architecture:</strong> Leveraging Ethereum L1 for identity and Optimism L2 for data storage and attestations</li>
             <li><strong>Dedicated RPC Providers:</strong> Enabling cross-chain operations without requiring users to switch networks</li>
             <li><strong>Reown AppKit:</strong> For secure wallet connections</li>
-            <li><strong>Tableland:</strong> For structured, decentralized SQL data storage</li>
+            <li><strong>Encrypted Local Storage:</strong> For secure, private data storage</li>
             <li><strong>Wagmi:</strong> For seamless Ethereum interactions</li>
           </ul>
         </div>
@@ -41,7 +41,7 @@ const AboutHow = () => {
           </p>
           
           <p>
-            Private data is securely stored using Tableland, giving users complete control over their information while maintaining privacy and security. Your data is never collected, stored, or analyzed on centralized servers.
+            Private data is securely stored using encrypted local storage, giving users complete control over their information while maintaining privacy and security. Your data is never collected, stored, or analyzed on centralized servers.
           </p>
           
           <p>

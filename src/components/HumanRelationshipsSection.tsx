@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
-import { useDataAccess, DataType } from '@/hooks/useDataAccess';
+import { useDataAccess } from '@/hooks/useDataAccess';
+import { DataType } from '@/types/storage';
 import { useStorage } from '@/context/StorageContext';
 
 export const HumanRelationshipsSection = () => {
@@ -200,7 +201,7 @@ export const HumanRelationshipsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Decentralized Storage:</strong> Your relationships data is securely stored using Gun.js, 
+            <strong>Decentralized Storage:</strong> Your relationships data is securely stored locally, 
             a decentralized SQL database for Web3. This provides better reliability, performance, 
             and compatibility with server-side rendering compared to our previous implementation.
           </p>
@@ -210,7 +211,7 @@ export const HumanRelationshipsSection = () => {
             
             {contactsData.length === 0 ? (
               <div>
-                <p>You don't have any relationships saved yet. Add some to store your human relationships securely with Gun.js.</p>
+                <p>You don't have any relationships saved yet. Add some to store your human relationships securely in encrypted local storage.</p>
                 <button 
                   className="button-primary" 
                   onClick={handleCreateTable}
@@ -233,7 +234,7 @@ export const HumanRelationshipsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your relationship information is stored securely with Gun.js decentralized storage.</p>
+                <p>Your relationship information is stored securely with encrypted local storage.</p>
                 
                 <form onSubmit={handleAddContact} className="private-data-form">
                   <div className="form-group">

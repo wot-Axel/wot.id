@@ -1,6 +1,6 @@
 // Define common types for storage
 
-import { TableType, TableData } from '@/utils/storageUtils';
+import { TableType, TableData } from '../utils/storageUtils';
 
 // Data types supported by the application
 export enum DataType {

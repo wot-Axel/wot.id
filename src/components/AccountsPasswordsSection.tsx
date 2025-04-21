@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
-import { useDataAccess, DataType } from '@/hooks/useDataAccess';
+import { useDataAccess } from '@/hooks/useDataAccess';
+import { DataType } from '@/types/storage';
 
 export const AccountsPasswordsSection = () => {
   const { isConnected } = useAppKitAccount();
@@ -106,7 +107,7 @@ export const AccountsPasswordsSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Decentralized Storage:</strong> Your accounts and passwords data is securely stored using Gun.js, 
+            <strong>Decentralized Storage:</strong> Your accounts and passwords data is securely stored locally, 
             a decentralized SQL database for Web3. This provides better reliability, performance, 
             and compatibility with server-side rendering compared to our previous implementation.
           </p>
@@ -127,7 +128,7 @@ export const AccountsPasswordsSection = () => {
               </div>
             ) : (
               <div>
-                <p>Your account information is stored securely using Gun.js decentralized storage.</p>
+                <p>Your account information is stored securely using encrypted local storage.</p>
                 
                 <form onSubmit={handleAddData} className="private-data-form">
                   <div className="form-group">

@@ -15,10 +15,6 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production",
-    "NEXT_PUBLIC_CERAMIC_NODE": "https://ceramic-clay.3boxlabs.com",
-    "NEXT_PUBLIC_COMPOSEDB_NETWORK": "testnet-clay",
-    "NEXT_PUBLIC_CERAMIC_TIMEOUT": "30000",
-    "NEXT_PUBLIC_CERAMIC_HEALTH_CHECK_TIMEOUT": "5000"
+    "NODE_ENV": "production"
   }
 }

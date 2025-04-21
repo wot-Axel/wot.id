@@ -28,7 +28,7 @@ export const isOptimismChain = (chainId?: number): boolean => {
 };
 
 /**
- * Get the network requirements for Gun.js operations
+ * Get the network requirements for storage operations
  * @returns Requirements information for network operations
  */
 export const getNetworkRequirements = () => {

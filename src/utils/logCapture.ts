@@ -66,13 +66,7 @@ export const getLogsByContent = (searchText: string) => {
   );
 };
 
-// Get Tableland-specific logs
-export const getTablelandLogs = () => {
-  return capturedLogs.filter(log => 
-    log.message.includes('[TABLELAND') ||
-    (log.data && log.data.includes('[TABLELAND'))
-  );
-};
+
 
 // Override console methods to capture logs
 export const setupLogCapture = () => {
@@ -123,7 +117,7 @@ export const setupLogCapture = () => {
 
     // Add to window for direct access
     (window as any).getLogs = getLogs;
-    (window as any).getTablelandLogs = getTablelandLogs;
+
     (window as any).clearLogs = clearLogs;
   }
 };

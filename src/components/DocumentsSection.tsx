@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
-import { useDataAccess, DataType } from '@/hooks/useDataAccess';
+import { useDataAccess } from '@/hooks/useDataAccess';
+import { DataType } from '@/types/storage';
 import { storeItem, getItem, listItems, deleteItem } from '@/utils/storageUtils';
 import { TableData } from '@/utils/storageUtils';
 

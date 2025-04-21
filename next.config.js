@@ -6,7 +6,7 @@ const nextConfig = {
       ...config.experiments,
       asyncWebAssembly: true,
       layers: true,
-    }
+    };
 
     // Prevent WebAssembly from being bundled for server-side
     if (isServer) {
@@ -16,23 +16,19 @@ const nextConfig = {
         net: false,
         tls: false,
       };
-
-      // Handle pino-pretty dependency issue
-      config.externals = [...(config.externals || []), 'pino-pretty'];
     }
     
-    // Explicitly exclude Ceramic and ComposeDB directories from the build
-    config.module.rules.push({
-      test: /\.(ts|tsx)$/,
-      include: /(src\/composedb|src\/utils\/ceramicTester\.ts|src\/utils\/ceramicUtils\.ts)/,
-      use: [
-        {
-          loader: 'null-loader',
-        },
-      ],
-    });
+    // Add fallbacks for removed dependencies
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      'gun': false,  // Provide an empty module for gun.js
+      'tableland': false, // Provide an empty module for tableland
+    };
 
-    return config
+    // Handle pino-pretty dependency issue
+    config.externals = [...(config.externals || []), 'pino-pretty'];
+    
+    return config;
   },
   // Disable server-side rendering for all components
   reactStrictMode: false,
@@ -73,6 +69,6 @@ const nextConfig = {
       },
     ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

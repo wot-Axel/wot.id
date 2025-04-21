@@ -50,6 +50,7 @@
     "eslint-config-next": "^15.2.4",
     "go-ipfs": "^0.22.0",
     "kubo": "^0.34.1",
+    "node-fetch": "^2.7.0",
     "null-loader": "^4.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2",

@@ -1,4 +1,4 @@
-// Define types for local storage compatibility with Gun.js data
+// Define types for local storage data format
 import { TableType } from './storageUtils';
 
 interface TableData {

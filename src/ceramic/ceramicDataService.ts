@@ -426,7 +426,7 @@ export class CeramicDataService {
       }
 
       // Execute the query
-      const result = await this.composeClient.executeQuery(query);
+      const result = await this.executeCeramicQuery(query);
       
       if (result.errors) {
         throw new Error(`GraphQL error: ${result.errors[0].message}`);

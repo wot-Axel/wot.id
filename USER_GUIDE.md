@@ -1,14 +1,14 @@
 # WOT.ID User Guide
 
-## Data Storage Update: Migration to Tableland
+## Data Storage Update: Migration to Local Storage
 
 ### What Has Changed
 
-WOT.ID has recently undergone a significant upgrade to its data storage system. We've migrated from Ceramic Network to Tableland to provide you with a more reliable, faster, and more secure experience.
+WOT.ID has recently undergone a significant upgrade to its data storage system. We've implemented encrypted local storage to provide you with a more reliable, faster, and more secure experience.
 
 ### What This Means For You
 
-**Better Performance**: Tableland offers improved data access speeds, making the application more responsive.
+**Better Performance**: Local storage offers improved data access speeds, making the application more responsive.
 
 **Improved Reliability**: The new storage system is more stable and less prone to connection issues.
 

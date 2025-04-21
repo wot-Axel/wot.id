@@ -1,6 +1,6 @@
 /**
  * Encryption utilities for client-side encryption of sensitive data
- * This provides functionality to encrypt and decrypt data before storing in Gun.js
+ * This provides functionality to encrypt and decrypt data before storing in localStorage
  */
 
 import { monitorAsync } from './performanceMonitor';
