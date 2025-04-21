@@ -1,55 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CERAMIC_CONFIG, getCeramicConfig, joinPaths } from '@/ceramic/ceramicConfig';
+import { CERAMIC_CONFIG, getCeramicConfig, joinPaths, normalizeCeramicUrl } from '@/ceramic/ceramicConfig';
 
 // For URL parsing and joining
 import { URL } from 'url';
 
-// Get the Ceramic node URL from configuration
-const { nodeUrl } = getCeramicConfig();
+// Get the Ceramic mainnet URL for direct forwarding (not the proxy URL)
+// This is important to avoid circular references where the proxy calls itself
+const mainnetUrl = CERAMIC_CONFIG.mainnetUrl;
 
 // Helper function to forward the request to Ceramic network
 async function forwardToCeramic(req: NextRequest, path: string) {
-    // Use the original nodeUrl from configuration for consistency
-  const mainnetUrl = CERAMIC_CONFIG.mainnetUrl;
-  
-  // Normalize the path to avoid duplicate segments while maintaining compatibility
+  // Construct target URL in a robust way that handles various input formats
   let targetUrl;
   try {
-    // Use a conservative approach to handle API path segments
-    // Only fix the specific issue with duplicate /api/v0 segments
-    if (path.includes('/api/v0/')) {
-      // Path already has /api/v0/, extract the endpoint after it
-      // This handles cases like /api/ceramic/api/v0/collection
-      const [_, ...endpointParts] = path.split('/api/v0/');
-      const endpointPath = endpointParts.join('/'); // In case there are multiple splits
+    // Special case handling for collection endpoints which are frequently problematic
+    if (path.includes('/collection') || path.includes('/streams')) {
+      // These endpoints need special handling
+      // Extract the part after any API segments, preserving only the endpoint path
+      let endpointPath = path;
       
-      // Make sure we don't end up with // in the URL
-      targetUrl = `${mainnetUrl}/api/v0/${endpointPath}`.replace(/([^:]\/)\/+/g, '$1');
-    } else if (path.startsWith('/api/v0')) {
-      // Handle paths that start with /api/v0 but don't have a trailing slash
-      const endpointPath = path.substring('/api/v0'.length);
-      targetUrl = `${mainnetUrl}/api/v0${endpointPath}`;
+      // Strip any /api/v0 prefix if present
+      if (path.includes('/api/v0/')) {
+        endpointPath = path.split('/api/v0/').pop() || '';
+      } else if (path.startsWith('/api/v0')) {
+        endpointPath = path.substring('/api/v0'.length);
+      } else if (path.includes('/api/')) {
+        // Handle case where there's just /api/ without v0
+        endpointPath = path.split('/api/').pop() || '';
+      }
+      
+      // Ensure we start with a clean slate and consistent format
+      if (endpointPath.startsWith('/')) {
+        endpointPath = endpointPath.substring(1);
+      }
+      
+      // Construct a clean target URL
+      targetUrl = new URL(`/api/v0/${endpointPath}`, mainnetUrl).toString();
     } else {
-      // For all other paths, just join them normally
-      // This maintains backward compatibility with existing code
-      const baseUrl = new URL(mainnetUrl);
-      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-      targetUrl = new URL(normalizedPath, baseUrl).toString();
+      // For all other paths, use more general handling
+      if (path.startsWith('/api/')) {
+        // Path already includes /api/, don't duplicate it
+        targetUrl = new URL(path, mainnetUrl).toString();
+      } else {
+        // Add /api/v0 if needed
+        const apiPath = path.startsWith('/') ? path : `/${path}`;
+        targetUrl = new URL(`/api/v0${apiPath}`, mainnetUrl).toString();
+      }
     }
+    
+    // Final normalization to catch any remaining issues
+    targetUrl = normalizeCeramicUrl(targetUrl);
+    
+    // Ensure no duplicate slashes in the final URL (except after protocol)
+    targetUrl = targetUrl.replace(/([^:])\/{2,}/g, '$1/');
   } catch (e) {
     console.error('[CERAMIC PROXY] Error constructing URL:', e);
-    // Use a simpler, more reliable fallback for production stability
-    targetUrl = path.includes('/api/v0') 
-      ? `${mainnetUrl}${path.startsWith('/') ? path : `/${path}`}` 
-      : `${mainnetUrl}/api/v0${path.startsWith('/') ? path : `/${path}`}`;
+    // Simple and reliable fallback for error cases
+    targetUrl = `${mainnetUrl}/api/v0/${path.replace(/^\/+/, '')}`;
   }
   
-  // Add detailed logging for debugging and monitoring
-  console.log(`[CERAMIC PROXY] Forwarding to: ${targetUrl} (original path: ${path})`, {
-    timestamp: new Date().toISOString(),
-    originalPath: path,
-    targetUrl
-  });
+  // Log the request for monitoring and debugging
+  console.log(`[CERAMIC PROXY] ${req.method} ${path} → ${targetUrl}`);
+  
+  // For collection-related requests, add additional debugging
+  if (path.includes('collection')) {
+    console.log('[CERAMIC PROXY] Collection request details:', {
+      originalPath: path,
+      targetUrl,
+      timestamp: new Date().toISOString()
+    });
+  }
   const url = targetUrl;
   
   const headers = new Headers();
@@ -98,37 +118,25 @@ async function forwardToCeramic(req: NextRequest, path: string) {
   }
 }
 
-// Generic handler function for all HTTP methods
+// Simple generic handler function for all HTTP methods
 async function handler(req: NextRequest) {
-  // Get the part of the URL after /api/ceramic
+  // Extract the part after /api/ceramic from the URL
   const pathname = req.nextUrl.pathname;
-  
-  // Preserve the simplest possible extraction logic for maximum stability
-  // Just strip the /api/ceramic prefix from the pathname
   const ceramicPrefix = '/api/ceramic';
-  let path = '';
   
+  // Determine the Ceramic path by removing the API prefix
+  let path;
   if (pathname.startsWith(ceramicPrefix)) {
-    // Standard prefix removal, preserving original behavior where possible
     path = pathname.substring(ceramicPrefix.length) || '/';
-    
-    // Only add leading slash if missing
+    // Ensure path has a leading slash
     if (!path.startsWith('/')) {
       path = '/' + path;
     }
   } else {
-    // Fallback, should rarely happen in production
+    // Should rarely happen, but handle as gracefully as possible
     path = pathname;
-    console.warn(`[CERAMIC PROXY] Unexpected path format: ${pathname}`);
+    console.warn(`[CERAMIC PROXY] Unexpected URL format: ${pathname}`);
   }
-  
-  // Structured logging for easier debugging in production
-  console.log(`[CERAMIC PROXY] Request: ${pathname} → ${path}`, {
-    originalUrl: pathname,
-    extractedPath: path,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
   
   return forwardToCeramic(req, path);
 }
