@@ -72,22 +72,25 @@ export const getCeramicConfig = () => {
     baseUrl = CERAMIC_CONFIG.mainnetUrl;
   }
   
-  // When using the proxy, ComposeDB client needs special handling
-  // to avoid URL construction issues and prevent incorrect domain usage
-  let nodeUrl = baseUrl;
+  // Get a simplified URL structure that works reliably with Ceramic client
+  let nodeUrl = '';
   
   if (useProxy) {
-    // For in-browser requests, we need to ensure the proxy URL is correctly constructed
+    // For in-browser requests, use a simple origin-based URL
     if (typeof window !== 'undefined') {
-      // For CeramicClient/ComposeDB, we must use an absolute URL
-      // Ceramic HTTP client doesn't support relative URLs properly
+      // In browser environments, use our proxy route
       const origin = window.location.origin;
-      nodeUrl = `${origin}/api/ceramic`;
+      nodeUrl = `${origin}/ceramic/`; // Must end with / for Ceramic client
     } else {
-      // In server-side context, we need the complete URL to the mainnet
-      // Because we're not dealing with browser CORS in this case
-      nodeUrl = CERAMIC_CONFIG.mainnetUrl;
+      // In server-side context, use mainnet directly
+      nodeUrl = 'https://gateway.ceramic.network/';
     }
+  } else if (environment === 'local') {
+    // For local development without proxy
+    nodeUrl = 'http://localhost:7007/';
+  } else {
+    // Fallback to mainnet
+    nodeUrl = 'https://gateway.ceramic.network/';
   }
   
   // Clean the URL one last time to avoid any issues

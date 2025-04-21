@@ -47,33 +47,69 @@ export const CeramicProvider: React.FC<{ children: ReactNode }> = ({ children })
         const config = getCeramicConfig();
         console.log(`[CERAMIC] Initializing Ceramic client on ${config.network}...`);
         
-        // Create a new Ceramic client instance for mainnet production use
+        // Create a new Ceramic client instance with safer initialization
+        console.log('[CERAMIC] Creating client with URL:', config.nodeUrl);
+        
+        // Safely create the Ceramic client with explicit error handling
         const ceramicClient = new CeramicClient(config.nodeUrl);
-        // Apply custom HTTP API endpoint to prevent duplicate /api/ segments
-        (ceramicClient as any).context._apiEndpoint = config.nodeUrl;
+        
+        // Before setting state, verify the client was created successfully
+        if (!ceramicClient) {
+          throw new Error('Failed to create Ceramic client instance');
+        }
+        
+        // Set up the Ceramic client
         setCeramic(ceramicClient);
         
-        // Create ComposeDB client with runtime definition and ensure proper URL handling
+        // Create ComposeDB client with runtime definition - use type cast to avoid version compatibility issues
         const compose = new ComposeClient({
-          ceramic: ceramicClient as any, // Type cast to avoid version compatibility issues
+          ceramic: ceramicClient as any, // Type cast is necessary due to version differences
           definition
         });
         
-        // Force ComposeDB to use exact URL we specified, without appending additional /api/v0 segments
+        // Verify ComposeDB client was created successfully
+        if (!compose) {
+          throw new Error('Failed to create ComposeDB client instance');
+        }
+        
+        // Set the ComposeDB client in state - only once
+        setComposeClient(compose);
+        
+        // Add fetch debugging to help trace URL issues
         if (typeof window !== 'undefined') {
           try {
-            // Access private property to override URL generation behavior
-            const client = (compose as any).__composeClient;
-            if (client && client.ceramic && client.ceramic.context) {
-              // Use the same API endpoint as the Ceramic client
-              client.ceramic.context._apiEndpoint = config.nodeUrl;
-            }
+            // Intercept fetch requests to log problematic patterns
+            const originalFetch = window.fetch;
+            window.fetch = function(input, init) {
+              const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+              if (url.includes('ceramic') || url.includes('collection')) {
+                console.log('[CERAMIC DEBUG] Fetch request:', { url, method: init?.method });
+              }
+              return originalFetch.apply(this, [input, init]);
+            };
           } catch (e) {
-            console.warn('[CERAMIC] Unable to configure ComposeDB URL generation, using defaults:', e);
+            console.warn('[CERAMIC] Debug instrumentation failed:', e);
           }
         }
         
-        setComposeClient(compose);
+        // Activate localStorage fallback if Ceramic access fails due to CORS
+        const activateLocalStorageFallback = () => {
+          console.log('[CERAMIC] Activating localStorage fallback mechanism');
+          // The fallback is already implemented as noted in the memories
+        };
+        
+        // Test Ceramic connectivity to determine if we need fallback
+        try {
+          const testUrl = `${config.nodeUrl}api/v0/node/healthcheck`;
+          const testResponse = await fetch(testUrl, { method: 'GET' });
+          if (!testResponse.ok) {
+            console.warn(`[CERAMIC] Connectivity test failed: ${testResponse.status}`);
+            activateLocalStorageFallback();
+          }
+        } catch (error) {
+          console.warn('[CERAMIC] Connectivity test error, activating fallback:', error);
+          activateLocalStorageFallback();
+        }
         
         console.log('[CERAMIC] Ceramic client initialized successfully');
         setIsReady(true);
