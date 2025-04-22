@@ -18,9 +18,8 @@ export const CERAMIC_CONFIG = {
   did: 'did:key:z6MkmzcN2bjLjGu8tP99N31XkvDgFskrwUfeVbewtJBNmqBo',
   // API path that Ceramic adds to URLs (important for path normalization)
   apiPath: '/api/v0',
-  // Flag to control whether we're using a direct ceramic connection or proxy
-  // In production, set to true to avoid CORS issues (proxy required)
-  useProxy: process.env.NODE_ENV === 'production' ? true : false
+  // Always use the proxy for local development and production
+  useProxy: true
 };
 
 /**
@@ -81,7 +80,7 @@ export const getCeramicConfig = () => {
     if (typeof window !== 'undefined') {
       // In browser environments, use our proxy route
       const origin = window.location.origin;
-      nodeUrl = `${origin}/ceramic/`; // Must end with / for Ceramic client
+      nodeUrl = `${origin}/api/ceramic/`; // Must end with / for Ceramic client
     } else {
       // In server-side context, use mainnet directly
       nodeUrl = 'https://gateway.ceramic.network/';
