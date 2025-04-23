@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { useStorage } from './StorageContext';
+import { useHelia } from './HeliaContext';
 import { DataType, StorageItem } from '../types/storage';
 import { mapDataTypeToTableType } from '../types/storage';
 
@@ -81,8 +81,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [dataVersion, setDataVersion] = useState<number>(0);
   
   // Access storage context
-  const storage = useStorage();
-  const { isReady: storageReady } = storage;
+  const { isReady: storageReady } = useHelia();
   
   // Reference to last fetch times to implement throttling
   const lastFetchTimeRef = useRef<{[key in DataType]?: number}>({});
@@ -172,8 +171,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Use the actual storage implementation
       const tableType = mapDataTypeToTableType(dataType);
-      const models = await storage.listItems(tableType);
-      
+      // List items using Helia index logic
+      // Each dataType/table has an index mapping: key → CID
+      const INDEX_CID_KEY = `helia_index_cid_${dataType}`;
+      const { getFile, isReady } = useHelia();
+      const cid = localStorage.getItem(INDEX_CID_KEY);
+      let index: Record<string, string> = {};
+      if (cid && isReady) {
+        const bytes = await getFile(cid);
+        if (bytes) {
+          try {
+            const json = new TextDecoder().decode(bytes);
+            index = JSON.parse(json);
+          } catch {}
+        }
+      }
+      const models: any[] = [];
+      for (const [key, valueCid] of Object.entries(index)) {
+        const valueBytes = await getFile(valueCid);
+        let value = '';
+        if (valueBytes) {
+          try {
+            value = new TextDecoder().decode(valueBytes);
+          } catch {}
+        }
+        models.push({ id: key, item_key: key, item_value: value, created_at: '' });
+      }
       // Format and store the results
       const formattedItems = formatItems(models);
       

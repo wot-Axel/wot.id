@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { useDataAccess } from '@/hooks/useDataAccess';
 import { DataType } from '@/types/storage';
-import { useStorage } from '@/context/StorageContext';
+import { useHelia } from '@/context/HeliaContext';
 
 export const HumanRelationshipsSection = () => {
   const { address, isConnected } = useAppKitAccount();
@@ -51,8 +51,8 @@ export const HumanRelationshipsSection = () => {
     }
   }, [fetchData]);
   
-  // Access the storage context
-  const { isReady: storageReady } = useStorage();
+  // Access the Helia storage context
+  const { isReady: storageReady } = useHelia();
   
   // Simplified initialization - no complex timeout logic
   const initializeData = useCallback(() => {

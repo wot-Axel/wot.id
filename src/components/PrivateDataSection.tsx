@@ -6,7 +6,7 @@ import {
   TableType,
   TableData
 } from '@/utils/storageUtils';
-import { useStorage } from '@/context/StorageContext';
+import { useHelia } from '@/context/HeliaContext';
 
 export const PrivateDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
@@ -17,18 +17,40 @@ export const PrivateDataSection = () => {
   const [newValue, setNewValue] = useState<string>('');
 
   // Use the Storage context
-  const storage = useStorage();
+  const { isReady, addFile, getFile } = useHelia();
   
   // Load private data when connected
   useEffect(() => {
     const loadPrivateData = async () => {
       try {
-        if (isConnected && address && storage.isReady) {
+        if (isConnected && address && isReady) {
           setLoading(true);
           setError('');
           
-          // Get existing data
-          const records = await storage.listItems(TableType.PRIVATE);
+          // Helia-based listItems logic
+          const INDEX_CID_KEY = `helia_index_cid_private`;
+          const cid = localStorage.getItem(INDEX_CID_KEY);
+          let index: Record<string, string> = {};
+          if (cid) {
+            const bytes = await getFile(cid);
+            if (bytes) {
+              try {
+                const json = new TextDecoder().decode(bytes);
+                index = JSON.parse(json);
+              } catch {}
+            }
+          }
+          const records: TableData[] = [];
+          for (const [key, valueCid] of Object.entries(index)) {
+            const valueBytes = await getFile(valueCid);
+            let value = '';
+            if (valueBytes) {
+              try {
+                value = new TextDecoder().decode(valueBytes);
+              } catch {}
+            }
+            records.push({ id: key, item_key: key, item_value: value, created_at: '' });
+          }
           setPrivateData(records);
           
           setLoading(false);
@@ -41,11 +63,11 @@ export const PrivateDataSection = () => {
     };
     
     loadPrivateData();
-  }, [isConnected, address, storage.isReady]);
+  }, [isConnected, address, isReady]);
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storage.isReady || !newKey || !newValue) {
+    if (!isReady || !newKey || !newValue) {
       setError('Missing required information. Please check all fields.');
       return;
     }
@@ -54,11 +76,40 @@ export const PrivateDataSection = () => {
       setLoading(true);
       setError('');
       
-      // Store data using the storage system
-      await storage.storeItem(TableType.PRIVATE, newKey, newValue);
-      
-      // Refresh data
-      const records = await storage.listItems(TableType.PRIVATE);
+      // Store data using Helia
+      const INDEX_CID_KEY = `helia_index_cid_private`;
+      // 1. Store value in Helia
+      const valueCid = await addFile(newValue);
+      if (!valueCid) throw new Error('Failed to store value in Helia');
+      // 2. Load and update index
+      let index: Record<string, string> = {};
+      const cid = localStorage.getItem(INDEX_CID_KEY);
+      if (cid) {
+        const bytes = await getFile(cid);
+        if (bytes) {
+          try {
+            const json = new TextDecoder().decode(bytes);
+            index = JSON.parse(json);
+          } catch {}
+        }
+      }
+      index[newKey] = valueCid;
+      // 3. Save new index to Helia
+      const indexJson = JSON.stringify(index);
+      const newIndexCid = await addFile(indexJson);
+      if (newIndexCid) localStorage.setItem(INDEX_CID_KEY, newIndexCid);
+      // 4. Refresh data
+      const records: TableData[] = [];
+      for (const [key, valueCid] of Object.entries(index)) {
+        const valueBytes = await getFile(valueCid);
+        let value = '';
+        if (valueBytes) {
+          try {
+            value = new TextDecoder().decode(valueBytes);
+          } catch {}
+        }
+        records.push({ id: key, item_key: key, item_value: value, created_at: '' });
+      }
       setPrivateData(records);
       
       // Clear form
@@ -73,7 +124,7 @@ export const PrivateDataSection = () => {
   };
 
   const handleClearPrivateData = async () => {
-    if (!storage.isReady) {
+    if (!isReady) {
       setError('Storage system not initialized.');
       return;
     }
@@ -82,11 +133,13 @@ export const PrivateDataSection = () => {
       setLoading(true);
       setError('');
       
-      // Our simple implementation doesn't support bulk delete
-      // Just clear the local state for now
+      // Clear all private data in Helia: reset the index
+      const INDEX_CID_KEY = `helia_index_cid_private`;
+      const emptyIndex = {};
+      const indexJson = JSON.stringify(emptyIndex);
+      const newIndexCid = await addFile(indexJson);
+      if (newIndexCid) localStorage.setItem(INDEX_CID_KEY, newIndexCid);
       setPrivateData([]);
-      localStorage.removeItem(`${TableType.PRIVATE}_items`);
-      
       setLoading(false);
     } catch (err: any) {
       console.error('Error clearing private data:', err);
@@ -112,7 +165,7 @@ export const PrivateDataSection = () => {
           <>
             {error && <div className="alert alert-error">{error}</div>}
             
-            {storage.isReady ? (
+            {isReady ? (
               <div>
                 <p>Your private data is securely stored.</p>
                 

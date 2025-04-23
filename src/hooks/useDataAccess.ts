@@ -1,12 +1,12 @@
  'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useStorage } from '@/context/StorageContext';
+import { useHelia } from '@/context/HeliaContext';
 import { TableType, TableData, PrivateData } from '@/utils/storageUtils';
 import { DataType, mapDataTypeToTableType } from '@/types/storage';
 
 /**
- * Hook for accessing data from storage
+ * Hook for accessing data from 
  * This provides a consistent interface for all data types
  */
 
@@ -16,13 +16,59 @@ import { useData } from '@/context/DataContext';
 export const useDataAccess = (dataType: DataType) => {
   // Get direct access to the centralized data store
   const { getData, isLoading: getIsLoading, error: getError, refreshData: refreshCentralData } = useData();
-  const storage = useStorage();
+  // MIGRATION: use Helia context instead of 
+  const { isReady, addFile, getFile } = useHelia();
+  // Each dataType/table has an index mapping: key → CID
+  // The index itself is stored in Helia as a JSON object, and its CID is tracked in localStorage (or a profile)
+  const INDEX_CID_KEY = `helia_index_cid_${dataType}`;
+
+  // Helper to load the current index mapping (key→CID)
+  const loadIndex = async (): Promise<Record<string, string>> => {
+    const cid = localStorage.getItem(INDEX_CID_KEY);
+    if (!cid) return {};
+    const bytes = await getFile(cid);
+    if (!bytes) return {};
+    try {
+      const json = new TextDecoder().decode(bytes);
+      return JSON.parse(json);
+    } catch {
+      return {};
+    }
+  };
+
+  // Helper to save the index mapping and return new CID
+  const saveIndex = async (index: Record<string, string>): Promise<string | null> => {
+    const json = JSON.stringify(index);
+    const cid = await addFile(json);
+    if (cid) localStorage.setItem(INDEX_CID_KEY, cid);
+    return cid;
+  };
+
   
   // Local state to maintain the existing API
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // List all items for this dataType from Helia
+  const listItems = useCallback(async () => {
+    if (!isReady) return [];
+    const index = await loadIndex();
+    const result: any[] = [];
+    for (const [key, cid] of Object.entries(index)) {
+      const bytes = await getFile(cid);
+      if (!bytes) continue;
+      let value = '';
+      try {
+        value = new TextDecoder().decode(bytes);
+      } catch {
+        value = '';
+      }
+      result.push({ id: key, key, value, cid });
+    }
+    return result;
+  }, [isReady, dataType]);
+
   // Keep local state in sync with the centralized store
   useEffect(() => {
     // Get data from the centralized store
@@ -38,8 +84,8 @@ export const useDataAccess = (dataType: DataType) => {
   
   // Delegate to the central data store's refresh function
   const fetchData = async () => {
-    if (!storage.isReady) {
-      console.warn(`[DATA ACCESS] Storage not ready for ${dataType}`);
+    if (!isReady) {
+      console.warn(`[DATA ACCESS]  not ready for ${dataType}`);
       return [];
     }
     
@@ -54,48 +100,43 @@ export const useDataAccess = (dataType: DataType) => {
   };
   
   // Create a new item - keep original implementation to maintain the same API
+  // Create a new item: store value in Helia, update index, save index
   const createItem = async (itemData: any, tags?: string[]) => {
-    if (!storage.isReady) {
+    if (!isReady) {
       return null;
     }
     
     setIsLoading(true);
     
     try {
-      const tableType = mapDataTypeToTableType(dataType);
-      
-      // Convert the content to key-value format
-      // If content is an object, use a meaningful key and stringify the value
+      // 1. Prepare key and value
       let key = '';
       let value = '';
-      
       if (typeof itemData === 'object') {
-        // Use the first property as the key, or generate a unique key
         const firstKey = Object.keys(itemData)[0];
         key = itemData.key || itemData.id || firstKey || `${dataType}_${Date.now()}`;
-        
-        // Add tags to the content for searchability
-        const contentWithTags = { ...itemData, tags: tags || [] };
-        value = JSON.stringify(contentWithTags);
+        value = JSON.stringify({ ...itemData, tags: tags || [] });
       } else {
         key = `${dataType}_${Date.now()}`;
         value = String(itemData);
       }
-      
-      const result = await storage.storeItem(tableType, key, value);
-      if (result) {
-        const formattedResult = {
-          id: String(result.id),
-          key: result.item_key,
-          value: result.item_value,
-          created_at: result.created_at
-        };
-        
-        // After creating the item, refresh data from the central store
-        await refreshCentralData(dataType as any);
-        return formattedResult;
-      }
-      return null;
+      // 2. Store value in Helia
+      const valueCid = await addFile(value);
+      if (!valueCid) throw new Error('Failed to store value in Helia');
+      // 3. Load and update index
+      const index = await loadIndex();
+      index[key] = valueCid;
+      // 4. Save new index to Helia
+      const indexCid = await saveIndex(index);
+      // 5. Refresh data
+      await refreshCentralData(dataType as any);
+      return {
+        id: key,
+        key,
+        value,
+        cid: valueCid,
+        indexCid
+      };
     } catch (err) {
       console.error(`Error creating ${dataType} item:`, err);
       setError(err instanceof Error ? err.message : 'Unknown error creating item');
@@ -106,49 +147,42 @@ export const useDataAccess = (dataType: DataType) => {
   };
   
   // Update an existing item - keep original implementation to maintain the same API
+  // Update: same as create, but key is fixed
   const updateItem = async (id: string, itemData: any, tags?: string[]) => {
-    if (!storage.isReady) {
+    if (!isReady) {
       return null;
     }
     
     setIsLoading(true);
     
     try {
-      const tableType = mapDataTypeToTableType(dataType);
-      
-      // Find the item in our data to get the key
+      // 1. Find the item
       const item = data.find(item => item.id === id);
-      if (!item) {
-        throw new Error(`Item with ID ${id} not found`);
-      }
-      
-      // Convert the content to key-value format for storage
-      let key = item.key;
+      if (!item) throw new Error(`Item with ID ${id} not found`);
+      const key = item.key;
       let value = '';
-      
       if (typeof itemData === 'object') {
-        // Add tags to the content for searchability
-        const contentWithTags = { ...itemData, tags: tags || [] };
-        value = JSON.stringify(contentWithTags);
+        value = JSON.stringify({ ...itemData, tags: tags || [] });
       } else {
         value = String(itemData);
       }
-      
-      // For now just treat this as a new store since our temp implementation doesn't support updates
-      const result = await storage.storeItem(tableType, key, value);
-      if (result) {
-        const formattedResult = {
-          id: String(result.id),
-          key: result.item_key,
-          value: result.item_value,
-          created_at: result.created_at
-        };
-        
-        // After updating, refresh from the central store
-        await refreshCentralData(dataType as any);
-        return formattedResult;
-      }
-      return null;
+      // 2. Store new value in Helia
+      const valueCid = await addFile(value);
+      if (!valueCid) throw new Error('Failed to store value in Helia');
+      // 3. Load and update index
+      const index = await loadIndex();
+      index[key] = valueCid;
+      // 4. Save new index to Helia
+      const indexCid = await saveIndex(index);
+      // 5. Refresh data
+      await refreshCentralData(dataType as any);
+      return {
+        id: key,
+        key,
+        value,
+        cid: valueCid,
+        indexCid
+      };
     } catch (err) {
       console.error(`Error updating ${dataType} item:`, err);
       setError(err instanceof Error ? err.message : 'Unknown error updating item');
@@ -159,27 +193,27 @@ export const useDataAccess = (dataType: DataType) => {
   };
   
   // Delete an item - keep original implementation but refresh from central store after
+  // Delete: remove key from index and save
   const deleteItem = async (id: string) => {
-    if (!storage.isReady) {
+    if (!isReady) {
       return false;
     }
     
     setIsLoading(true);
     
     try {
-      const tableType = mapDataTypeToTableType(dataType);
-      // Find the item to get the key
-      const itemToDelete = data.find(item => item.id === id);
-      if (!itemToDelete) {
-        throw new Error(`Item with ID ${id} not found`);
-      }
-      
-      const success = await storage.deleteItem(tableType, itemToDelete.key);
-      if (success) {
-        // After deletion, refresh from the central store
-        await refreshCentralData(dataType as any);
-      }
-      return success;
+      // 1. Find the item
+      const item = data.find(item => item.id === id);
+      if (!item) throw new Error(`Item with ID ${id} not found`);
+      const key = item.key;
+      // 2. Load and update index
+      const index = await loadIndex();
+      if (index[key]) delete index[key];
+      // 3. Save new index
+      await saveIndex(index);
+      // 4. Refresh data
+      await refreshCentralData(dataType as any);
+      return true;
     } catch (err) {
       console.error(`Error deleting ${dataType} item:`, err);
       setError(err instanceof Error ? err.message : 'Unknown error deleting item');
@@ -196,7 +230,7 @@ export const useDataAccess = (dataType: DataType) => {
   
   // Clear all items for this data type
   const clearItems = async () => {
-    if (!storage.isReady) {
+    if (!isReady) {
       return false;
     }
     
@@ -220,8 +254,8 @@ export const useDataAccess = (dataType: DataType) => {
   const didInitRef = useRef(false);
   
   useEffect(() => {
-    // Skip if we've already initialized or storage isn't ready
-    if (didInitRef.current || !storage.isReady) return;
+    // Skip if we've already initialized or  isn't ready
+    if (didInitRef.current || !isReady) return;
     
     // Mark as initialized to prevent refetching
     didInitRef.current = true;
@@ -235,7 +269,7 @@ export const useDataAccess = (dataType: DataType) => {
     }
   // We deliberately avoid dependencies that could trigger refetches
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storage.isReady]);
+  }, [isReady]);
   
   return {
     data,
@@ -245,9 +279,6 @@ export const useDataAccess = (dataType: DataType) => {
     updateItem,
     deleteItem,
     refreshData,
-    clearItems,
-    storage
+    clearItems
   };
 };
-
-
