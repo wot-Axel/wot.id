@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useHelia } from './HeliaContext';
+import { useClientMounted } from '../hooks/useClientMount';
 import { DataType, StorageItem } from '../types/storage';
 import { mapDataTypeToTableType } from '../types/storage';
 
@@ -79,15 +80,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const dataStateRef = useRef<DataState>({});
   // State to trigger renders when data changes
   const [dataVersion, setDataVersion] = useState<number>(0);
-  
+
+  // SSR/client-mount safety: Only allow data logic after client is mounted
+  const mounted = useClientMounted();
+
   // Access storage context
   const { isReady: storageReady } = useHelia();
-  
+
   // Reference to last fetch times to implement throttling
   const lastFetchTimeRef = useRef<{[key in DataType]?: number}>({});
 
   // Initialize data state for all supported types
   useEffect(() => {
+    if (!mounted) return;
     DATA_TYPES.forEach(type => {
       if (!dataStateRef.current[type]) {
         dataStateRef.current[type] = {
@@ -98,18 +103,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
     });
-  }, []);
+  }, [mounted]);
 
-  // Setup data loading for all data types when storage is ready
+  // Setup data loading for all data types ONLY after both storage is ready and client is mounted
   useEffect(() => {
-    if (!storageReady) return;
-    
-    console.log('[DATA CONTEXT] Storage ready, fetching initial data');
-    
+    if (!storageReady || !mounted) return;
+
+    console.log('[DATA CONTEXT] Storage ready & client mounted, fetching initial data');
+
     // Group data types by priority for better loading experience
     const priorityData: DataType[] = [DataType.PROFILE, DataType.CONNECTIONS, DataType.CURRENCIES]; // Load these first
     const secondaryData: DataType[] = DATA_TYPES.filter(type => !priorityData.includes(type));
-    
+
     // Load priority data first
     priorityData.forEach((dataType, index) => {
       const delay = index * 150; // Slightly longer delay between priority items
@@ -119,7 +124,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }, delay);
     });
-    
+
     // Then load secondary data with larger staggering to reduce load spikes
     secondaryData.forEach((dataType, index) => {
       const delay = 800 + (index * 300); // Start after priority data with more spacing
@@ -129,8 +134,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }, delay);
     });
-    
-  }, [storageReady]);
+
+  }, [storageReady, mounted]);
 
   // Fetch data for a specific type with necessary type conversions
   const fetchDataForType = async (dataType: DataType): Promise<StorageItem[]> => {
