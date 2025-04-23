@@ -29,8 +29,11 @@ export const PrivateDataSection = () => {
           
           // Helia-based listItems logic
           const INDEX_CID_KEY = `helia_index_cid_private`;
-          const cid = localStorage.getItem(INDEX_CID_KEY);
           let index: Record<string, string> = {};
+          let cid: string | null = null;
+          if (typeof window !== 'undefined') {
+            cid = localStorage.getItem(INDEX_CID_KEY);
+          }
           if (cid) {
             const bytes = await getFile(cid);
             if (bytes) {
@@ -83,7 +86,10 @@ export const PrivateDataSection = () => {
       if (!valueCid) throw new Error('Failed to store value in Helia');
       // 2. Load and update index
       let index: Record<string, string> = {};
-      const cid = localStorage.getItem(INDEX_CID_KEY);
+      let cid: string | null = null;
+      if (typeof window !== 'undefined') {
+        cid = localStorage.getItem(INDEX_CID_KEY);
+      }
       if (cid) {
         const bytes = await getFile(cid);
         if (bytes) {
@@ -97,7 +103,7 @@ export const PrivateDataSection = () => {
       // 3. Save new index to Helia
       const indexJson = JSON.stringify(index);
       const newIndexCid = await addFile(indexJson);
-      if (newIndexCid) localStorage.setItem(INDEX_CID_KEY, newIndexCid);
+      if (newIndexCid && typeof window !== 'undefined') localStorage.setItem(INDEX_CID_KEY, newIndexCid);
       // 4. Refresh data
       const records: TableData[] = [];
       for (const [key, valueCid] of Object.entries(index)) {
@@ -138,7 +144,7 @@ export const PrivateDataSection = () => {
       const emptyIndex = {};
       const indexJson = JSON.stringify(emptyIndex);
       const newIndexCid = await addFile(indexJson);
-      if (newIndexCid) localStorage.setItem(INDEX_CID_KEY, newIndexCid);
+      if (newIndexCid && typeof window !== 'undefined') localStorage.setItem(INDEX_CID_KEY, newIndexCid);
       setPrivateData([]);
       setLoading(false);
     } catch (err: any) {

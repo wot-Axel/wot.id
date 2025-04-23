@@ -175,7 +175,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Each dataType/table has an index mapping: key → CID
       const INDEX_CID_KEY = `helia_index_cid_${dataType}`;
       const { getFile, isReady } = useHelia();
-      const cid = localStorage.getItem(INDEX_CID_KEY);
+      let cid: string | null = null;
+      if (typeof window !== 'undefined') {
+        cid = localStorage.getItem(INDEX_CID_KEY);
+      }
       let index: Record<string, string> = {};
       if (cid && isReady) {
         const bytes = await getFile(cid);
