@@ -38,17 +38,6 @@ export default function StorageDebugPage() {
     }
   };
 
-      console.error('Error storing test item:', error);
-      alert(`Error storing item: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
-  
-  // Handle refresh of data
-  const handleManualRefresh = () => {
-    handleRefresh();
-    alert('Storage data refreshed');
-  };
-
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Helia/IPFS Debug Tools</h1>
