@@ -1,64 +1,43 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useStorage } from '@/context/StorageContext';
-import { TableType } from '@/utils/storageUtils';
+import { useHelia } from '@/context/HeliaContext';
 
 export default function StorageDebugPage() {
-  const storage = useStorage();
-  const [isStorageReady, setIsStorageReady] = useState(false);
+  const { isReady, addFile, getFile } = useHelia();
   const [networkStatus, setNetworkStatus] = useState(navigator.onLine);
-  const [tableData, setTableData] = useState<Record<string, any>>({});
-  const [selectedTable, setSelectedTable] = useState<TableType>(TableType.PRIVATE);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [storageStats, setStorageStats] = useState<string[]>([]);
-  const [testKey, setTestKey] = useState('');
+  const [lastCid, setLastCid] = useState<string | null>(null);
+  const [retrievedContent, setRetrievedContent] = useState<string>('');
   const [testValue, setTestValue] = useState('');
 
-  // Track online status and initialize services
+  // Track online status
   useEffect(() => {
     const handleOnline = () => setNetworkStatus(true);
     const handleOffline = () => setNetworkStatus(false);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    // Initialize storage
-    setIsStorageReady(storage.isReady);
-    
-    // Simple system logs for debugging
-    setStorageStats(['Local storage initialized', 'Using browser localStorage provider']);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [storage.isReady]);
+  }, []);
 
-  // Load data when table changes or refresh is triggered
-  useEffect(() => {
-    if (storage.isReady) {
-      loadTableData();
-    }
-  }, [storage.isReady, selectedTable, refreshTrigger]);
+  const handleAddFile = async () => {
+    if (!isReady || !testValue) return;
+    const cid = await addFile(testValue);
+    setLastCid(cid || null);
+  };
 
-  const loadTableData = async () => {
-    try {
-      const items = await storage.listItems(selectedTable);
-      setTableData({
-        [selectedTable]: items
-      });
-    } catch (error) {
-      console.error('Error loading table data:', error);
+  const handleGetFile = async () => {
+    if (!isReady || !lastCid) return;
+    const bytes = await getFile(lastCid);
+    if (bytes) {
+      setRetrievedContent(new TextDecoder().decode(bytes));
+    } else {
+      setRetrievedContent('');
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  const handleClearTable = async () => {
-    if (!confirm(`Are you sure you want to clear all data in the ${selectedTable} table?`)) {
       return;
     }
 
@@ -99,124 +78,57 @@ export default function StorageDebugPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Storage Debug Tools</h1>
-           <div className="mb-6 bg-gray-100 p-4 rounded">
-        <h2 className="text-lg font-bold mb-2">Storage Status</h2>
+      <h1 className="text-2xl font-bold mb-4">Helia/IPFS Debug Tools</h1>
+      <div className="mb-6 bg-gray-100 p-4 rounded">
+        <h2 className="text-lg font-bold mb-2">Helia Status</h2>
         <div className="grid grid-cols-2 gap-2">
-          <div className="font-semibold">Storage Provider:</div>
-          <div>{storage.isReady ? 'Ready' : 'Initializing...'}</div>
-          
-          <div className="font-semibold">localStorage Status:</div>
-          <div>{isStorageReady ? 'Initialized' : 'Not Initialized'}</div>
-          
+          <div className="font-semibold">Helia Provider:</div>
+          <div>{isReady ? 'Ready' : 'Initializing...'}</div>
           <div className="font-semibold">Network Status:</div>
           <div className={networkStatus ? 'text-green-600' : 'text-red-600'}>
             {networkStatus ? 'Online' : 'Offline'}
           </div>
-          
-          <div className="font-semibold">Storage Stats:</div>
-          <div className="col-span-2 mt-2 text-sm bg-gray-50 p-2 rounded border border-gray-200 max-h-28 overflow-y-auto">
-            {storageStats.map((stat, index) => (
-              <div key={index} className="mb-1">{stat}</div>
-            ))}
-          </div>
         </div>
       </div>
-      
-      <div className="mb-6">
-        <h2 className="text-lg font-bold mb-2">Table Inspector</h2>
-        <div className="flex items-center space-x-2 mb-4">
-          <select
-            value={selectedTable}
-            onChange={(e) => setSelectedTable(e.target.value as TableType)}
-            className="p-2 border rounded"
+      <div className="mb-6 p-4 border rounded">
+        <h2 className="text-lg font-bold mb-2">Add & Retrieve String from IPFS</h2>
+        <div className="flex flex-wrap gap-2 items-end mb-3">
+          <input
+            type="text"
+            value={testValue}
+            onChange={(e) => setTestValue(e.target.value)}
+            className="p-2 border rounded flex-1"
+            placeholder="Enter some text to store on IPFS"
+            disabled={!isReady}
+          />
+          <button
+            onClick={handleAddFile}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            disabled={!isReady || !testValue}
           >
-            {Object.values(TableType).map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-          <button 
-            onClick={handleRefresh}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Refresh
-          </button>
-          <button 
-            onClick={handleClearTable}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-          >
-            Clear Table
+            Add to IPFS
           </button>
         </div>
-        
-        <div className="mb-4 p-3 border rounded">
-          <h3 className="text-md font-bold mb-2">Add Test Item</h3>
-          <div className="flex flex-wrap gap-2 items-end">
-            <div>
-              <label className="block text-sm font-medium mb-1">Key</label>
-              <input 
-                type="text" 
-                value={testKey}
-                onChange={(e) => setTestKey(e.target.value)}
-                className="p-2 border rounded"
-                placeholder="item-key"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Value</label>
-              <input 
-                type="text"
-                value={testValue}
-                onChange={(e) => setTestValue(e.target.value)}
-                className="p-2 border rounded"
-                placeholder="item-value"
-              />
-            </div>
+        {lastCid && (
+          <div className="mb-3">
+            <span className="font-mono text-sm">CID: {lastCid}</span>
             <button
-              onClick={handleTestStore}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              onClick={handleGetFile}
+              className="ml-4 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              disabled={!isReady}
             >
-              Store
+              Retrieve from IPFS
             </button>
           </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border">
-            <thead>
-              <tr>
-                <th className="border px-4 py-2">Key</th>
-                <th className="border px-4 py-2">Value</th>
-                <th className="border px-4 py-2">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tableData[selectedTable]?.length > 0 ? (
-                tableData[selectedTable].map((item: any) => (
-                  <tr key={item.id}>
-                    <td className="border px-4 py-2">{item.item_key}</td>
-                    <td className="border px-4 py-2 whitespace-pre-wrap break-words max-w-md">
-                      {typeof item.item_value === 'object' 
-                        ? JSON.stringify(item.item_value, null, 2) 
-                        : item.item_value
-                      }
-                    </td>
-                    <td className="border px-4 py-2">
-                      {new Date(item.created_at).toLocaleString()}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={3} className="border px-4 py-2 text-center">
-                    No data in this table
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        )}
+        {retrievedContent && (
+          <div className="mt-2 p-2 bg-gray-50 border rounded">
+            <span className="font-semibold">Retrieved Content:</span>
+            <div className="mt-1 font-mono text-sm break-words whitespace-pre-wrap">{retrievedContent}</div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

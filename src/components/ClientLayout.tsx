@@ -3,9 +3,10 @@
 import React from 'react';
 // Import ContextProvider with proper type handling
 import ContextProvider from '@/context';
+
+
 import { XmtpProvider } from '@/context/XmtpContext';
-import { CeramicProvider } from '@/context/CeramicContext';
-import { StorageProvider } from '@/context/StorageContext';
+import { HeliaProvider } from '@/context/HeliaContext';
 import { DataProvider } from '@/context/DataContext';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Footer } from '@/components/Footer';
@@ -23,8 +24,8 @@ export function ClientLayout({
     <>
       <ContextProvider cookies={cookies || null}>
         <XmtpProvider>
-          <CeramicProvider>
-            <StorageProvider>
+          
+            <HeliaProvider>
               {/* Add DataProvider for centralized data management */}
               <DataProvider>
               {/* Initialize log capture system */}
@@ -36,8 +37,8 @@ export function ClientLayout({
               </main>
               <Footer />
               </DataProvider>
-            </StorageProvider>
-          </CeramicProvider>
+            </HeliaProvider>
+          
         </XmtpProvider>
       </ContextProvider>
     </>

@@ -1,6 +1,0 @@
-type Profile @createModel(accountRelation: SINGLE, description: "Basic profile information") {
-  name: String! @string(minLength: 3, maxLength: 100)
-  description: String @string(maxLength: 500)
-  gender: String @string(maxLength: 100)
-  birthDate: String @string(maxLength: 10)
-}
