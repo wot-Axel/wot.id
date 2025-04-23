@@ -38,33 +38,6 @@ export default function StorageDebugPage() {
     }
   };
 
-      return;
-    }
-
-    try {
-      const items = await storage.listItems(selectedTable);
-      for (const item of items) {
-        await storage.deleteItem(selectedTable, item.item_key);
-      }
-      handleRefresh();
-    } catch (error) {
-      console.error('Error clearing table:', error);
-    }
-  };
-  
-  // Test store functionality
-  const handleTestStore = async () => {
-    if (!testKey || !testValue) {
-      alert('Please enter both key and value');
-      return;
-    }
-    
-    try {
-      await storage.storeItem(selectedTable, testKey, testValue);
-      setTestKey('');
-      setTestValue('');
-      handleRefresh();
-    } catch (error) {
       console.error('Error storing test item:', error);
       alert(`Error storing item: ${error instanceof Error ? error.message : String(error)}`);
     }
