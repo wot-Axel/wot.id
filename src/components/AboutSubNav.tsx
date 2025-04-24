@@ -32,10 +32,10 @@ export const AboutSubNav = () => {
         How
       </Link>
       <Link 
-        href="/about/contribute" 
-        className={`subnav-link ${isActive('/about/contribute') ? 'active' : ''}`}
+        href="/about/join" 
+        className={`subnav-link ${isActive('/about/join') ? 'active' : ''}`}
       >
-        Contribute
+        Join
       </Link>
     </div>
   );

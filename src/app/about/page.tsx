@@ -6,11 +6,13 @@ import { useState } from "react";
 
 const About = () => {
   const [showDetails, setShowDetails] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<'why' | 'how' | 'who' | 'join'>('why');
   
   return (
     <div className="legal-page">
       {!showDetails ? (
         <>
+
           <h1 className="page-title">My Trusted Identity</h1>
           <div className="legal-section">
             <h2>For Everything</h2>
@@ -66,7 +68,7 @@ const About = () => {
           <div style={{ textAlign: 'center', margin: '2rem 0' }}>
             <button
               className="about-tell-me-more-btn"
-              onClick={() => setShowDetails(true)}
+              onClick={() => { setShowDetails(true); setSelectedSection('why'); }}
               style={{ padding: '0.75rem 2rem', fontSize: '1.1rem', borderRadius: '2rem', background: '#222', color: '#fff', border: 'none', cursor: 'pointer' }}
             >
               Tell me more about wot.id
@@ -75,60 +77,84 @@ const About = () => {
         </>
       ) : (
         <>
-          <div className="legal-section">
-            <h2>Why: A Trusted Identity for a Decentralized World</h2>
-            <div className="section-content">
-              <ul className="feature-list">
-                <li><strong>Verifiability & Security:</strong> All actions and data are provable on-chain. Your identity is anchored to Ethereum mainnet with attestations, not managed by any central authority.</li>
-                <li><strong>Strict Decentralization:</strong> No single point of failure. All digital information about you is stored in decentralized, peer-to-peer networks.</li>
-                <li><strong>Privacy & Control:</strong> Only you decide who can access your data—never a platform, company, or server.</li>
-                <li><strong>Future-Proofing:</strong> wot.id is designed to adapt as cryptography and blockchain ecosystems evolve, ensuring your data remains secure and accessible for decades.</li>
-              </ul>
-            </div>
+          <h1 className="page-title">About wot.id</h1>
+          <AboutSubNav />
+          <div style={{ margin: '1.5rem 0' }}>
+            <button className={`about-subnav-btn${selectedSection === 'why' ? ' active' : ''}`} onClick={() => setSelectedSection('why')}>Why</button>
+            <button className={`about-subnav-btn${selectedSection === 'how' ? ' active' : ''}`} onClick={() => setSelectedSection('how')}>How</button>
+            <button className={`about-subnav-btn${selectedSection === 'who' ? ' active' : ''}`} onClick={() => setSelectedSection('who')}>Who</button>
+            <button className={`about-subnav-btn${selectedSection === 'join' ? ' active' : ''}`} onClick={() => setSelectedSection('join')}>Join</button>
           </div>
-          <div className="legal-section">
-            <h2>How: Our Architecture & Commitment to the Future</h2>
-            <div className="section-content">
-              <ul className="feature-list">
-                <li><strong>Crypto-Agile Encryption:</strong> All data is encrypted client-side using a hybrid of classical (AES-GCM/X25519) and post-quantum (Kyber) cryptography. This ensures your data is safe from both current and future threats.</li>
-                <li><strong>Metadata & Versioning:</strong> Every encrypted blob contains algorithm details, IVs, nonces, and timestamps—enabling seamless upgrades and key rotation as standards change.</li>
-                <li><strong>Key Management:</strong> Designed for easy key rotation and multi-recipient support as PQC matures.</li>
-                <li><strong>On-Chain Attestations:</strong> All identity claims are anchored to Ethereum mainnet and EAS, with L2 scalability via Optimism (never at the expense of credible neutrality).</li>
-                <li><strong>No Local Storage:</strong> We never use browser localStorage for critical data—your secrets are never at risk from browser vulnerabilities.</li>
-                <li><strong>Peer-to-Peer by Default:</strong> All data flows are strictly peer-to-peer, using decentralized storage and verifiable credentials.</li>
-                <li><strong>Multi-Chain Ready:</strong> While Ethereum mainnet is the root of trust, wot.id is built to adapt to new chains as needed—never alt-L1s unless explicitly reconsidered.</li>
-                <li><strong>Continuous PQC Readiness:</strong> We monitor the Ethereum and EAS ecosystem for PQC adoption and will migrate as soon as standards mature.</li>
-                <li><strong>Open Documentation:</strong> All architectural decisions, cryptographic protocols, and upgrade roadmaps are publicly documented.</li>
-              </ul>
-            </div>
-          </div>
-          <div className="legal-section">
-            <h2>Who: For Humans, Not Platforms</h2>
-            <div className="section-content">
-              <ul className="feature-list">
-                <li><strong>Your Identity, Your Rules:</strong> Every wot.id is tied to a real human existence, verified by Ethereum Attestation Service, and enriched with data you control.</li>
-                <li><strong>No Central Authority:</strong> There is no wot.id "admin"—the system is credibly neutral and strictly peer-to-peer.</li>
-                <li><strong>Community-Driven:</strong> All design and development decisions are guided by the principles of decentralization, verifiability, and user empowerment.</li>
-                <li><strong>Privacy by Design:</strong> No data is ever collected, stored, or analyzed on centralized servers.</li>
-                <li><strong>Accessible to All:</strong> Anyone can join, contribute, and benefit from a provable, decentralized identity.</li>
-              </ul>
-            </div>
-          </div>
-          <div className="legal-section">
-            <h2>Join: Help Build the Future of Identity</h2>
-            <div className="section-content">
-              <ul className="feature-list">
-                <li>Contribute code, ideas, or feedback—wot.id is open-source and welcomes all collaborators.</li>
-                <li>Help us write the roadmap for PQC adoption, decentralized storage, and verifiable credentials.</li>
-                <li>Review our documentation, audit our cryptography, or propose new features.</li>
-                <li>Be part of a movement to give every human a secure, decentralized, and future-proof digital identity.</li>
-              </ul>
-            </div>
-          </div>
+          {(() => {
+            switch (selectedSection) {
+              case 'how':
+                return (
+                  <div className="legal-section">
+                    <h2>How: Our Architecture & Commitment to the Future</h2>
+                    <div className="section-content">
+                      <ul className="feature-list">
+                        <li><strong>Crypto-Agile Encryption:</strong> All data is encrypted client-side using a hybrid of classical (AES-GCM/X25519) and post-quantum (Kyber) cryptography. This ensures your data is safe from both current and future threats.</li>
+                        <li><strong>Metadata & Versioning:</strong> Every encrypted blob contains algorithm details, IVs, nonces, and timestamps—enabling seamless upgrades and key rotation as standards change.</li>
+                        <li><strong>Key Management:</strong> Designed for easy key rotation and multi-recipient support as PQC matures.</li>
+                        <li><strong>On-Chain Attestations:</strong> All identity claims are anchored to Ethereum mainnet and EAS, with L2 scalability via Optimism (never at the expense of credible neutrality).</li>
+                        <li><strong>No Local Storage:</strong> We never use browser localStorage for critical data—your secrets are never at risk from browser vulnerabilities.</li>
+                        <li><strong>Peer-to-Peer by Default:</strong> All data flows are strictly peer-to-peer, using decentralized storage and verifiable credentials.</li>
+                        <li><strong>Multi-Chain Ready:</strong> While Ethereum mainnet is the root of trust, wot.id is built to adapt to new chains as needed—never alt-L1s unless explicitly reconsidered.</li>
+                        <li><strong>Continuous PQC Readiness:</strong> We monitor the Ethereum and EAS ecosystem for PQC adoption and will migrate as soon as standards mature.</li>
+                        <li><strong>Open Documentation:</strong> All architectural decisions, cryptographic protocols, and upgrade roadmaps are publicly documented.</li>
+                      </ul>
+                    </div>
+                  </div>
+                );
+              case 'who':
+                return (
+                  <div className="legal-section">
+                    <h2>Who: For Humans, Not Platforms</h2>
+                    <div className="section-content">
+                      <ul className="feature-list">
+                        <li><strong>Your Identity, Your Rules:</strong> Every wot.id is tied to a real human existence, verified by Ethereum Attestation Service, and enriched with data you control.</li>
+                        <li><strong>No Central Authority:</strong> There is no wot.id "admin"—the system is credibly neutral and strictly peer-to-peer.</li>
+                        <li><strong>Community-Driven:</strong> All design and development decisions are guided by the principles of decentralization, verifiability, and user empowerment.</li>
+                        <li><strong>Privacy by Design:</strong> No data is ever collected, stored, or analyzed on centralized servers.</li>
+                        <li><strong>Accessible to All:</strong> Anyone can join and benefit from a provable, decentralized identity.</li>
+                      </ul>
+                    </div>
+                  </div>
+                );
+              case 'join':
+                return (
+                  <div className="legal-section">
+                    <h2>Join: Help Build the Future of Identity</h2>
+                    <div className="section-content">
+                      <ul className="feature-list">
+                        <li>Participate in open discussions, share ideas, or help shape the roadmap for PQC adoption, decentralized storage, and verifiable credentials.</li>
+                        <li>Review our documentation, audit our cryptography, or propose new features.</li>
+                        <li>Be part of a movement to give every human a secure, decentralized, and future-proof digital identity.</li>
+                        <li>All forms of collaboration and feedback are welcome.</li>
+                      </ul>
+                    </div>
+                  </div>
+                );
+              default:
+                return (
+                  <div className="legal-section">
+                    <h2>Why: A Trusted Identity for a Decentralized World</h2>
+                    <div className="section-content">
+                      <ul className="feature-list">
+                        <li><strong>Verifiability & Security:</strong> All actions and data are provable on-chain. Your identity is anchored to Ethereum mainnet with attestations, not managed by any central authority.</li>
+                        <li><strong>Strict Decentralization:</strong> No single point of failure. All digital information about you is stored in decentralized, peer-to-peer networks.</li>
+                        <li><strong>Privacy & Control:</strong> Only you decide who can access your data—never a platform, company, or server.</li>
+                        <li><strong>Future-Proofing:</strong> wot.id is designed to adapt as cryptography and blockchain ecosystems evolve, ensuring your data remains secure and accessible for decades.</li>
+                      </ul>
+                    </div>
+                  </div>
+                );
+            }
+          })()}
           <div style={{ textAlign: 'center', margin: '2rem 0' }}>
             <button
               className="about-back-btn"
-              onClick={() => setShowDetails(false)}
+              onClick={() => setShowDetails(false) }
               style={{ padding: '0.75rem 2rem', fontSize: '1.1rem', borderRadius: '2rem', background: '#eee', color: '#222', border: '1px solid #222', cursor: 'pointer' }}
             >
               Back to main benefits
