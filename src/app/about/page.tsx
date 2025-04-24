@@ -86,7 +86,29 @@ const About = () => {
         <>
           <h1 className="page-title">About wot.id</h1>
           <AboutSubNav />
-          {/* Insert the detailed About content here, as in commit fde4b9f */}
+          <div className="legal-section">
+            <h2>Why We Built wot.id</h2>
+            <div className="section-content">
+              <p>
+                In today's digital world, our identities are fragmented across countless platforms and services. 
+                Personal information is often stored in centralized databases vulnerable to breaches, and users have little control over how their data is used.
+              </p>
+              <p>
+                wot.id was created to solve these problems by giving individuals complete control over their digital identities. Our approach is built on the following core principles:
+              </p>
+              <ul className="feature-list">
+                <li><strong>Decentralization:</strong> No single entity controls your identity; it is anchored on Ethereum mainnet for maximum security and neutrality.</li>
+                <li><strong>Verifiability:</strong> All actions and data are provable on-chain, making your credentials universally trustworthy.</li>
+                <li><strong>Privacy:</strong> You decide what to share, with whom, and when. Zero-knowledge proofs and cryptographic controls protect your information.</li>
+                <li><strong>Interoperability:</strong> Manage assets and attestations from multiple chains in one unified interface.</li>
+                <li><strong>Future-Proof:</strong> Our architecture is designed to incorporate new chains and cryptographic standards as the ecosystem evolves.</li>
+                <li><strong>Seamless Experience:</strong> Maintain your primary identity on Ethereum L1, with fast, low-cost operations on Optimism L2—no manual network switching required.</li>
+              </ul>
+              <p>
+                wot.id empowers you to take back control of your digital life—securely, privately, and on your terms.
+              </p>
+            </div>
+          </div>
           <div style={{ textAlign: 'center', margin: '2rem 0' }}>
             <button
               className="about-back-btn"
