@@ -69,7 +69,17 @@ const About = () => {
             <button
               className="about-tell-me-more-btn"
               onClick={() => { setShowDetails(true); setSelectedSection('why'); }}
-              style={{ padding: '0.75rem 2rem', fontSize: '1.1rem', borderRadius: '2rem', background: '#222', color: '#fff', border: 'none', cursor: 'pointer' }}
+              style={{
+                padding: '0.75rem 2rem',
+                fontSize: '1.1rem',
+                borderRadius: '2rem',
+                background: '#fff',
+                color: '#222',
+                border: '1.5px solid #222',
+                cursor: 'pointer',
+                boxShadow: 'none',
+                transition: 'background 0.2s, color 0.2s'
+              }}
             >
               Tell me more about wot.id
             </button>
@@ -79,12 +89,7 @@ const About = () => {
         <>
           <h1 className="page-title">About wot.id</h1>
           <AboutSubNav />
-          <div style={{ margin: '1.5rem 0' }}>
-            <button className={`about-subnav-btn${selectedSection === 'why' ? ' active' : ''}`} onClick={() => setSelectedSection('why')}>Why</button>
-            <button className={`about-subnav-btn${selectedSection === 'how' ? ' active' : ''}`} onClick={() => setSelectedSection('how')}>How</button>
-            <button className={`about-subnav-btn${selectedSection === 'who' ? ' active' : ''}`} onClick={() => setSelectedSection('who')}>Who</button>
-            <button className={`about-subnav-btn${selectedSection === 'join' ? ' active' : ''}`} onClick={() => setSelectedSection('join')}>Join</button>
-          </div>
+          
           {(() => {
             switch (selectedSection) {
               case 'how':
