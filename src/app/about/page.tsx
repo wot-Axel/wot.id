@@ -141,27 +141,3 @@ const About = () => {
 }
 
 export default About;
-          <li><strong>Your Identity, Your Rules:</strong> Every wot.id is tied to a real human existence, verified by Ethereum Attestation Service, and enriched with data you control.</li>
-          <li><strong>No Central Authority:</strong> There is no wot.id "admin"—the system is credibly neutral and strictly peer-to-peer.</li>
-          <li><strong>Community-Driven:</strong> All design and development decisions are guided by the principles of decentralization, verifiability, and user empowerment.</li>
-          <li><strong>Privacy by Design:</strong> No data is ever collected, stored, or analyzed on centralized servers.</li>
-          <li><strong>Accessible to All:</strong> Anyone can join, contribute, and benefit from a provable, decentralized identity.</li>
-        </ul>
-      </div>
-    </div>
-    <div className="legal-section">
-      <h2>Join: Help Build the Future of Identity</h2>
-      <div className="section-content">
-        <ul className="feature-list">
-          <li>Contribute code, ideas, or feedback—wot.id is open-source and welcomes all collaborators.</li>
-          <li>Help us write the roadmap for PQC adoption, decentralized storage, and verifiable credentials.</li>
-          <li>Review our documentation, audit our cryptography, or propose new features.</li>
-          <li>Be part of a movement to give every human a secure, decentralized, and future-proof digital identity.</li>
-        </ul>
-      </div>
-    </div>
-    <div style={{ textAlign: 'center', margin: '2rem 0' }}>
-      <button
-        className="about-back-btn"
-
-export default About;
