@@ -141,24 +141,7 @@ const About = () => {
 }
 
 export default About;
-                This dApp is built using modern technologies that prioritize security, privacy, and user experience:
-              </p>
-              <ul className="tech-list">
-                <li>Next.js for a fast, responsive frontend framework</li>
-                <li>Ethereum Attestation Service for verifiable blockchain attestations</li>
-                <li>Multi-chain architecture leveraging Ethereum L1 and Optimism L2</li>
-                <li>Encrypted local storage for secure data storage</li>
-                <li>Reown AppKit for secure wallet connection</li>
-                <li>Dedicated RPC providers for seamless cross-chain operations</li>
-              </ul>
-              
-              <p>
-                What makes wot.id different from other identity solutions:
-              </p>
-              <ul className="tech-list">
-                <li><strong>True Self-Sovereignty:</strong> Your data remains under your control at all times</li>
-                <li><strong>Multi-Chain by Design:</strong> Leverages the strengths of different networks without forcing you to switch</li>
-                <li><strong>Comprehensive Identity:</strong> Manages both on-chain and off-chain aspects of your identity</li>
+
                 <li><strong>Privacy-First:</strong> Built from the ground up with privacy as a core principle</li>
                 <li><strong>No Lock-In:</strong> Your identity isn't tied to our platform or any single blockchain</li>
               </ul>
