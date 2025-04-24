@@ -27,28 +27,18 @@ export const isBraveWalletInstalled = (): boolean => {
 };
 
 /**
- * Records a wallet ID as recently used in localStorage
+ * Records a wallet ID as recently used (session only, no persistent storage)
  */
+let lastUsedWallet: string | null = null;
 export const recordWalletUsage = (walletId: string): void => {
-  try {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('lastUsedWallet', walletId);
-  } catch (error) {
-    console.error('Error recording wallet usage:', error);
-  }
+  lastUsedWallet = walletId;
 };
 
 /**
- * Gets the last used wallet ID from localStorage
+ * Gets the last used wallet ID (session only)
  */
 export const getLastUsedWallet = (): string | null => {
-  try {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('lastUsedWallet');
-  } catch (error) {
-    console.error('Error getting last used wallet:', error);
-    return null;
-  }
+  return lastUsedWallet;
 };
 
 /**

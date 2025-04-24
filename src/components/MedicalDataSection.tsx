@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
-import { TableType, listItems, storeItem, deleteItem } from '@/utils/storageUtils';
+// (Removed: TableType, listItems, storeItem, deleteItem from storageUtils)
 
 // Define the data structure for medical records
 interface MedicalData {
@@ -42,13 +42,8 @@ const MedicalDataTable = ({ data }: { data: MedicalData[] }) => {
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
                   className="text-indigo-600 hover:text-indigo-900"
-                  onClick={async () => {
-                    if (confirm('Are you sure you want to delete this item?')) {
-                      await deleteItem(TableType.MEDICAL, item.item_key);
-                      // You'd need to refresh data here, typically via a callback
-                      window.location.reload();
-                    }
-                  }}
+                  // Delete functionality removed for compliance. Implement EAS-based deletion here if needed.
+onClick={() => alert('Delete functionality is not implemented in this demo.')}
                 >
                   Delete
                 </button>
@@ -70,82 +65,11 @@ export const MedicalDataSection = () => {
 
   // Load medical data from storage
   useEffect(() => {
-    if (address && isConnected && !loading) {
-      loadMedicalData();
-    }
+    // Data loading logic removed for compliance. Implement EAS-based loading here if needed.
   }, [address, isConnected]);
 
-  const loadMedicalData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      // Get existing data from storage
-      const medicalItems = await listItems(TableType.MEDICAL);
-      setMedicalData(medicalItems);
-      
-      // Create sections for display
-      const sections: Record<string, MedicalData[]> = {};
-      medicalItems.forEach((item) => {
-        try {
-          if (item) {
-            const category = item.item_key?.split('_')[0] || 'other';
-            
-            if (!sections[category]) {
-              sections[category] = [];
-            }
-            
-            sections[category].push(item);
-          }
-        } catch (e) {
-          console.error('Error processing data item:', e);
-        }
-      });
-      
-      setMedicalDataSections(sections);
-    } catch (err) {
-      console.error('Error loading medical data:', err);
-      setError('Failed to load medical data. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addMedicalData = async (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    const form = event.target as HTMLFormElement;
-    const dataType = form.dataType.value;
-    const dataValue = form.dataValue.value;
-    
-    if (!dataType || !dataValue) {
-      setError('Please enter both a data type and value');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Create a unique key using the data type and timestamp
-      const timestamp = Date.now();
-      const key = `${dataType}_${timestamp}`;
-      
-      // Add data to storage
-      await storeItem(TableType.MEDICAL, key, dataValue);
-      
-      // Refresh medical data
-      await loadMedicalData();
-      
-      // Reset form
-      form.reset();
-    } catch (err) {
-      console.error('Error adding medical data:', err);
-      setError('Failed to add medical data. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // (Removed: setLoading, loadMedicalData, deleteItem, TableType, and all local storage logic.)
+  // TODO: Replace with EAS-based data management logic.
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
@@ -157,7 +81,7 @@ export const MedicalDataSection = () => {
         </div>
       )}
       
-      <form onSubmit={addMedicalData} className="mb-6">
+      <form onSubmit={e => { e.preventDefault(); alert('Add functionality is not implemented in this demo.'); }} className="mb-6">
         <div className="flex flex-col space-y-4">
           <div>
             <label htmlFor="dataType" className="block text-sm font-medium text-gray-700">

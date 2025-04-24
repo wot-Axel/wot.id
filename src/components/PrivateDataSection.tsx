@@ -2,16 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useAppKitAccount } from '@reown/appkit/react';
-import { 
-  TableType,
-  TableData
-} from '@/utils/storageUtils';
+
 import { useHelia } from '@/context/HeliaContext';
 
 export const PrivateDataSection = () => {
   const { address, isConnected } = useAppKitAccount();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  // Define TableData type if not imported
+  type TableData = { id: string; item_key: string; item_value: string; created_at: string };
   const [privateData, setPrivateData] = useState<TableData[]>([]);
   const [newKey, setNewKey] = useState<string>('');
   const [newValue, setNewValue] = useState<string>('');
@@ -32,7 +31,7 @@ export const PrivateDataSection = () => {
           let index: Record<string, string> = {};
           let cid: string | null = null;
           if (typeof window !== 'undefined') {
-            cid = localStorage.getItem(INDEX_CID_KEY);
+            cid = null;
           }
           if (cid) {
             const bytes = await getFile(cid);
@@ -88,7 +87,7 @@ export const PrivateDataSection = () => {
       let index: Record<string, string> = {};
       let cid: string | null = null;
       if (typeof window !== 'undefined') {
-        cid = localStorage.getItem(INDEX_CID_KEY);
+        cid = null;
       }
       if (cid) {
         const bytes = await getFile(cid);
@@ -103,7 +102,7 @@ export const PrivateDataSection = () => {
       // 3. Save new index to Helia
       const indexJson = JSON.stringify(index);
       const newIndexCid = await addFile(indexJson);
-      if (newIndexCid && typeof window !== 'undefined') localStorage.setItem(INDEX_CID_KEY, newIndexCid);
+      
       // 4. Refresh data
       const records: TableData[] = [];
       for (const [key, valueCid] of Object.entries(index)) {
@@ -144,7 +143,7 @@ export const PrivateDataSection = () => {
       const emptyIndex = {};
       const indexJson = JSON.stringify(emptyIndex);
       const newIndexCid = await addFile(indexJson);
-      if (newIndexCid && typeof window !== 'undefined') localStorage.setItem(INDEX_CID_KEY, newIndexCid);
+      
       setPrivateData([]);
       setLoading(false);
     } catch (err: any) {
@@ -164,8 +163,8 @@ export const PrivateDataSection = () => {
       <div className="section-content">
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <p>
-            <strong>Secure Storage:</strong> Your private data is securely stored using encrypted local storage.
-            In a future update, this will be integrated with a more robust decentralized storage solution.
+            <strong>Secure Storage:</strong> Your private data is securely stored using decentralized storage (Helia/IPFS).
+            No data is stored in browser local storage.tegrated with a more robust decentralized storage solution.
           </p>
         </div>
           <>

@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { useHelia } from './HeliaContext';
 import { useClientMounted } from '../hooks/useClientMount';
 import { DataType, StorageItem } from '../types/storage';
-import { mapDataTypeToTableType } from '../types/storage';
 
 // Define the shape of our global data state
 type DataState = {
@@ -175,7 +174,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       // Use the actual storage implementation
-      const tableType = mapDataTypeToTableType(dataType);
+      // TODO: Replace tableType logic with compliant DataType-based logic if needed.
+// const tableType = mapDataTypeToTableType(dataType);
       // List items using Helia index logic
       // Each dataType/table has an index mapping: key → CID
       const INDEX_CID_KEY = `helia_index_cid_${dataType}`;

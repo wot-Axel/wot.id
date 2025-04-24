@@ -496,13 +496,14 @@ export const XmtpProvider = ({ children }: { children: ReactNode }) => {
         // Dynamically import the XMTP Client
         const xmtpModule = await getXmtpClient();
         
-        // Simple check for development client flag
-        const hasDevClient = typeof window !== 'undefined' && localStorage.getItem('xmtp_dev_client_created') === 'true';
-        console.log('Checking if user can message...');
-        console.log('Development client detected in localStorage:', hasDevClient);
-        
-        // If we have a development client flag, try to create a client with the development key
-        if (hasDevClient) {
+        // Removed all localStorage usage for development client flag.
+      // No persistent browser storage is used for XMTP development/testing flags.
+      const hasDevClient = false;
+      console.log('Checking if user can message...');
+      console.log('Development client detected:', hasDevClient);
+      
+      // If we have a development client flag, try to create a client with the development key
+      if (hasDevClient) {
           console.log('Development client detected, creating client with development key');
           try {
             // Use the development private key to create a client

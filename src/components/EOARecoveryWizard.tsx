@@ -69,16 +69,16 @@ export default function EOARecoveryWizard() {
   
   // State for development mode detection
   const [isDevelopment, setIsDevelopment] = useState(false)
-  
-  // Check if we're in development environment - client-side only
+  // Removed all localStorage usage for address mapping and recovery.
+  // All mappings are now session-only and stored in component state or decentralized storage (Helia/IPFS).
+  // Deprecated manual address mapping and embedded wallet info patterns removed.
+  // If persistent mapping is needed, integrate with Helia/IPFS.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsDevelopment(
-        window.location.hostname === 'localhost' || 
-        window.location.hostname === '127.0.0.1'
-      )
-    }
-  }, [])
+    setIsDevelopment(
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    );
+  }, []);
   
   const [manualMode, setManualMode] = useState(false)
   
@@ -176,12 +176,7 @@ export default function EOARecoveryWizard() {
       // Create new map and update localStorage
       const newMap = { ...addressMap, [currentConfig]: currentAddress }
       
-      try {
-        localStorage.setItem('wot_id_address_map', JSON.stringify(newMap))
-      } catch (e) {
-        console.error('Error saving address map:', e)
-        setConnectionError('Error saving address map. Please try again.')
-      }
+      // Removed localStorage persistence for address map. Use decentralized storage or session state only.
       
       // Update state
       setAddressMap(newMap)

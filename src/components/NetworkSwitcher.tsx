@@ -1,108 +1,63 @@
-'use client'
+"use client";
 
-import React, { useEffect, useState } from 'react'
-import { networkConfigs } from '@/config'
-import { modal } from '@/context'
+import React, { useState } from "react";
+import { useAppKitNetwork, useAppKitState } from "@reown/appkit/react";
+import { networks } from "@/config";
 
-/**
- * NetworkSwitcher component
- * 
- * This component allows dynamically switching between different network configurations
- * to help recover the original EOA address associated with a social login.
- */
-export default function NetworkSwitcher() {
-  const [currentOrder, setCurrentOrder] = useState<string>('mainnet-first')
-  const [isReady, setIsReady] = useState(false)
-  
-  // Initialize from localStorage on client-side only
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedOrder = localStorage.getItem('wot_id_network_order') || 'mainnet-first'
-      setCurrentOrder(savedOrder)
-      setIsReady(true)
-      
-      // Check for network parameter in URL
-      const params = new URLSearchParams(window.location.search)
-      const networkParam = params.get('network')
-      if (networkParam && ['mainnet-first', 'optimism-first', 'base-first'].includes(networkParam)) {
-        if (networkParam !== savedOrder) {
-          localStorage.setItem('wot_id_network_order', networkParam)
-          setCurrentOrder(networkParam)
-        }
-      }
-    }
-  }, [])
-  
-  // Function to switch network configuration
-  const switchNetwork = async (order: string) => {
-    if (!isReady || order === currentOrder) return
-    
+export const NetworkSwitcher: React.FC = () => {
+  const { switchNetwork } = useAppKitNetwork();
+  const { activeChain, loading } = useAppKitState();
+  const [error, setError] = useState("");
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  const handleSwitch = async (network: any) => {
+    if (network.id === activeChain) return;
+    setError("");
+    setIsSwitching(true);
     try {
-      // Store the selection
-      localStorage.setItem('wot_id_network_order', order)
-      setCurrentOrder(order)
-      
-      // Clear AppKit connection data
-      const keysToRemove = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && (key.includes('appkit') || key.includes('wallet') || key.includes('w3m'))) {
-          keysToRemove.push(key)
-        }
-      }
-      
-      // Remove keys in a separate loop to avoid index shifting
-      keysToRemove.forEach(key => localStorage.removeItem(key))
-      
-      // Disconnect if connected
-      try {
-        await modal.disconnect()
-      } catch (e) {
-        console.error('Error disconnecting:', e)
-      }
-      
-      // Reload the page with the new configuration
-      window.location.href = `/account-debug?network=${order}&t=${Date.now()}`
-    } catch (error) {
-      console.error('Error switching network:', error)
+      await switchNetwork(network);
+    } catch (err: any) {
+      setError(
+        err?.message ||
+          "Network switch failed. Please try again or switch in your wallet."
+      );
+    } finally {
+      setIsSwitching(false);
     }
-  }
-  
-  if (!isReady) return null
-  
+  };
+
   return (
-    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
-      <h2 className="text-lg font-semibold mb-2">Network Configuration</h2>
-      <div className="flex flex-wrap gap-2">
-        <button 
-          onClick={() => switchNetwork('mainnet-first')}
-          className={`px-3 py-1 rounded ${currentOrder === 'mainnet-first' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-        >
-          Mainnet First
-        </button>
-        <button 
-          onClick={() => switchNetwork('optimism-first')}
-          className={`px-3 py-1 rounded ${currentOrder === 'optimism-first' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-        >
-          Optimism First
-        </button>
-        <button 
-          onClick={() => switchNetwork('base-first')}
-          className={`px-3 py-1 rounded ${currentOrder === 'base-first' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-        >
-          Base First
-        </button>
+    <div style={{ margin: "1rem 0" }}>
+      <div style={{ marginBottom: "0.5rem", fontWeight: 600 }}>Network</div>
+      <div style={{ display: "flex", gap: "0.5rem" }}>
+        {networks.map((network) => (
+          <button
+            key={network.id}
+            onClick={() => handleSwitch(network)}
+            disabled={isSwitching || loading || network.id === activeChain}
+            style={{
+              padding: "0.5rem 1.25rem",
+              borderRadius: 6,
+              border: network.id === activeChain ? "2px solid #222" : "1px solid #bbb",
+              background: network.id === activeChain ? "#222" : "#fff",
+              color: network.id === activeChain ? "#fff" : "#222",
+              fontWeight: network.id === activeChain ? 700 : 400,
+              opacity: isSwitching && network.id !== activeChain ? 0.6 : 1,
+              cursor:
+                isSwitching || loading || network.id === activeChain
+                  ? "not-allowed"
+                  : "pointer",
+              transition: "all 0.15s"
+            }}
+          >
+            {network.name}
+            {network.id === activeChain && " (Active)"}
+          </button>
+        ))}
       </div>
-      <p className="mt-2 text-sm text-gray-600">
-        Current network order: <span className="font-semibold">{
-          currentOrder === 'mainnet-first' ? 'Mainnet, Optimism, Base' :
-          currentOrder === 'optimism-first' ? 'Optimism, Mainnet, Base' :
-          'Base, Mainnet, Optimism'
-        }</span>
-      </p>
-      <p className="mt-1 text-xs text-gray-500">
-        Changing network order will clear your connection and reload the page.
-      </p>
+      {error && (
+        <div style={{ color: "#b00", marginTop: "0.5rem" }}>{error}</div>
+      )}
     </div>
-  )
-}
+  );
+};

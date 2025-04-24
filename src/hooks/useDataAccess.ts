@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHelia } from '@/context/HeliaContext';
-import { TableType, TableData, PrivateData } from '@/utils/storageUtils';
-import { DataType, mapDataTypeToTableType } from '@/types/storage';
+// (Removed: TableType, TableData, PrivateData from storageUtils)
+// (TODO: Replace all local storage logic with EAS logic.)
+import { DataType } from '@/types/storage';
 
 /**
  * Hook for accessing data from 
@@ -23,24 +24,22 @@ export const useDataAccess = (dataType: DataType) => {
   const INDEX_CID_KEY = `helia_index_cid_${dataType}`;
 
   // Helper to load the current index mapping (key→CID)
+  // Refactored: No localStorage usage. Use in-memory or decentralized storage only.
+  // Use a cache object for CIDs (per dataType)
+  const indexCache = useRef<{ [key in DataType]?: Record<string, string> }>({});
   const loadIndex = async (): Promise<Record<string, string>> => {
-    const cid = localStorage.getItem(INDEX_CID_KEY);
-    if (!cid) return {};
-    const bytes = await getFile(cid);
-    if (!bytes) return {};
-    try {
-      const json = new TextDecoder().decode(bytes);
-      return JSON.parse(json);
-    } catch {
-      return {};
+    if (indexCache.current[dataType]) {
+      return indexCache.current[dataType]!;
     }
+    // Optionally, fetch from decentralized storage (Helia/IPFS) if needed
+    return {};
   };
 
   // Helper to save the index mapping and return new CID
   const saveIndex = async (index: Record<string, string>): Promise<string | null> => {
     const json = JSON.stringify(index);
     const cid = await addFile(json);
-    if (cid) localStorage.setItem(INDEX_CID_KEY, cid);
+    if (cid) indexCache.current[dataType] = index;
     return cid;
   };
 

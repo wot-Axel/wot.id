@@ -13,30 +13,17 @@ export default function AccountDebugger() {
   const { address, embeddedWalletInfo, isConnected, allAccounts } = useAppKitAccount()
   const [previousAddresses, setPreviousAddresses] = useState<string[]>([])
   
+  // Removed localStorage usage for previously seen addresses. Only session in-memory state is used.
   useEffect(() => {
-    // Load previously seen addresses from localStorage
-    try {
-      const savedAddresses = localStorage.getItem('wot_id_seen_addresses')
-      if (savedAddresses) {
-        setPreviousAddresses(JSON.parse(savedAddresses))
-      }
-    } catch (error) {
-      console.error('Error loading previous addresses:', error)
-    }
+    setPreviousAddresses([]); // No persistent storage, just session state
   }, [])
   
   useEffect(() => {
-    // Save the current address to localStorage if it's new
+    // Save the current address to session-only state if it's new
     if (address && isConnected) {
       setPreviousAddresses(prev => {
         if (!prev.includes(address)) {
-          const newAddresses = [...prev, address]
-          try {
-            localStorage.setItem('wot_id_seen_addresses', JSON.stringify(newAddresses))
-          } catch (error) {
-            console.error('Error saving addresses:', error)
-          }
-          return newAddresses
+          return [...prev, address]
         }
         return prev
       })
@@ -116,7 +103,6 @@ export default function AccountDebugger() {
         <button 
           className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
           onClick={() => {
-            localStorage.removeItem('wot_id_seen_addresses')
             setPreviousAddresses([])
           }}
         >

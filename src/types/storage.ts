@@ -1,6 +1,7 @@
 // Define common types for storage
 
-import { TableType, TableData } from '../utils/storageUtils';
+// (Removed: TableType, TableData from storageUtils)
+// (TODO: Remove or replace all mapping functions that reference TableType.)
 
 // Data types supported by the application
 export enum DataType {
@@ -44,35 +45,3 @@ export function mapTableTypeToDataType(tableType: string): DataType {
       return DataType.DEFAULT;
   }
 }
-
-// Map DataType to TableType
-export const mapDataTypeToTableType = (dataType: DataType): TableType => {
-  switch (dataType) {
-    case DataType.PROFILE:
-      return TableType.PRIVATE;
-    case DataType.DOCUMENTS:
-      return TableType.PRIVATE;
-    case DataType.DIGITAL_ASSETS:
-      return TableType.DIGITAL_ASSETS;
-    case DataType.REAL_WORLD_ASSETS:
-      return TableType.PRIVATE;
-    case DataType.MEDICAL:
-      return TableType.MEDICAL;
-    case DataType.CONNECTIONS:
-      return TableType.CONTACTS;
-    case DataType.ORGANIZATIONS:
-      return TableType.AFFILIATIONS;
-    case DataType.MESSAGES:
-      return TableType.MESSAGE;
-    case DataType.PRIVATE:
-      return TableType.PRIVATE;
-    case DataType.CONTACTS:
-      return TableType.CONTACTS;
-    case DataType.AFFILIATIONS:
-      return TableType.AFFILIATIONS;
-    case DataType.CURRENCIES:
-      return TableType.PRIVATE;
-    default:
-      return TableType.PRIVATE;
-  }
-};

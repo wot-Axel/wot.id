@@ -5,15 +5,6 @@
 import { modal } from '@/context';
 
 /**
- * Records a wallet ID as recently used in localStorage
- */
-export const recordWalletUsage = (walletId: string): void => {
-  try {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('lastUsedWallet', walletId);
-  } catch (error) {
-    console.error('Error recording wallet usage:', error);
-  }
 };
 
 /**
@@ -36,7 +27,7 @@ export const useWalletPreferences = () => {
   // Set up event listener for connections and errors
   modal.subscribeEvents((event: any) => {
     if (event.name === 'CONNECT_SUCCESS' && event.data?.wallet?.id) {
-      recordWalletUsage(event.data.wallet.id);
+      // Optionally handle wallet connection in session state here
       console.log('Connection successful with wallet:', event.data.wallet.id);
     }
     

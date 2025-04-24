@@ -4,19 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { formatEther } from 'viem';
 import { useBalance } from 'wagmi';
-import { getStoredCorrectAddress, ensureCorrectAddress } from '@/utils/addressUtils';
+import { ensureCorrectAddress } from '@/utils/addressUtils';
 
 export const CurrenciesSection = () => {
   const { address: currentAddress, isConnected } = useAppKitAccount();
   const [address, setAddress] = useState<string | undefined>(currentAddress);
   
-  // Use the correct stored address if available
+  // Use the current address directly
   useEffect(() => {
-    const storedAddress = getStoredCorrectAddress();
-    if (storedAddress) {
-      console.log(`[CURRENCIES] Using stored correct address: ${storedAddress} instead of current: ${currentAddress}`);
-      setAddress(storedAddress);
-    } else if (currentAddress) {
+    if (currentAddress) {
       setAddress(currentAddress);
     }
   }, [currentAddress]);

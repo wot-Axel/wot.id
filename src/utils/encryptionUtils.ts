@@ -1,6 +1,6 @@
 /**
  * Encryption utilities for client-side encryption of sensitive data
- * This provides functionality to encrypt and decrypt data before storing in localStorage
+ * This provides functionality to encrypt and decrypt data before storing in decentralized storage or in-memory/session state
  */
 
 import { monitorAsync } from './performanceMonitor';
