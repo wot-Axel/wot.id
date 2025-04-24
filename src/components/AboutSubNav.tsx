@@ -14,12 +14,6 @@ export const AboutSubNav = () => {
   return (
     <div className="about-subnav">
       <Link 
-        href="/about/who" 
-        className={`subnav-link ${isActive('/about/who') ? 'active' : ''}`}
-      >
-        Who
-      </Link>
-      <Link 
         href="/about/why" 
         className={`subnav-link ${isActive('/about/why') ? 'active' : ''}`}
       >
@@ -30,6 +24,12 @@ export const AboutSubNav = () => {
         className={`subnav-link ${isActive('/about/how') ? 'active' : ''}`}
       >
         How
+      </Link>
+      <Link 
+        href="/about/who" 
+        className={`subnav-link ${isActive('/about/who') ? 'active' : ''}`}
+      >
+        Who
       </Link>
       <Link 
         href="/about/join" 
