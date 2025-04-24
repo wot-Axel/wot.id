@@ -16,6 +16,7 @@
     "@chakra-ui/react": "^3.15.0",
     "@ethereum-attestation-service/eas-sdk": "^2.7.0",
     "@helia/unixfs": "^5.0.0",
+    "@noble/post-quantum": "^0.4.0",
     "@opentelemetry/api": "^1.7.0",
     "@reown/appkit": "^1.7.1",
     "@reown/appkit-adapter-wagmi": "^1.7.1",
@@ -27,6 +28,7 @@
     "graphql": "^16.10.0",
     "helia": "^2.0.0",
     "html5-qrcode": "^2.3.8",
+    "libsodium-wrappers": "^0.7.15",
     "next": "^15.2.4",
     "pino-pretty": "^10.3.1",
     "protobufjs": "^7.2.6",
@@ -34,12 +36,14 @@
     "react-dom": "^18.3.1",
     "react-qr-code": "^2.0.15",
     "tesseract.js": "^6.0.0",
+    "tweetnacl": "^1.0.3",
     "uint8arrays": "^5.1.0",
     "uuid": "^11.1.0",
     "viem": "^2.23.11",
     "wagmi": "^2.14.15"
   },
   "devDependencies": {
+    "@types/libsodium-wrappers": "^0.7.14",
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -50,6 +54,7 @@
     "node-fetch": "^2.7.0",
     "null-loader": "^4.0.1",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.29.0"
   },
