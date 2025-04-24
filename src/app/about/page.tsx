@@ -110,7 +110,6 @@ const About = () => {
                       </ul>
                     </div>
                   </div>
-                  </>
                 );
               case 'who':
                 return (
@@ -126,7 +125,6 @@ const About = () => {
                       </ul>
                     </div>
                   </div>
-                  </>
                 );
               case 'join':
                 return (
@@ -273,7 +271,6 @@ const About = () => {
                       </ul>
                     </div>
                   </div>
-                  </>
                 );
             }
           })()}
