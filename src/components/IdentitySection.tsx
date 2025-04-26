@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
+import { normalizeCredential, hashCredential, deriveEthereumAddress } from '@/utils/credentialUtils';
 import dynamic from 'next/dynamic';
 import { useDataAccess } from '@/hooks/useDataAccess';
 import { DataType } from '@/types/storage';
