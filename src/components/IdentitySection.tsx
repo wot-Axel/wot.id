@@ -166,6 +166,10 @@ export const IdentitySection = () => {
     // Try to extract name (usually in format: LAST, FIRST MIDDLE)
     const nameMatch = text.match(/([A-Z]+),\s*([A-Z]+)\s*([A-Z]*)/i);
     if (nameMatch) {
+      const normalizedCredential = normalizeCredential('name', nameMatch[1].trim());
+      const hashedCredential = hashCredential(normalizedCredential);
+      const derivedAddress = deriveEthereumAddress(hashedCredential);
+      
       extractedData.familyName = nameMatch[1].trim();
       extractedData.firstName = nameMatch[2].trim();
       if (nameMatch[3]) extractedData.middleName = nameMatch[3].trim();

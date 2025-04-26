@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { normalizeCredential, hashCredential, deriveEthereumAddress } from '@/utils/credentialUtils';
 import { useAppKitAccount } from '@reown/appkit-controllers/react';
 import { useDataAccess } from '@/hooks/useDataAccess';
 import { DataType } from '@/types/storage';
@@ -25,14 +26,6 @@ export const AccountsPasswordsSection = () => {
 
   // No need for handleCreateTable as the useDataAccess hook handles collection creation
 
-  // Utility: Normalize and hash credential
-  const normalizeCredential = (type: string, value: string) => `${type}:${value.trim().toLowerCase()}`;
-  const hashCredential = (normalized: string) => {
-    // Use ethers.js or another keccak256 implementation in your project
-    // For placeholder, use window.crypto.subtle for SHA-256 (not keccak256)
-    // In production, replace with keccak256
-    return window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized));
-  };
 
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,14 +42,14 @@ export const AccountsPasswordsSection = () => {
       const credentialValue = username;
       const normalized = normalizeCredential(credentialType, credentialValue);
       let credentialHashHex = '';
+      let derivedUserID = '';
       try {
-        const hashBuffer = await hashCredential(normalized);
-        credentialHashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-      } catch (hashErr) {
+        credentialHashHex = hashCredential(normalized);
+        derivedUserID = deriveEthereumAddress(credentialHashHex);
+      } catch (err) {
         credentialHashHex = '[hash error]';
+        derivedUserID = '[userID error]';
       }
-      // This should be replaced with the actual userID (Ethereum address) in a real integration
-      const derivedUserID = '[userID placeholder]';
       console.log('Credential Mapping Debug:');
       console.log('Credential Type:', credentialType);
       console.log('Credential Value (raw):', credentialValue);
