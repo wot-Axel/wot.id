@@ -1,0 +1,55 @@
+wot.id Design Principles & Core Architecture
+===========================================
+
+1. Human Uniqueness & One-to-One Mapping
+----------------------------------------
+- One Human, One Account, One Address: Each human is uniquely represented by a single deterministic Ethereum mainnet address (userID). All credentials (email, OAuth, password, etc.) must resolve to this address. No duplicates, no exceptions.
+
+2. Deterministic Identity
+------------------------
+- userID = Ethereum Address: The user’s identity is anchored to a deterministic Ethereum mainnet address, generated at first login and never changed.
+- No Drift: Any drift resulting in multiple addresses for the same human is a critical failure.
+
+3. Credential Linking Logic
+---------------------------
+- Atomic On-Chain Mapping: Every credential is hashed/namespaced and mapped to a userID on-chain (Optimism L2). This mapping is the single source of truth—no centralized database, no mutable backend state.
+- Credential Linking: New credentials can only be linked to an existing userID after strong verification. No credential may ever be mapped to more than one userID.
+
+4. Hybrid Data Model
+--------------------
+- Atomic and Block Storage: Credentials are linked atomically on-chain for uniqueness and auditability. Optionally, blocks (bundles) of credentials or profile fragments can be referenced for efficient retrieval, but atomic mappings remain the source of truth.
+- Supporting Data: Documents and rich data supporting identity (e.g., diplomas, images) are stored on Helia/IPFS. Their CIDs are referenced in on-chain mappings or attestations.
+
+5. Attestations & Trust
+-----------------------
+- Attestation-Driven Trust: All claims, endorsements, and profile attributes are modeled as signed, on-chain attestations. Attestations are immutable, auditable events, not mutable fields.
+- Human Web of Trust: Trust and certainty are established because other humans can make attestations about a user, and these are cryptographically signed, tamper-proof, and verifiable.
+- Revocation: Attestations can be revoked only by issuing a new, signed revocation on-chain.
+
+6. Security & Privacy
+---------------------
+- No Raw Credentials: Only hashed and namespaced credentials are stored or mapped.
+- No Centralized DB: All state is decentralized and immutable (on-chain and IPFS/Helia).
+- Strong Verification: New credentials can only be linked after verifying control via secure authentication.
+- Auditability: All credential links, attestations, and revocations are on-chain events—history is always visible and auditable.
+
+7. Performance
+--------------
+- Optimism L2 for High Throughput: All on-chain operations (credential mapping, attestations, revocations) happen on Optimism L2 for low latency and high TPS.
+- Real-Time UX: All user flows (login, linking, attestation) are designed to be near real-time, with UI feedback for pending on-chain operations.
+
+8. Component-Based Architecture
+-------------------------------
+- Separation of Concerns: Both frontend and backend are organized into components/modules for maintainability, security, and scalability.
+- Hybrid Data Handling: Components manage atomic, block, and document-based data flows cleanly and securely.
+
+9. Critical Path Focus
+----------------------
+- No Feature Bloat: Only the most important flows—login, address generation, credential linking, attestation, and profile retrieval—are prioritized until stability and certainty are achieved.
+
+10. Exclusivity & Anti-Sybil
+----------------------------
+- Humans Only: wot.id is strictly for unique humans. Attempts to create multiple accounts for a single human are considered cheating and result in exclusion.
+
+--
+This document is the canonical reference for all future wot.id design and implementation decisions.
